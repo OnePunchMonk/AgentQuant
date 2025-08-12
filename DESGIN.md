@@ -9,19 +9,19 @@
 
 ```mermaid
 flowchart TD
-    A[Data Sources (yfinance, FRED)] --> B[Ingestion Layer]
-    B --> C[Data Store (Parquet/CSV)]
-    B --> D[Feature Engine]
-    D --> E[Regime Detector]
-    E --> F[Agent Brain (Gemini LLM Planner)]
+    A["Data Sources (yfinance, FRED)"] --> B["Ingestion Layer"]
+    B --> C["Data Store (Parquet/CSV)"]
+    B --> D["Feature Engine"]
+    D --> E["Regime Detector"]
+    E --> F["Agent Brain (Gemini LLM Planner)"]
     
-    F --> G[Backtester (vectorbt)]
-    F --> H[Risk Engine (stub)]
+    F --> G["Backtester (vectorbt)"]
+    F --> H["Risk Engine (stub)"]
     
-    G --> I[Decision & Report Generator]
+    G --> I["Decision & Report Generator"]
     H --> I
     
-    I --> J[Log / Notebook UI]
+    I --> J["Log / Notebook UI"]
 
 ```
 ## 3. Agent Reasoning Loop
