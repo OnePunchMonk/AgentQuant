@@ -1,5 +1,5 @@
 # AgentQuant: AI-Powered Autonomous Trading Research Platform
-
+[![Under Development](https://img.shields.io/badge/Status-Under%20Active%20Development-orange)](https://github.com/OnePunchMonk/AgentQuant)
 ## 🚀 Revolutionizing Quantitative Finance with Agentic AI
 
 *Transform stock selection into complete trading strategies through autonomous AI agents*
