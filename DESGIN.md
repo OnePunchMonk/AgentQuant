@@ -7,7 +7,7 @@
 
 ## 2. Architecture Diagram
 
-```
+```mermaid
 flowchart TD
     A[Data Sources (yfinance, FRED)] --> B[Ingestion Layer]
     B --> C[Data Store (Parquet/CSV)]
