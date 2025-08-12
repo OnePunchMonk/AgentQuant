@@ -1,0 +1,35 @@
+[project]
+name = "regime-adaptive-agent"
+version = "0.1.0"
+description = "An autonomous agent for quantitative trading research and strategy adaptation."
+authors = [{ name = "Avaya Aggarwal", email = "aggarwal.avaya27@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+
+dependencies = [
+    "pandas",
+    "numpy",
+    "pyyaml",
+    "python-dotenv",
+    "yfinance",
+    "vectorbt",
+    "google-generativeai",
+    "streamlit",
+    "fastapi",
+    "uvicorn",
+    "fredapi",
+    "pytest",
+    "pandera", # Optional, for future schema validation
+]
+
+[project.scripts]
+run-agent = "src.agent.runner:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-v"
+
+[tool.setuptools]
+packages = ["src"]

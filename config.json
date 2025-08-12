@@ -1,0 +1,94 @@
+{
+  "app_config": {
+    "name": "AlphaOptimizer",
+    "version": "2.0.0",
+    "description": "Self-correcting AI agent for quantitative trading strategy optimization",
+    "author": "AlphaOptimizer Team"
+  },
+  "default_settings": {
+    "max_optimization_iterations": 3,
+    "default_stock_symbol": "AAPL",
+    "default_start_date": "2022-01-01",
+    "default_end_date": "2023-12-31",
+    "initial_capital": 100000,
+    "commission_rate": 0.001
+  },
+  "performance_benchmarks": {
+    "sharpe_ratio": {
+      "good": 1.0,
+      "excellent": 1.5
+    },
+    "max_drawdown": {
+      "good": 20.0,
+      "excellent": 10.0
+    },
+    "win_rate": {
+      "good": 50.0,
+      "excellent": 60.0
+    },
+    "total_return": {
+      "good": 10.0,
+      "excellent": 20.0
+    }
+  },
+  "supported_indicators": [
+    "SimpleMovingAverage",
+    "ExponentialMovingAverage",
+    "RSI",
+    "MACD",
+    "BollingerBands",
+    "Stochastic",
+    "ATR",
+    "ADX",
+    "Williams%R",
+    "ROC",
+    "MFI",
+    "OBV"
+  ],
+  "sample_strategies": [
+    {
+      "name": "Moving Average Crossover",
+      "description": "A momentum strategy that buys when fast MA crosses above slow MA",
+      "symbol": "AAPL",
+      "category": "Trend Following"
+    },
+    {
+      "name": "RSI Mean Reversion",
+      "description": "Buy oversold conditions (RSI < 30) and sell overbought (RSI > 70)",
+      "symbol": "TSLA",
+      "category": "Mean Reversion"
+    },
+    {
+      "name": "Bollinger Bands",
+      "description": "Trade bounces off Bollinger Band extremes",
+      "symbol": "SPY",
+      "category": "Mean Reversion"
+    },
+    {
+      "name": "MACD Momentum",
+      "description": "Enter trades on MACD signal line crossovers",
+      "symbol": "NVDA",
+      "category": "Momentum"
+    },
+    {
+      "name": "Breakout Strategy",
+      "description": "Buy when price breaks above resistance with volume confirmation",
+      "symbol": "GOOGL",
+      "category": "Breakout"
+    }
+  ],
+  "ui_config": {
+    "theme": "light",
+    "color_scheme": {
+      "primary": "#4ECDC4",
+      "secondary": "#45B7D1",
+      "success": "#96CEB4",
+      "warning": "#FFEAA7",
+      "danger": "#FF6B6B"
+    },
+    "chart_config": {
+      "default_height": 400,
+      "template": "plotly_white"
+    }
+  }
+}

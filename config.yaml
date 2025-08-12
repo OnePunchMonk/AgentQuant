@@ -1,0 +1,41 @@
+# General project configuration
+project_name: "regime-adaptive-agent"
+log_level: "INFO"
+
+# Data sources and storage
+data_path: "data_store" # Relative path to store data files
+universe:
+  - "SPY"
+  - "QQQ"
+  - "IWM"
+  - "TLT"
+  - "GLD"
+reference_asset: "SPY" # Asset used for primary feature calculation
+vix_ticker: "^VIX"
+
+data:
+  yfinance_period: "5y"
+  fred_series:
+    DGS10: "10-Year Treasury Constant Maturity Rate"
+    T10Y2Y: "10-Year Treasury Constant Maturity Minus 2-Year Treasury Constant Maturity"
+
+# Agent configuration
+agent:
+  run_interval: "daily" # 'daily', 'hourly'
+  mode: "suggest_only"  # 'suggest_only' or 'auto_execute'
+  risk:
+    max_drawdown: 0.20
+    max_position_size: 0.50
+
+# Backtest assumptions
+backtest:
+  initial_cash: 100000
+  slippage: 0.0005
+  commission: 0.0001
+
+# Strategy definitions
+strategies:
+  - name: "momentum"
+    default_params:
+      fast_window: 21
+      slow_window: 63

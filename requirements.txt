@@ -1,0 +1,11 @@
+pandas
+numpy
+pyyaml
+python-dotenv
+yfinance
+vectorbt
+google-generativeai
+streamlit
+fastapi
+uvicorn
+fredapi
