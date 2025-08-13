@@ -146,7 +146,7 @@ AgentQuant/
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/AgentQuant.git
+git clone https://github.com/onepunchmonk/AgentQuant.git
 cd AgentQuant
 
 # Install dependencies
@@ -371,7 +371,7 @@ We welcome contributions from the quantitative finance and AI communities:
 
 ```bash
 # Fork the repository
-git fork https://github.com/yourusername/AgentQuant.git
+git fork https://github.com/onepunchmonk/AgentQuant.git
 
 # Create a feature branch  
 git checkout -b feature/amazing-new-feature
