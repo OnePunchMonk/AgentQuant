@@ -148,7 +148,7 @@ AgentQuant/
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/AgentQuant.git
+git clone https://github.com/onepunchmonk/AgentQuant.git
 cd AgentQuant
 
 # Install dependencies
