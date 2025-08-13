@@ -1,4 +1,5 @@
 # AgentQuant: AI-Powered Autonomous Trading Research Platform
+
 [![Under Development](https://img.shields.io/badge/Status-Under%20Active%20Development-orange)](https://github.com/OnePunchMonk/AgentQuant)
 
 > **Note:** This project is under active development. Features, APIs, and dependencies are subject to change. Please use with caution.
@@ -338,7 +339,7 @@ We welcome contributions from the quantitative finance and AI communities:
 
 ```bash
 # Fork the repository
-git fork https://github.com/onepunchmonk/AgentQuant.git
+git fork https://github.com/yourusername/AgentQuant.git
 
 # Create a feature branch  
 git checkout -b feature/amazing-new-feature

@@ -4,6 +4,7 @@ from fredapi import Fred
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+from datetime import date
 
 from src.utils.config import config
 
@@ -13,13 +14,35 @@ def get_data_path():
     path.mkdir(parents=True, exist_ok=True)
     return path
 
-def fetch_ohlcv_data(force_download=False):
+def fetch_ohlcv_data(ticker=None, start_date=None, end_date=None, force_download=False):
     """
     Fetches OHLCV data for the universe from yfinance.
     Saves to parquet files to avoid re-downloading.
+    
+    Args:
+        ticker (str, optional): Specific ticker to fetch. If None, fetches all tickers in universe.
+        start_date (str or date, optional): Start date for data fetch in YYYY-MM-DD format or date object.
+        end_date (str or date, optional): End date for data fetch in YYYY-MM-DD format or date object.
+        force_download (bool, optional): Force download even if data exists locally.
+        
+    Returns:
+        dict or pd.DataFrame: Dictionary of dataframes for each ticker or single dataframe if ticker specified.
     """
     data_path = get_data_path()
-    tickers = config['universe'] + [config['vix_ticker']]
+    
+    # Convert date objects to strings if needed
+    if isinstance(start_date, date):
+        start_date = start_date.strftime('%Y-%m-%d')
+    if isinstance(end_date, date):
+        end_date = end_date.strftime('%Y-%m-%d')
+    
+    if ticker is not None:
+        # Single ticker case
+        tickers = [ticker]
+    else:
+        # Multiple tickers case
+        tickers = config['universe'] + [config['vix_ticker']]
+    
     all_data = {}
 
     print(f"Fetching OHLCV data for: {', '.join(tickers)}")
@@ -28,7 +51,12 @@ def fetch_ohlcv_data(force_download=False):
         file_path = data_path / f"{ticker.replace('^', '')}.parquet"
         if not file_path.exists() or force_download:
             try:
-                data = yf.download(ticker, period=config['data']['yfinance_period'], auto_adjust=True)
+                # If start_date and end_date are provided, use them instead of the config period
+                if start_date and end_date:
+                    data = yf.download(ticker, start=start_date, end=end_date, auto_adjust=True)
+                else:
+                    data = yf.download(ticker, period=config['data']['yfinance_period'], auto_adjust=True)
+                
                 if data.empty:
                     print(f"Warning: No data found for {ticker}. Skipping.")
                     continue
@@ -37,8 +65,24 @@ def fetch_ohlcv_data(force_download=False):
             except Exception as e:
                 print(f"Error downloading {ticker}: {e}")
         else:
-            all_data[ticker] = pd.read_parquet(file_path)
+            # Read from parquet file
+            df = pd.read_parquet(file_path)
+            
+            # Filter by date range if provided
+            if start_date or end_date:
+                if start_date:
+                    start_date_parsed = pd.to_datetime(start_date)
+                    df = df[df.index >= start_date_parsed]
+                if end_date:
+                    end_date_parsed = pd.to_datetime(end_date)
+                    df = df[df.index <= end_date_parsed]
+            
+            all_data[ticker] = df
 
+    # If a single ticker was requested, return just that dataframe
+    if ticker is not None and ticker in all_data:
+        return all_data[ticker]
+    
     return all_data
 
 def fetch_fred_data(force_download=False):
