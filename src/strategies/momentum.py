@@ -1,5 +1,8 @@
 import pandas as pd
-import vectorbt as vbt
+try:
+    import vectorbt as vbt
+except Exception:  # pragma: no cover
+    vbt = None
 
 def create_momentum_signals(close_prices, fast_window=21, slow_window=63):
     """
@@ -13,11 +16,21 @@ def create_momentum_signals(close_prices, fast_window=21, slow_window=63):
     Returns:
         tuple: A tuple containing entries and exits boolean Series.
     """
-    # Use the modern vbt.MA.run() method instead of the old MAVG
-    fast_ma = vbt.MA.run(close_prices, window=fast_window, short_name='fast')
-    slow_ma = vbt.MA.run(close_prices, window=slow_window, short_name='slow')
-    
-    entries = fast_ma.ma_crossed_above(slow_ma)
-    exits = fast_ma.ma_crossed_below(slow_ma)
-    
+    # If vectorbt is available, use its MA cross helpers
+    if vbt is not None:
+        fast_ma = vbt.MA.run(close_prices, window=fast_window, short_name='fast')
+        slow_ma = vbt.MA.run(close_prices, window=slow_window, short_name='slow')
+        entries = fast_ma.ma_crossed_above(slow_ma)
+        exits = fast_ma.ma_crossed_below(slow_ma)
+        return entries, exits
+
+    # Fallback: pure pandas implementation
+    fast = close_prices.rolling(window=fast_window).mean()
+    slow = close_prices.rolling(window=slow_window).mean()
+    prev_fast = fast.shift(1)
+    prev_slow = slow.shift(1)
+    entries = (fast > slow) & (prev_fast <= prev_slow)
+    exits = (fast < slow) & (prev_fast >= prev_slow)
+    entries = entries.fillna(False)
+    exits = exits.fillna(False)
     return entries, exits
