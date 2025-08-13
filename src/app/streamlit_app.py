@@ -1,6 +1,28 @@
 """
-Streamlit interface for visualizing and interacting with backtesting strategies.
+AgentQuant: AI-Powered Autonomous Trading Research Platform
+===========================================================
+
+This module provides the main Streamlit web interface for the AgentQuant platform.
+Users can generate AI-powered trading strategies, run backtests, and visualize results
+through an intuitive dashboard.
+
+Key Features:
+- AI strategy generation using LLM agents
+- Interactive backtesting with real market data
+- Comprehensive performance visualization
+- Risk analysis and portfolio optimization
+- Export capabilities for further analysis
+
+Dependencies:
+- Streamlit: Web application framework
+- pandas/numpy: Data manipulation and numerical computing
+- matplotlib: Visualization and charting
+- Custom modules: Agent planning, backtesting, data ingestion
+
+Author: AgentQuant Development Team
+License: MIT
 """
+
 import os
 import streamlit as st
 import pandas as pd
@@ -10,6 +32,7 @@ from datetime import datetime, timedelta
 import json
 from typing import Dict, List, Any, Optional
 
+# Internal module imports for core functionality
 from src.agent.simple_planner import generate_strategy_proposals
 from src.backtest.runner import run_backtest
 from src.data.ingest import fetch_ohlcv_data
@@ -26,30 +49,58 @@ from src.visualization.plots import (
 )
 
 
-# Set page config
+# Configure Streamlit page settings for optimal user experience
 st.set_page_config(
-    page_title="AgentQuant Dashboard",
-    page_icon="📈",
+    page_title="AgentQuant: AI Trading Research Platform",
+    page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 
-def load_available_assets():
-    """Load the available assets from the data store"""
+def load_available_assets() -> List[str]:
+    """
+    Load available assets from the data store directory.
+    
+    Scans the data_store directory for parquet files and extracts asset symbols.
+    This allows the UI to dynamically populate available assets without hardcoding.
+    
+    Returns:
+        List[str]: List of available asset symbols (e.g., ['SPY', 'QQQ', 'TLT'])
+        
+    Note:
+        Returns empty list if data_store directory doesn't exist or contains no parquet files.
+    """
     data_dir = os.path.join(os.getcwd(), "data_store")
     assets = []
     
     if os.path.exists(data_dir):
         for file in os.listdir(data_dir):
             if file.endswith(".parquet"):
+                # Extract symbol by removing .parquet extension
                 assets.append(file.split(".")[0])
     
     return assets
 
 
-def load_available_strategies():
-    """Load the available strategy types"""
+def load_available_strategies() -> List[str]:
+    """
+    Load the list of available strategy types supported by the platform.
+    
+    This function returns the strategy types that are implemented in the
+    multi_strategy module and can be executed by the backtesting engine.
+    
+    Returns:
+        List[str]: List of strategy names available for selection
+        
+    Strategy Types:
+        - momentum: Moving average crossover and trend following
+        - mean_reversion: Bollinger Bands and RSI-based signals  
+        - volatility: Volatility targeting and VIX-based strategies
+        - trend_following: Directional trend capture strategies
+        - breakout: Range breakout and momentum strategies
+        - regime_based: Market regime adaptive allocation
+    """
     return [
         "momentum",
         "mean_reversion",
@@ -408,8 +459,21 @@ def main():
                     with col2:
                         # Plot allocation weights
                         st.subheader("Asset Allocation")
-                        if isinstance(result_data["weights"], pd.DataFrame):
-                            fig = plot_portfolio_composition(result_data["weights"])
+                        weights_data = result_data["weights"]
+                        if isinstance(weights_data, dict):
+                            # Convert static weights dict to DataFrame for display
+                            weights_df = pd.DataFrame([weights_data])
+                            st.dataframe(weights_df)
+                            # Also create a simple pie chart
+                            fig, ax = plt.subplots(figsize=(8, 6))
+                            assets = list(weights_data.keys())
+                            weights = list(weights_data.values())
+                            ax.pie(weights, labels=assets, autopct='%1.1f%%')
+                            ax.set_title("Asset Allocation")
+                            st.pyplot(fig)
+                            plt.close(fig)
+                        elif isinstance(weights_data, pd.DataFrame):
+                            fig = plot_portfolio_composition(weights_data)
                             st.pyplot(fig)
                             plt.close(fig)
                         else:

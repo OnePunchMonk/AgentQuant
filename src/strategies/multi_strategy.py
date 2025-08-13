@@ -1,5 +1,30 @@
 """
-Implementation of various trading strategies beyond momentum.
+Multi-Strategy Implementation Module
+====================================
+
+This module provides a comprehensive collection of quantitative trading strategies
+implemented in a unified framework. Each strategy follows consistent interfaces
+for signal generation, position calculation, and performance evaluation.
+
+The module supports multiple strategy types including momentum, mean reversion,
+volatility targeting, trend following, breakout, and regime-based strategies.
+All strategies are designed to work with vectorized pandas operations for
+optimal performance on large datasets.
+
+Key Features:
+- Unified strategy interface with consistent API
+- Robust parameter handling and validation
+- Support for multi-asset strategies
+- Market regime awareness and adaptation
+- Comprehensive signal generation logic
+
+Dependencies:
+- pandas: Time series data manipulation
+- numpy: Numerical computations and array operations
+- typing: Type hints for better code documentation
+
+Author: AgentQuant Development Team
+License: MIT
 """
 from typing import Dict, List, Optional, Any
 import pandas as pd
@@ -7,6 +32,27 @@ import numpy as np
 
 
 def _get_col(df: pd.DataFrame, candidates: List[str]) -> pd.Series:
+    """
+    Robust column extraction utility for handling various DataFrame formats.
+    
+    This utility function attempts to extract a column from a DataFrame using
+    case-insensitive matching against a list of candidate column names. It's
+    designed to handle edge cases like tuple column names, MultiIndex columns,
+    and various data types that might appear in financial datasets.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame to search for columns
+        candidates (List[str]): List of potential column names to search for
+        
+    Returns:
+        pd.Series: Numeric series with NaN values removed, or empty series if no match
+        
+    Note:
+        - Performs case-insensitive matching using string conversion
+        - Handles tuple column names by converting to string representation
+        - Coerces data to numeric format and drops NaN values
+        - Provides fallback mechanism for edge cases
+    """
     # Build a case-insensitive mapping from stringified column names to original
     try:
         col_map = {str(c).lower(): c for c in df.columns}
@@ -236,7 +282,12 @@ def calculate_regime_based_signal(
     if isinstance(regime_data, str):
         regime_type = regime_data.lower()
     elif isinstance(regime_data, dict):
-        regime_type = regime_data.get("name", "").lower()
+        name = regime_data.get("name", "")
+        if isinstance(name, (tuple, list)):
+            name = str(name[0]) if len(name) > 0 else ""
+        elif not isinstance(name, str):
+            name = str(name)
+        regime_type = name.lower()
     elif isinstance(regime_data, (tuple, list)):
         # Handle tuple/list case - convert to string
         regime_type = str(regime_data[0]).lower() if len(regime_data) > 0 else ""

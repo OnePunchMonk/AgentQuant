@@ -1,3 +1,37 @@
+"""
+Configuration Management Module for AgentQuant
+==============================================
+
+This module handles all configuration loading and management for the AgentQuant
+platform. It provides a centralized configuration system that loads settings
+from YAML files and makes them available throughout the application.
+
+Key Features:
+- YAML-based configuration management
+- Automatic config loading and validation
+- Centralized configuration access via singleton pattern
+- Support for nested configuration structures
+- Error handling for missing or malformed config files
+
+The configuration system supports various settings including:
+- Universe definition (list of assets to analyze)
+- Data source parameters (yfinance, FRED APIs)
+- Agent configuration (LLM settings, optimization parameters)
+- Backtesting parameters (initial cash, fees, date ranges)
+- Risk management settings (drawdown limits, position sizing)
+
+Usage:
+    from src.utils.config import config
+    universe = config['universe']
+    initial_cash = config['backtest']['initial_cash']
+
+Dependencies:
+- yaml: YAML file parsing and loading
+- pathlib: Cross-platform path handling
+
+Author: AgentQuant Development Team
+License: MIT
+"""
 import yaml
 from pathlib import Path
 

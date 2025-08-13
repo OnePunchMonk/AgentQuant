@@ -9,23 +9,82 @@ import inspect
 from src.strategies.strategy_registry import get_strategy_function
 from src.utils.config import config
 
+"""
+Backtesting Engine and Portfolio Simulation Module
+==================================================
+
+This module provides the core backtesting infrastructure for the AgentQuant platform.
+It handles strategy execution, portfolio simulation, performance calculation, and
+comprehensive metrics generation for quantitative trading strategies.
+
+Key Features:
+- Vectorized backtesting using vectorbt for high performance
+- Fallback simulation engine for cases without vectorbt dependency
+- Comprehensive metrics calculation (Sharpe ratio, drawdown, returns)
+- Multi-asset portfolio simulation with proper position sizing
+- Risk management and parameter normalization
+- Robust error handling and debugging support
+
+The module supports both single-asset and multi-asset strategies, with automatic
+parameter normalization to ensure compatibility across different strategy types.
+
+Dependencies:
+- vectorbt: High-performance backtesting framework (optional)
+- pandas: Time series data manipulation and analysis
+- numpy: Numerical computations and statistical operations
+- Custom strategy modules for signal generation
+
+Author: AgentQuant Development Team
+License: MIT
+"""
+
+try:
+    import vectorbt as vbt  # type: ignore
+except Exception:
+    vbt = None
+import pandas as pd
+import numpy as np
+import inspect
+
+from src.strategies.strategy_registry import get_strategy_function
+from src.utils.config import config
+
 def run_backtest(ohlcv_data, assets, strategy_name, params, allocation_weights=None):
     """
-    Runs a vectorized backtest for given assets, strategy, and parameters.
+    Execute a comprehensive backtest for a given strategy and asset universe.
+    
+    This is the main entry point for backtesting in the AgentQuant platform.
+    It handles both single-asset and multi-asset strategies, with automatic
+    fallback to a pandas-based simulation if vectorbt is not available.
     
     Args:
-        ohlcv_data (dict or pd.DataFrame): OHLCV data for assets. 
-                                         If dict, keys are asset tickers and values are DataFrames.
-                                         If DataFrame, it's assumed to be for a single asset.
-        assets (list): List of asset tickers to backtest.
-        strategy_name (str): The name of the strategy from the registry.
-        params (dict): Dictionary of parameters for the strategy function.
-        allocation_weights (dict, optional): Weights for each asset in the portfolio.
-                                           If None, equal weights are used.
+        ohlcv_data (Dict[str, pd.DataFrame]): Market data for each asset
+        assets (List[str]): List of asset symbols to include in the backtest
+        strategy_name (str): Name of the strategy to execute
+        params (Dict): Strategy parameters and configuration
+        allocation_weights (Dict, optional): Asset allocation weights for portfolio
         
     Returns:
-        pd.Series: A series containing key performance metrics.
+        Dict: Comprehensive backtest results including:
+            - portfolio_value: Time series of portfolio value
+            - daily_returns: Daily return series
+            - total_return: Cumulative return over the period
+            - sharpe_ratio: Risk-adjusted return metric
+            - max_drawdown: Maximum peak-to-trough decline
+            - num_trades: Total number of trades executed
+            - success: Boolean indicating successful execution
+            
+    Raises:
+        Exception: If strategy execution fails or data is insufficient
+        
+    Note:
+        - Automatically normalizes parameters for strategy compatibility
+        - Handles missing data and edge cases gracefully
+        - Provides detailed error messages for debugging
     """
+    # Original docstring content that was displaced - removing duplicate
+    # Args are already documented above in the main docstring
+    
     # Handle the case where ohlcv_data is a single DataFrame
     if isinstance(ohlcv_data, pd.DataFrame):
         if not assets or len(assets) != 1:
@@ -127,7 +186,15 @@ def run_backtest(ohlcv_data, assets, strategy_name, params, allocation_weights=N
                 if isinstance(rd, (tuple, list)):
                     p['regime_data'] = str(rd[0]) if len(rd) > 0 else 'neutral'
                     print(f"DEBUG regime_data converted from tuple/list to: {p['regime_data']}")
-                elif not isinstance(rd, (str, dict)):
+                elif isinstance(rd, dict):
+                    name_val = rd.get('name', rd)
+                    if isinstance(name_val, (tuple, list)):
+                        name_val = str(name_val[0]) if len(name_val) > 0 else 'neutral'
+                    elif not isinstance(name_val, str):
+                        name_val = str(name_val)
+                    rd['name'] = name_val
+                    p['regime_data'] = rd
+                elif not isinstance(rd, str):
                     p['regime_data'] = str(rd)
                     print(f"DEBUG regime_data converted to string: {p['regime_data']}")
         elif name == 'volatility':
@@ -241,10 +308,21 @@ def run_backtest(ohlcv_data, assets, strategy_name, params, allocation_weights=N
     # Create a combined result
     if combined_portfolio_value is not None:
         # Calculate combined metrics
+        # Calculate proper Sharpe ratio from combined portfolio returns
+        portfolio_returns = combined_portfolio_value.pct_change().dropna()
+        if len(portfolio_returns) > 1 and portfolio_returns.std() > 0:
+            sharpe_ratio = (portfolio_returns.mean() / portfolio_returns.std()) * np.sqrt(252.0)
+        else:
+            sharpe_ratio = 0.0
+        
+        # Calculate max drawdown (as positive percentage)
+        drawdown_series = (combined_portfolio_value / combined_portfolio_value.cummax() - 1)
+        max_drawdown = abs(drawdown_series.min())  # Convert to positive value
+        
         metrics = {
             'total_return': (combined_portfolio_value.iloc[-1] / combined_portfolio_value.iloc[0]) - 1,
-            'sharpe_ratio': None,  # Would need to calculate this properly
-            'max_drawdown': (combined_portfolio_value / combined_portfolio_value.cummax() - 1).min(),
+            'sharpe_ratio': sharpe_ratio,
+            'max_drawdown': max_drawdown,
             'num_trades': sum(result['num_trades'] for result in all_results.values())
         }
         
