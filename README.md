@@ -2,7 +2,7 @@
 
 [![Under Development](https://img.shields.io/badge/Status-Under%20Active%20Development-orange)](https://github.com/OnePunchMonk/AgentQuant)
 
-> **Note:** This project is under active development. Features, APIs, and dependencies are subject to change. Please use with caution.
+> **Note:** This project is under active development. Features, APIs, and dependencies are subject to change. Please use with caution. ( DEBUG BACKTESTING AND VIZ PENDING )
 
 ## 🚀 Revolutionizing Quantitative Finance with Agentic AI
 
