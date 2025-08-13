@@ -1,5 +1,37 @@
 """
-Simplified strategy generation agent without LangChain dependencies.
+Simple Strategy Planning Agent for AgentQuant
+=============================================
+
+This module provides a basic strategy planning agent that generates trading strategy
+proposals without requiring external LLM APIs. It serves as a fallback mechanism
+and development tool when full AI integration is not available or needed.
+
+The simple planner generates deterministic strategy proposals based on predefined
+templates and parameter ranges. While not as sophisticated as the LLM-powered
+agent, it provides reliable strategy generation for testing and development.
+
+Key Features:
+- Deterministic strategy generation without external dependencies
+- Predefined parameter ranges for common strategy types
+- Multiple strategy templates covering major quantitative approaches
+- Randomized parameter selection for testing variety
+- Consistent output format compatible with backtesting engine
+
+Strategy Types Supported:
+- Momentum: Moving average crossovers and trend following
+- Mean Reversion: Bollinger Bands and RSI-based strategies
+- Volatility: Volatility targeting and risk parity approaches
+- Trend Following: Directional trend capture strategies
+- Breakout: Range breakout and momentum strategies
+- Regime-Based: Market environment adaptive allocation
+
+Dependencies:
+- random: Parameter randomization for strategy variation
+- pandas: Data structure support for strategy metadata
+- typing: Type hints for better code documentation
+
+Author: AgentQuant Development Team
+License: MIT
 """
 import random
 from typing import Dict, List, Any

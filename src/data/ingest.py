@@ -1,3 +1,39 @@
+"""
+Data Ingestion and Market Data Management Module
+================================================
+
+This module provides comprehensive data ingestion capabilities for the AgentQuant
+platform. It handles fetching, processing, and caching of market data from multiple
+sources including yfinance for equity/ETF data and FRED for macroeconomic indicators.
+
+Key Features:
+- Multi-source data integration (yfinance, FRED APIs)
+- Automatic data caching using Parquet format for efficiency
+- Comprehensive OHLCV data fetching for multiple assets
+- Macroeconomic indicators integration for regime analysis
+- Robust error handling and data validation
+- Configurable date ranges and update frequencies
+
+The module supports various asset types including:
+- Stocks and ETFs (via yfinance)
+- Market indices and benchmarks
+- Treasury yields and rates (via FRED)
+- Volatility indicators (VIX, etc.)
+
+Data is automatically cached in the data_store directory using Parquet format
+for fast loading and minimal storage requirements. The module handles missing
+data, API errors, and provides fallback mechanisms for robust operation.
+
+Dependencies:
+- yfinance: Yahoo Finance API for market data
+- fredapi: Federal Reserve Economic Data API
+- pandas: Data manipulation and time series handling
+- pathlib: Cross-platform file path operations
+- python-dotenv: Environment variable management
+
+Author: AgentQuant Development Team
+License: MIT
+"""
 import yfinance as yf
 import pandas as pd
 from fredapi import Fred

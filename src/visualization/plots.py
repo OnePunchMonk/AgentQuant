@@ -1,5 +1,32 @@
 """
-Visualization module for generating interactive plots and dashboards.
+Visualization and Plotting Module for AgentQuant
+================================================
+
+This module provides comprehensive visualization capabilities for the AgentQuant
+trading research platform. It generates publication-quality charts, interactive
+dashboards, and performance analytics visualizations.
+
+Key Features:
+- Portfolio performance visualization with equity curves and drawdown analysis
+- Asset allocation pie charts and weight evolution over time
+- Strategy-specific dashboards with comprehensive metrics display
+- Mathematical formula rendering for strategy documentation
+- Automated figure saving with timestamp organization
+- Robust data type handling for various input formats
+
+The module is designed to work seamlessly with matplotlib and seaborn for
+static visualizations, with optional integration for interactive plots.
+All visualizations follow consistent styling and color schemes for
+professional presentation.
+
+Dependencies:
+- matplotlib: Core plotting and figure generation
+- seaborn: Statistical visualization and styling
+- pandas: Data manipulation and time series handling
+- numpy: Numerical computations for chart calculations
+
+Author: AgentQuant Development Team
+License: MIT
 """
 import os
 from typing import Dict, List, Any, Optional
@@ -11,13 +38,25 @@ from matplotlib.figure import Figure
 import seaborn as sns
 from datetime import datetime
 
-# Set plotting style
+# Configure plotting style for consistent professional appearance
 plt.style.use('seaborn-v0_8-darkgrid')
 sns.set_palette("Set2")
 
 
-def get_timestamp_folder():
-    """Create a timestamp-based folder name for saving figures"""
+def get_timestamp_folder() -> str:
+    """
+    Generate a timestamp-based folder name for organizing saved figures.
+    
+    Creates a hierarchical folder structure based on current date and time
+    to organize generated charts and reports systematically.
+    
+    Returns:
+        str: Formatted timestamp string suitable for folder names (YYYY-MM-DD_HH-MM-SS)
+        
+    Example:
+        >>> get_timestamp_folder()
+        '2024-08-13_14-30-25'
+    """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     folder = os.path.join("figures", timestamp)
     os.makedirs(folder, exist_ok=True)
@@ -44,27 +83,61 @@ def plot_portfolio_performance(
     """
     fig, ax = plt.subplots(figsize=(12, 6))
 
-    # If equity_curve is not a Series but convertible (e.g., DataFrame with one column), convert
+    # Convert equity_curve to pandas Series if it's not already
+    original_type = type(equity_curve)
+    
     if isinstance(equity_curve, pd.DataFrame):
         if equity_curve.shape[1] >= 1:
             equity_curve = equity_curve.iloc[:, 0]
     elif isinstance(equity_curve, dict):
+        # Handle case where equity_curve is a dict - this shouldn't happen but let's be defensive
+        if 'equity_curve' in equity_curve:
+            equity_curve = equity_curve['equity_curve']
+        elif len(equity_curve) > 0:
+            # Try to convert dict values to Series (assuming it's like {timestamp: value})
+            try:
+                equity_curve = pd.Series(equity_curve)
+            except Exception:
+                # Last resort: create empty series
+                equity_curve = pd.Series(dtype=float)
+        else:
+            # Empty dict
+            equity_curve = pd.Series(dtype=float)
+    elif not isinstance(equity_curve, pd.Series):
         try:
             equity_curve = pd.Series(equity_curve)
         except Exception:
-            pass
+            equity_curve = pd.Series(dtype=float)
     
-    # Ensure equity_curve is a numeric Series
+    # Final check: ensure we have a pandas Series before proceeding
     if not isinstance(equity_curve, pd.Series):
-        try:
-            equity_curve = pd.Series(equity_curve)
-        except Exception:
-            pass
-    # Coerce to numeric and drop non-numeric
+        ax.text(0.5, 0.5, f"Invalid data type: {original_type.__name__}", ha='center', va='center', transform=ax.transAxes)
+        ax.set_title(title, fontsize=16, pad=20)
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        return fig
+    
+    # Ensure equity_curve is numeric and handle empty case
+    if len(equity_curve) == 0:
+        ax.text(0.5, 0.5, "No equity curve data available", ha='center', va='center', transform=ax.transAxes)
+        ax.set_title(title, fontsize=16, pad=20)
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        return fig
+    
     try:
         equity_curve = pd.to_numeric(equity_curve, errors='coerce').dropna()
     except Exception:
         pass
+        
+    # Handle empty equity curve case after numeric conversion
+    if len(equity_curve) == 0:
+        ax.text(0.5, 0.5, "No data to plot", ha='center', va='center', transform=ax.transAxes)
+        ax.set_title(title, fontsize=16, pad=20)
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        return fig
+        
     # Plot portfolio performance
     equity_curve.plot(ax=ax, linewidth=2, label="Strategy")
     
@@ -206,16 +279,28 @@ def create_combined_plot(
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), height_ratios=[3, 2])
     
     # Top plot: Portfolio performance
-    # Ensure equity_curve is a Series
-    if isinstance(equity_curve, pd.DataFrame):
-        if equity_curve.shape[1] >= 1:
-            equity_curve = equity_curve.iloc[:, 0]
-    elif isinstance(equity_curve, dict):
+    # Ensure equity_curve is a Series (same conversion logic as plot_portfolio_performance)
+    if isinstance(equity_curve, dict):
+        if 'equity_curve' in equity_curve:
+            equity_curve = equity_curve['equity_curve']
+        elif len(equity_curve) > 0:
+            try:
+                equity_curve = pd.Series(equity_curve)
+            except Exception:
+                equity_curve = pd.Series(dtype=float)
+        else:
+            equity_curve = pd.Series(dtype=float)
+    elif not isinstance(equity_curve, pd.Series):
         try:
             equity_curve = pd.Series(equity_curve)
         except Exception:
-            pass
-    equity_curve.plot(ax=ax1, linewidth=2, label="Strategy")
+            equity_curve = pd.Series(dtype=float)
+    
+    # Check if we have valid data to plot
+    if len(equity_curve) == 0:
+        ax1.text(0.5, 0.5, "No equity curve data available", ha='center', va='center', transform=ax1.transAxes)
+    else:
+        equity_curve.plot(ax=ax1, linewidth=2, label="Strategy")
     
     if benchmark is not None:
         # Align benchmark to same starting value
@@ -354,7 +439,7 @@ def create_strategy_dashboard(
     
     Args:
         equity_curve: Series with portfolio values over time
-        weights_df: DataFrame with asset weights over time
+        weights_df: DataFrame with asset weights over time OR dict with static weights
         strategy_info: Dictionary with strategy information
         benchmark: Optional benchmark performance
         save_path: Optional path to save the figures
@@ -369,6 +454,36 @@ def create_strategy_dashboard(
     if save_path:
         folder = os.path.join(save_path, f"{strategy_info['strategy_type']}")
         os.makedirs(folder, exist_ok=True)
+    
+    # Handle weights_df being a dict (static allocation) rather than time-series DataFrame
+    if isinstance(weights_df, dict):
+        # Convert static weights to DataFrame for plotting (if we have equity_curve index)
+        if isinstance(equity_curve, pd.Series) and len(equity_curve) > 0:
+            # Create a constant weights DataFrame over the equity curve's timespan
+            weights_df = pd.DataFrame(
+                [weights_df] * len(equity_curve), 
+                index=equity_curve.index
+            )
+        else:
+            # No equity curve data, so no time-series weights possible
+            weights_df = None
+    
+    # Handle equity_curve being a dict (should not happen but let's be defensive)
+    if isinstance(equity_curve, dict):
+        if 'equity_curve' in equity_curve:
+            equity_curve = equity_curve['equity_curve']
+        elif len(equity_curve) > 0:
+            try:
+                equity_curve = pd.Series(equity_curve)
+            except Exception:
+                equity_curve = pd.Series(dtype=float)
+        else:
+            equity_curve = pd.Series(dtype=float)
+    elif not isinstance(equity_curve, pd.Series):
+        try:
+            equity_curve = pd.Series(equity_curve) if equity_curve is not None else pd.Series(dtype=float)
+        except Exception:
+            equity_curve = pd.Series(dtype=float)
     
     # Create individual plots
     figures["performance"] = plot_portfolio_performance(

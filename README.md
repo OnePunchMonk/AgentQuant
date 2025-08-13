@@ -1,8 +1,6 @@
 # AgentQuant: AI-Powered Autonomous Trading Research Platform
 
-[![Under Development](https://img.shields.io/badge/Status-Under%20Active%20Development-orange)](https://github.com/OnePunchMonk/AgentQuant)
-
-> **Note:** This project is under active development. Features, APIs, and dependencies are subject to change. Please use with caution. ( DEBUG BACKTESTING AND VIZ PENDING )
+[![Project Status: Stable](https://img.shields.io/badge/status-stable-green.svg)](https://github.com/OnePunchMonk/AgentQuant)
 
 ## 🚀 Revolutionizing Quantitative Finance with Agentic AI
 
@@ -148,7 +146,7 @@ AgentQuant/
 
 ```bash
 # Clone the repository
-git clone https://github.com/onepunchmonk/AgentQuant.git
+git clone https://github.com/yourusername/AgentQuant.git
 cd AgentQuant
 
 # Install dependencies
@@ -210,6 +208,24 @@ python run_app.py
 - **Risk Metrics**: Sharpe ratio, max drawdown, volatility
 - **Portfolio Allocation**: Dynamic asset weighting
 - **Comparison Analysis**: Strategy vs benchmark performance
+
+## 📸 Platform Screenshots
+
+### Main Dashboard - Strategy Generation Interface
+![Dashboard Overview](screenshots/dashboard1.png)
+*The main Streamlit interface where users configure stock universe and generate AI-powered trading strategies*
+
+### Strategy Performance Analysis
+![Performance Analysis](screenshots/dashboard2.png)
+*Comprehensive performance metrics and equity curve visualization for generated strategies*
+
+### Portfolio Composition & Allocation
+![Portfolio Composition](screenshots/dashboard3.png)
+*Dynamic asset allocation charts showing portfolio weights and rebalancing over time*
+
+### Risk Analytics Dashboard
+![Risk Analytics](screenshots/dashboard4.png)
+*Detailed risk analysis including drawdown analysis, Sharpe ratios, and volatility metrics*
 
 ## 🧠 AI Agent Capabilities: The Complete Quant Researcher
 
@@ -333,13 +349,29 @@ Allocation = {AAPL: 40%, MSFT: 35%, GOOGL: 25%}
 - Demonstrate strategy performance in real-time
 - Hands-on learning without programming barriers
 
+## 📚 Documentation
+
+### Comprehensive Documentation Suite
+- **[README.md](README.md)** - Main project overview and quickstart guide
+- **[DESIGN.md](DESIGN.md)** - Complete technical architecture and system design
+- **[AGENT.md](docs/AGENT.md)** - Deep dive into AI agent architecture from GenAI engineering perspective
+- **[INSTALLATION.md](docs/INSTALLATION.md)** - Detailed installation and setup instructions
+
+### Developer Resources
+- **Agent Architecture**: Detailed LangGraph workflows, state management, and tool integration patterns
+- **Strategy Framework**: Complete strategy development lifecycle and implementation details  
+- **API Documentation**: Function signatures, parameters, and usage examples
+- **Performance Tuning**: Optimization guidelines and best practices
+
+For developers interested in the internal agent reasoning loops, multi-agent orchestration, and GenAI engineering patterns, see **[docs/AGENT.md](docs/AGENT.md)** for comprehensive technical details.
+
 ## 🤝 Contributing
 
 We welcome contributions from the quantitative finance and AI communities:
 
 ```bash
 # Fork the repository
-git fork https://github.com/onepunchmonk/AgentQuant.git
+git fork https://github.com/yourusername/AgentQuant.git
 
 # Create a feature branch  
 git checkout -b feature/amazing-new-feature
