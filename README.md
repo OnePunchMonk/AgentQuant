@@ -4,7 +4,7 @@
 
 ## 🚀 Revolutionizing Quantitative Finance with Agentic AI
 
-*Transform stock selection into complete trading strategies through autonomous AI agents*
+*Transform stock selection into complete trading strategies in < 5 minutes through autonomous AI agents*
 
 ---
 
