@@ -1,4 +1,4 @@
-# AgentQuant: AI-Powered Autonomous Trading Research Platform
+# AgentQuant: AI-Powered Autonomous Algorithmic Trading Research Platform
 
 [![Project Status: Stable](https://img.shields.io/badge/status-stable-green.svg)](https://github.com/OnePunchMonk/AgentQuant)
 
