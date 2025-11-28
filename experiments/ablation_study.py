@@ -15,7 +15,7 @@ from src.backtest.runner import run_backtest
 from src.utils.config import config
 from dotenv import load_dotenv
 
-def run_ablation_study(num_runs=20):
+def run_ablation_study(num_runs=5):
     load_dotenv()
     print("Loading data...")
     ohlcv_data = fetch_ohlcv_data()
