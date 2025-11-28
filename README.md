@@ -13,6 +13,53 @@ AgentQuant is an AI-powered research platform that automates the quantitative wo
 3.  **Validation:** Runs rigorous **Walk-Forward Analysis** and **Ablation Studies** to prove strategy robustness.
 4.  **Backtesting:** Executes vectorized backtests to verify performance.
 
+## 🏗️ System Architecture
+
+```mermaid
+graph TD
+    subgraph "User Interface"
+        UI[Streamlit Dashboard]
+        Config[config.yaml]
+    end
+
+    subgraph "Data Layer"
+        Ingest[Data Ingestion<br/>(yfinance)]
+        Features[Feature Engine<br/>(Indicators)]
+        Regime[Regime Detection<br/>(VIX/Momentum)]
+    end
+
+    subgraph "Agent Core (Gemini 2.5 Flash)"
+        Planner[Strategy Planner]
+        Context[Market Context<br/>Analysis]
+    end
+
+    subgraph "Execution Layer"
+        Strategies[Strategy Registry<br/>(Momentum, MeanRev, etc.)]
+        Backtest[Backtest Engine<br/>(VectorBT/Pandas)]
+    end
+
+    subgraph "Validation"
+        WalkForward[Walk-Forward<br/>Validation]
+        Ablation[Ablation<br/>Study]
+    end
+
+    UI --> Config
+    Config --> Ingest
+    Ingest --> Features
+    Features --> Regime
+    
+    Regime --> Context
+    Features --> Context
+    Context --> Planner
+    
+    Planner -->|Proposes Params| Strategies
+    Strategies --> Backtest
+    
+    Backtest --> UI
+    Backtest --> WalkForward
+    Backtest --> Ablation
+```
+
 ## 🧠 The "Brain" (Gemini 2.5 Flash)
 
 The agent uses a sophisticated prompt engineering framework to:
