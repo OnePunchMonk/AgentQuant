@@ -1,0 +1,9 @@
+strategy,sharpe,return,drawdown
+Buy and Hold,"Ticker
+SPY    0.896312
+dtype: float64","Ticker
+SPY    1.023956
+dtype: float64","Ticker
+SPY   -0.244964
+dtype: float64"
+Golden Cross,0.5984071818353794,0.007089904170924477,0.0
