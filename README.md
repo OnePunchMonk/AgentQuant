@@ -23,9 +23,9 @@ graph TD
     end
 
     subgraph "Data Layer"
-        Ingest[Data Ingestion<br/>(yfinance)]
-        Features[Feature Engine<br/>(Indicators)]
-        Regime[Regime Detection<br/>(VIX/Momentum)]
+        Ingest[Data Ingestion<br/>yfinance]
+        Features[Feature Engine<br/>Indicators]
+        Regime[Regime Detection<br/>VIX/Momentum]
     end
 
     subgraph "Agent Core (Gemini 2.5 Flash)"
@@ -34,8 +34,8 @@ graph TD
     end
 
     subgraph "Execution Layer"
-        Strategies[Strategy Registry<br/>(Momentum, MeanRev, etc.)]
-        Backtest[Backtest Engine<br/>(VectorBT/Pandas)]
+        Strategies[Strategy Registry<br/>Momentum, MeanRev, etc.]
+        Backtest[Backtest Engine<br/>VectorBT/Pandas]
     end
 
     subgraph "Validation"
