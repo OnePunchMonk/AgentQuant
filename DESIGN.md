@@ -29,7 +29,7 @@ flowchart TB
     ORCHESTRATOR[🤖 Agent Orchestrator<br/>LangGraph StateGraph]
     
     %% Core Agent Components
-    PLANNER[🧠 Planning Agent<br/>LangChain + Gemini Pro]
+    PLANNER[🧠 Planning Agent<br/>LangChain + Gemini 2.5 Flash]
     EXECUTOR[⚡ Execution Agent<br/>Strategy Implementation]
     ANALYZER[📊 Analysis Agent<br/>Performance Evaluation]
     
@@ -434,7 +434,7 @@ data:
   
 # Agent Configuration  
 agent:
-  model: "gemini-pro"
+  model: "gemini-2.5-flash"
   temperature: 0.1
   max_strategies: 10
   optimization_method: "bayesian"

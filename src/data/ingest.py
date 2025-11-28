@@ -83,37 +83,41 @@ def fetch_ohlcv_data(ticker=None, start_date=None, end_date=None, force_download
 
     print(f"Fetching OHLCV data for: {', '.join(tickers)}")
 
-    for ticker in tickers:
-        file_path = data_path / f"{ticker.replace('^', '')}.parquet"
+    for t in tickers:
+        file_path = data_path / f"{t.replace('^', '')}.parquet"
+        
         if not file_path.exists() or force_download:
             try:
                 # If start_date and end_date are provided, use them instead of the config period
                 if start_date and end_date:
-                    data = yf.download(ticker, start=start_date, end=end_date, auto_adjust=True)
+                    data = yf.download(t, start=start_date, end=end_date, auto_adjust=True)
                 else:
-                    data = yf.download(ticker, period=config['data']['yfinance_period'], auto_adjust=True)
+                    data = yf.download(t, period=config['data']['yfinance_period'], auto_adjust=True)
                 
                 if data.empty:
-                    print(f"Warning: No data found for {ticker}. Skipping.")
+                    print(f"Warning: No data found for {t}. Skipping.")
                     continue
                 data.to_parquet(file_path)
-                all_data[ticker] = data
+                all_data[t] = data
             except Exception as e:
-                print(f"Error downloading {ticker}: {e}")
+                print(f"Error downloading {t}: {e}")
         else:
             # Read from parquet file
-            df = pd.read_parquet(file_path)
-            
-            # Filter by date range if provided
-            if start_date or end_date:
-                if start_date:
-                    start_date_parsed = pd.to_datetime(start_date)
-                    df = df[df.index >= start_date_parsed]
-                if end_date:
-                    end_date_parsed = pd.to_datetime(end_date)
-                    df = df[df.index <= end_date_parsed]
-            
-            all_data[ticker] = df
+            try:
+                df = pd.read_parquet(file_path)
+                
+                # Filter by date range if provided
+                if start_date or end_date:
+                    if start_date:
+                        start_date_parsed = pd.to_datetime(start_date)
+                        df = df[df.index >= start_date_parsed]
+                    if end_date:
+                        end_date_parsed = pd.to_datetime(end_date)
+                        df = df[df.index <= end_date_parsed]
+                
+                all_data[t] = df
+            except Exception as e:
+                print(f"Error reading {t} from disk: {e}")
 
     # If a single ticker was requested, return just that dataframe
     if ticker is not None and ticker in all_data:

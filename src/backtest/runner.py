@@ -269,9 +269,15 @@ def run_backtest(ohlcv_data, assets, strategy_name, params, allocation_weights=N
                 close = _get_close_series(ohlcv_dict[asset])
                 close = close.dropna()
                 # Build position series from entries/exits
-                pos = pd.Series(0.0, index=close.index)
+                # Initialize with NaN to allow ffill to work correctly
+                pos = pd.Series(np.nan, index=close.index)
+                
+                # Set 1.0 for entries and 0.0 for exits
+                # We use fill_value=False for reindexing to ignore dates outside our range
                 pos[entries.reindex(close.index, fill_value=False)] = 1.0
                 pos[exits.reindex(close.index, fill_value=False)] = 0.0
+                
+                # Forward fill positions to hold trades
                 pos = pos.ffill().fillna(0.0)
 
                 daily_ret = close.pct_change().fillna(0.0)

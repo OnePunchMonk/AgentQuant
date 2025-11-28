@@ -13,16 +13,18 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 import random
 
-# LangChain dependencies commented out due to installation issues
-# When LangChain is available, uncomment these imports:
-# from langchain_google_genai import ChatGoogleGenerativeAI
-# from langgraph.graph import StateGraph, END
-# from typing_extensions import TypedDict
+# LangChain dependencies
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
+try:
+    from langchain_core.pydantic_v1 import BaseModel, Field
+except ImportError:
+    from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-
-def generate_strategy_proposals(
+def generate_random_strategies(
     regime_data: dict,
     features_df: pd.DataFrame,
     baseline_stats: pd.Series,
@@ -31,18 +33,7 @@ def generate_strategy_proposals(
     num_proposals: int = 5
 ) -> List[Dict[str, Any]]:
     """
-    Generates strategy proposals using simplified logic (fallback when LangChain unavailable).
-    
-    Args:
-        regime_data: Information about the current market regime
-        features_df: DataFrame containing market features
-        baseline_stats: Series containing baseline strategy performance
-        strategy_types: List of available strategy types
-        available_assets: List of available asset tickers
-        num_proposals: Number of strategy proposals to generate
-        
-    Returns:
-        List of strategy proposals with configurations
+    Generates strategy proposals using random logic (Baseline).
     """
     proposals = []
     
@@ -67,11 +58,12 @@ def generate_strategy_proposals(
         
         # Generate strategy parameters based on type and market regime
         if strategy_type == "momentum":
+            # Momentum strategy expects fast_window and slow_window
+            fw = random.randint(10, 40)
+            sw = random.randint(fw + 10, 100)
             params = {
-                "lookback_period": random.randint(10, 50),
-                "momentum_threshold": random.uniform(0.01, 0.05),
-                "volatility_filter": True if current_vol > 0.2 else False,
-                "rebalance_frequency": random.choice(["daily", "weekly", "monthly"])
+                "fast_window": fw,
+                "slow_window": sw
             }
         elif strategy_type == "mean_reversion":
             params = {
@@ -152,6 +144,122 @@ def generate_strategy_proposals(
         proposals.append(proposal)
     
     return proposals
+
+class StrategyParams(BaseModel):
+    fast_window: Optional[int] = Field(description="Fast moving average window (for momentum)")
+    slow_window: Optional[int] = Field(description="Slow moving average window (for momentum)")
+    lookback_window: Optional[int] = Field(description="Lookback window (for other strategies)")
+    entry_threshold: Optional[float] = Field(description="Entry threshold")
+    stop_loss: Optional[float] = Field(description="Stop loss percentage")
+    reasoning: str = Field(description="Reasoning for the chosen parameters")
+
+def generate_strategy_proposals(
+    regime_data: dict,
+    features_df: pd.DataFrame,
+    baseline_stats: pd.Series,
+    strategy_types: List[str],
+    available_assets: List[str],
+    num_proposals: int = 5
+) -> List[Dict[str, Any]]:
+    """
+    Generates strategy proposals using Gemini LLM.
+    """
+    
+    # Check for API Key
+    if not os.getenv("GOOGLE_API_KEY"):
+        logger.warning("GOOGLE_API_KEY not found. Falling back to random strategy generation.")
+        return generate_random_strategies(regime_data, features_df, baseline_stats, strategy_types, available_assets, num_proposals)
+
+    try:
+        # Try using gemini-2.5-flash as requested
+        # Disable retries to fail fast and fallback to random
+        llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2, max_retries=0)
+        
+        proposals = []
+        
+        # Prepare Context
+        if isinstance(regime_data, str):
+            regime_name = regime_data
+        else:
+            regime_name = regime_data.get('current_regime', 'Unknown')
+            
+        # Get latest technicals
+        if not features_df.empty:
+            latest_features = features_df.iloc[-1].to_dict()
+            technical_summary = ", ".join([f"{k}: {v:.2f}" for k, v in latest_features.items() if isinstance(v, (int, float))])
+        else:
+            technical_summary = "No technical data available."
+
+        parser = JsonOutputParser(pydantic_object=StrategyParams)
+
+        prompt = PromptTemplate(
+            template="""Act as a Quantitative Researcher. Based on this context, select optimal parameters for a {strategy_type} Strategy.
+            
+            Input:
+            Market Regime: {regime_name}
+            Technical Summary: {technical_summary}
+            Asset Name: {asset_name}
+            
+            Task: Return a JSON object with the optimal parameters.
+            For Momentum strategy, provide 'fast_window' and 'slow_window'.
+            For other strategies, provide 'lookback_window', 'entry_threshold', 'stop_loss'.
+            
+            {format_instructions}
+            """,
+            input_variables=["strategy_type", "regime_name", "technical_summary", "asset_name"],
+            partial_variables={"format_instructions": parser.get_format_instructions()},
+        )
+
+        chain = prompt | llm | parser
+
+        for i in range(num_proposals):
+            strategy_type = random.choice(strategy_types)
+            asset = random.choice(available_assets) # Simplified asset selection for now
+            
+            try:
+                response = chain.invoke({
+                    "strategy_type": strategy_type,
+                    "regime_name": regime_name,
+                    "technical_summary": technical_summary,
+                    "asset_name": asset
+                })
+                
+                # Map LLM output to internal params structure (this might need adjustment based on strategy type)
+                # The LLM returns generic params, we might need to map them to specific strategy params
+                
+                params = {
+                    "lookback_period": response.get("lookback_window", 20),
+                    # Map other params as needed, or just pass them through if the runner supports them
+                    # For now, we'll pass the raw response as params, plus the specific ones we asked for
+                    **response
+                }
+                
+                # Clean up params for specific strategies if needed
+                if strategy_type == "momentum":
+                     params["fast_window"] = response.get("fast_window", 20)
+                     params["slow_window"] = response.get("slow_window", 50)
+                
+                proposal = {
+                    "strategy_type": strategy_type,
+                    "asset_tickers": [asset],
+                    "params": params,
+                    "allocation_weights": {asset: 1.0},
+                    "rationale": response.get("reasoning", "Generated by AI")
+                }
+                proposals.append(proposal)
+                
+            except Exception as e:
+                logger.error(f"Error generating strategy with LLM: {e}")
+                # Fallback for this iteration
+                fallback = generate_random_strategies(regime_data, features_df, baseline_stats, [strategy_type], [asset], 1)[0]
+                proposals.append(fallback)
+
+        return proposals
+
+    except Exception as e:
+        logger.error(f"Failed to initialize LLM agent: {e}")
+        return generate_random_strategies(regime_data, features_df, baseline_stats, strategy_types, available_assets, num_proposals)
+
 
 
 def create_langchain_agent():
