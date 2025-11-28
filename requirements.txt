@@ -15,7 +15,7 @@ plotly==5.17.0
 streamlit-option-menu==0.3.13
 streamlit-ace==0.1.1
 scipy==1.12.0
-scikit-learn==1.4.1
+scikit-learn==1.5.0
 empyrical==0.5.5
 altair==5.2.0
 pyarrow==16.0.0
