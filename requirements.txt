@@ -1,7 +1,7 @@
 langgraph==0.0.69
 langchain==0.2.16
 langchain-google-genai==1.0.10
-langchain-core==0.1.27
+langchain-core==0.3.80
 pydantic==2.6.1
 backtrader==1.9.78.123
 yfinance==0.2.28
