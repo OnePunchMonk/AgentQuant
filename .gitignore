@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.vscode/
+data_store/
+figures/
+results_plots/
+docs/PAPER_DRAFT.md
+docs/EXPERIMENTAL_DETAILS.md
+experiments/*.csv
