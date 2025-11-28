@@ -44,7 +44,7 @@ def get_llm_planner():
     genai.configure(api_key=api_key)
     
     model = genai.GenerativeModel(
-        model_name='gemini-pro',
+        model_name='gemini-2.5-flash',
         tools=[backtest_tool] # Provide the tool function to the model
     )
     return model
