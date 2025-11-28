@@ -39,9 +39,10 @@ source venv/bin/activate
 
 # Step 4: Install dependencies
 pip install -r requirements.txt
+pip install langchain-google-genai  # Required for Gemini 2.5 Flash
 
 # Step 5: Verify installation
-python -c "import streamlit; import pandas; import yfinance; print('✅ Installation successful!')"
+python -c "import streamlit; import pandas; import yfinance; import langchain_google_genai; print('✅ Installation successful!')"
 ```
 
 ### Method 2: Docker Installation

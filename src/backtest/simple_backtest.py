@@ -20,6 +20,16 @@ def ensure_equity_from_returns(maybe_series: pd.Series) -> pd.Series:
         return (1 + s).cumprod()
     return s
 
+def calculate_sharpe(daily_returns: pd.Series, risk_free_rate: float = 0.0) -> float:
+    """
+    Calculate annualized Sharpe Ratio from daily returns.
+    """
+    if daily_returns.empty or daily_returns.std() == 0:
+        return 0.0
+    excess_returns = daily_returns - (risk_free_rate / 252)
+    # Annualized Sharpe
+    return (excess_returns.mean() / excess_returns.std()) * np.sqrt(252)
+
 def basic_momentum_backtest(ohlcv_df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
     """
     Simple deterministic dual-moving-average momentum backtest.
@@ -58,10 +68,9 @@ def basic_momentum_backtest(ohlcv_df: pd.DataFrame, params: Dict[str, Any]) -> D
         equity = (1 + daily_returns).cumprod()
 
     total_return = float(equity.iloc[-1] - 1.0)
-    # annualized Sharpe (assumes ~252 trading days)
-    mean_ret = strat_returns.mean() * 252
-    std_ret = strat_returns.std() * np.sqrt(252)
-    sharpe = float(mean_ret / std_ret) if std_ret and std_ret != 0 else float("nan")
+    
+    # Use the robust Sharpe calculation
+    sharpe = calculate_sharpe(strat_returns)
 
     max_dd = max_drawdown_from_equity(equity)
 

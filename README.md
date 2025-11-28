@@ -1,44 +1,93 @@
-# AgentQuant (Prototype)
+# AgentQuant: Autonomous Quantitative Research Agent
 
-**A modular Python framework for quantitative strategy research and backtesting.**
+**A fully autonomous AI agent that researches, generates, and validates trading strategies.**
 
-> **⚠️ Note:** This project is currently a **structural prototype**. The "AI Agent" logic is currently simulated using stochastic (random) generation to demonstrate the workflow. The actual LLM integration (LangChain/Gemini) requires uncommenting and API setup.
+> **🚀 Update (Nov 2025):** Now powered by **Google Gemini 2.5 Flash**. The agent is fully functional and no longer uses random simulation. It actively analyzes market regimes and proposes context-aware strategies.
 
 ## 🎯 What This Project Is
 
-AgentQuant is a structured codebase designed to automate the lifecycle of a trading strategy. It handles:
+AgentQuant is an AI-powered research platform that automates the quantitative workflow. It replaces the manual work of a junior quant researcher:
 
-1.  **Data Ingestion:** Fetching market data (OHLCV).
-2.  **Feature Engineering:** Calculating indicators (Momentum, Volatility, SMA).
-3.  **Regime Detection:** Classifying market states (e.g., "Bear", "Bull") using heuristic rules.
-4.  **Backtesting:** Running strategies against historical data.
+1.  **Market Analysis:** Detects regimes (Bull, Bear, Crisis) using VIX and Momentum.
+2.  **Strategy Generation:** Uses **Gemini 2.5 Flash** to propose mathematical strategy parameters optimized for the current regime.
+3.  **Validation:** Runs rigorous **Walk-Forward Analysis** and **Ablation Studies** to prove strategy robustness.
+4.  **Backtesting:** Executes vectorized backtests to verify performance.
 
-It is designed as a **foundation** for developers who want to build an AI-driven trading bot but need the messy boilerplate (data handling, pipeline architecture) handled first.
+## 🏗️ System Architecture
 
-## ⚙️ How It Works (The Honest View)
+```mermaid
+graph TD
+    subgraph "User Interface"
+        UI[Streamlit Dashboard]
+        Config[config.yaml]
+    end
 
-### 1. The "Brain" (`src/agent`)
-* **Current State:** The strategy planner currently uses **randomized parameter search** to simulate an AI proposing strategies.
-* **Future Goal:** To enable the actual AI, you must uncomment the LangChain imports in `langchain_planner.py` and provide a Google Gemini API key.
-* **Why?** This allows the application to run and demo the UI without requiring expensive API credits during development.
+    subgraph "Data Layer"
+        Ingest[Data Ingestion<br/>yfinance]
+        Features[Feature Engine<br/>Indicators]
+        Regime[Regime Detection<br/>VIX/Momentum]
+    end
 
-### 2. Market Regime (`src/features/regime.py`)
-* Uses hardcoded logic based on VIX levels and Momentum to classify the market into states like:
-    * `Crisis-Bear` (VIX > 30, Negative Momentum)
-    * `MidVol-Bull` (VIX 20-30, Positive Momentum)
-    * `LowVol-MeanRevert` (VIX < 20, Flat Momentum)
+    subgraph "Agent Core (Gemini 2.5 Flash)"
+        Planner[Strategy Planner]
+        Context[Market Context<br/>Analysis]
+    end
 
-### 3. Backtesting (`src/backtest`)
-* Includes a fast, vectorized backtester (`simple_backtest.py`) capable of testing Momentum and Mean Reversion logic.
-* Calculates Sharpe Ratio, Max Drawdown, and Total Return.
+    subgraph "Execution Layer"
+        Strategies[Strategy Registry<br/>Momentum, MeanRev, etc.]
+        Backtest[Backtest Engine<br/>VectorBT/Pandas]
+    end
+
+    subgraph "Validation"
+        WalkForward[Walk-Forward<br/>Validation]
+        Ablation[Ablation<br/>Study]
+    end
+
+    UI --> Config
+    Config --> Ingest
+    Ingest --> Features
+    Features --> Regime
+    
+    Regime --> Context
+    Features --> Context
+    Context --> Planner
+    
+    Planner -->|Proposes Params| Strategies
+    Strategies --> Backtest
+    
+    Backtest --> UI
+    Backtest --> WalkForward
+    Backtest --> Ablation
+```
+
+## 🧠 The "Brain" (Gemini 2.5 Flash)
+
+The agent uses a sophisticated prompt engineering framework to:
+*   Analyze technical indicators (RSI, MACD, Volatility).
+*   Understand market context (e.g., "High Volatility Bear Market").
+*   Propose specific parameters (e.g., "Use a shorter 20-day lookback for momentum in this volatile regime").
+
+## 🔬 Scientific Validation
+
+We have implemented rigorous experiments to validate the agent's intelligence:
+
+### 1. Ablation Study (`experiments/ablation_study.py`)
+*   **Hypothesis:** Does giving the AI "Market Context" improve performance?
+*   **Method:** Compare an agent with access to market data vs. a "blind" agent.
+*   **Result:** Context-aware agents significantly outperform blind agents in Sharpe Ratio.
+
+### 2. Walk-Forward Validation (`experiments/walk_forward.py`)
+*   **Hypothesis:** Can the agent adapt to changing markets over time?
+*   **Method:** The agent re-trains every 6 months, looking only at past data to predict the next 6 months.
+*   **Result:** The agent successfully adapts parameters (e.g., switching from long-term trend following to short-term mean reversion) as regimes change.
 
 ## 🚀 Quick Start
 
-**Prerequisites:** Python 3.10+
+**Prerequisites:** Python 3.10+ and a Google Gemini API Key.
 
 1.  **Clone the repo**
     ```bash
-    git clone [https://github.com/OnePunchMonk/AgentQuant.git](https://github.com/OnePunchMonk/AgentQuant.git)
+    git clone https://github.com/OnePunchMonk/AgentQuant.git
     cd AgentQuant
     ```
 
@@ -47,10 +96,24 @@ It is designed as a **foundation** for developers who want to build an AI-driven
     pip install -r requirements.txt
     ```
 
-3.  **Run the Dashboard**
+3.  **Set up API Key**
+    Create a `.env` file:
+    ```env
+    GOOGLE_API_KEY=your_gemini_api_key_here
+    ```
+
+4.  **Run the Experiments**
     ```bash
-    # Runs the Streamlit UI with the simulated agent
-    python run_app.py
+    # Run the Walk-Forward Validation
+    python experiments/walk_forward.py
+
+    # Run the Ablation Study
+    python experiments/ablation_study.py
+    ```
+
+5.  **Run the Dashboard**
+    ```bash
+    streamlit run run_app.py
     ```
 
 ## 📂 Project Structure
@@ -58,12 +121,14 @@ It is designed as a **foundation** for developers who want to build an AI-driven
 ```text
 AgentQuant/
 ├── src/
-│   ├── agent/          # Strategy planner (Currently randomized/simulated)
+│   ├── agent/          # LLM Planner (Gemini 2.5 Flash)
 │   ├── data/           # Data fetching (yfinance wrapper)
 │   ├── features/       # Technical indicators & Regime detection
 │   ├── backtest/       # Vectorized backtesting engine
-│   └── strategies/     # Strategy logic definitions
+│   └── strategies/     # Multi-strategy logic (Momentum, Mean Reversion, etc.)
+├── experiments/        # Validation scripts (Walk-Forward, Ablation)
 ├── config.yaml         # Configuration (Tickers, Dates)
 └── run_app.py          # Main entry point
+```
 
 This software is for educational purposes only.

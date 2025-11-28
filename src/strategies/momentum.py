@@ -29,8 +29,19 @@ def create_momentum_signals(close_prices, fast_window=21, slow_window=63):
     slow = close_prices.rolling(window=slow_window).mean()
     prev_fast = fast.shift(1)
     prev_slow = slow.shift(1)
+    
+    # Standard Crossover Logic
     entries = (fast > slow) & (prev_fast <= prev_slow)
     exits = (fast < slow) & (prev_fast >= prev_slow)
+    
+    # FIX: State-Based Initialization
+    # If the simulation starts and Fast is ALREADY > Slow, we should be long.
+    # We force an entry at the first valid index if the condition is met.
+    first_valid_idx = slow.first_valid_index()
+    if first_valid_idx is not None:
+        if fast.loc[first_valid_idx] > slow.loc[first_valid_idx]:
+            entries.loc[first_valid_idx] = True
+
     entries = entries.fillna(False)
     exits = exits.fillna(False)
     return entries, exits
