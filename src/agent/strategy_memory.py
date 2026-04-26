@@ -116,11 +116,22 @@ class StrategyMemory:
         if not results:
             return "No prior results for this regime."
 
-        lines = ["PRIOR RESULTS IN THIS REGIME:"]
+        lines = [\"PRIOR RESULTS IN THIS REGIME:\"]
         for r in results:
             lines.append(
-                f"  - {r.strategy_type} {r.params}: "
-                f"Sharpe={r.sharpe:.2f}, Return={r.total_return:.1%}, "
-                f"Method={r.generation_method}"
+                f\"  - {r.strategy_type} {r.params}: \"
+                f\"Sharpe={r.sharpe:.2f}, Return={r.total_return:.1%}, \"
+                f\"Method={r.generation_method}\"
             )
-        return "\n".join(lines)
+        return \"\\n\".join(lines)
+
+    def query_regime(
+        self, regime: str, strategy_type: str = \"\", limit: int = 100
+    ) -> List[PastResult]:
+        \"\"\"Query runs for a specific regime (and optionally strategy_type).\"\"\"
+        return self.recall(regime=regime, strategy_type=strategy_type, n=limit)
+
+    def query_all(self, strategy_type: str = \"\", limit: int = 200) -> List[PastResult]:
+        \"\"\"Query all runs for a strategy_type regardless of regime.\"\"\"
+        return self.recall(regime=\"\", strategy_type=strategy_type, n=limit)
+
