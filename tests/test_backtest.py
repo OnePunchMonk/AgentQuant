@@ -34,12 +34,12 @@ def test_invalid_strategy_raises():
 
 
 def test_zero_signal_flat_equity():
-    """Volatility strategy with very high threshold → near-zero signal → flat equity."""
+    """Volatility strategy with threshold below realized vol → all-zero signal → flat equity."""
     from src.backtest.metrics import PerformanceMetrics
     df = _make_df()
-    # vol_threshold so high that daily vol never exceeds it → flat equity
+    # vol_threshold=0.001 (0.1%) annualized is below any real daily vol → signal always 0
     result = run_backtest({"SPY": df}, ["SPY"], "volatility",
-                          {"window": 21, "vol_threshold": 99.0})
+                          {"window": 21, "vol_threshold": 0.001})
     assert result is not None
     eq = result["equity_curve"]
     metrics = PerformanceMetrics.from_equity(eq)
