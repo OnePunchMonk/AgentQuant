@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install core dependencies
+        run: |
+          pip install -e ".[dev]"
+
+      - name: Run linter (ruff)
+        run: |
+          ruff check src/ tests/ --output-format=github
+
+      - name: Run tests
+        env:
+          GOOGLE_API_KEY: ""
+          FRED_API_KEY: ""
+        run: |
+          pytest tests/ -v --tb=short --ignore=tests/test_backtest.py
+
+  security-check:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for secrets in .env files
+        run: |
+          if git ls-files | grep -E "^\.env$|^\.env\." | grep -v ".env.example"; then
+            echo "ERROR: .env file is tracked by git!"
+            exit 1
+          fi
+          echo "Security check passed — no .env files committed."
