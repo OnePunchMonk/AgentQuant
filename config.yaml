@@ -1,16 +1,16 @@
 # General project configuration
-project_name: "regime-adaptive-agent"
+project_name: "AgentQuant"
 log_level: "INFO"
 
 # Data sources and storage
-data_path: "data_store" # Relative path to store data files
+data_path: "data_store"
 universe:
   - "SPY"
   - "QQQ"
   - "IWM"
   - "TLT"
   - "GLD"
-reference_asset: "SPY" # Asset used for primary feature calculation
+reference_asset: "SPY"
 vix_ticker: "^VIX"
 
 data:
@@ -19,10 +19,23 @@ data:
     DGS10: "10-Year Treasury Constant Maturity Rate"
     T10Y2Y: "10-Year Treasury Constant Maturity Minus 2-Year Treasury Constant Maturity"
 
+cache:
+  ttl_hours: 24
+  enabled: true
+
+# LLM configuration
+llm:
+  provider: "gemini"          # gemini | openai | ollama
+  model: "gemini-2.5-flash"
+  temperature: 0.2
+  max_retries: 2
+
 # Agent configuration
 agent:
-  run_interval: "daily" # 'daily', 'hourly'
-  mode: "suggest_only"  # 'suggest_only' or 'auto_execute'
+  max_iterations: 3           # max reflect-retry loops
+  min_acceptable_sharpe: 0.3  # below this, agent retries
+  run_interval: "daily"
+  mode: "suggest_only"
   risk:
     max_drawdown: 0.20
     max_position_size: 0.50
@@ -32,10 +45,53 @@ backtest:
   initial_cash: 100000
   slippage: 0.0005
   commission: 0.0001
+  market_impact_bps: 5.0      # square-root market impact basis points
+  min_warmup_periods: 252
 
-# Strategy definitions
+# Strategy definitions with parameter grids
 strategies:
   - name: "momentum"
     default_params:
       fast_window: 21
       slow_window: 63
+    grid:
+      - { fast_window: 5, slow_window: 20 }
+      - { fast_window: 10, slow_window: 30 }
+      - { fast_window: 10, slow_window: 50 }
+      - { fast_window: 15, slow_window: 80 }
+      - { fast_window: 17, slow_window: 91 }
+      - { fast_window: 20, slow_window: 60 }
+      - { fast_window: 20, slow_window: 100 }
+      - { fast_window: 50, slow_window: 150 }
+      - { fast_window: 50, slow_window: 200 }
+      - { fast_window: 63, slow_window: 252 }
+
+  - name: "mean_reversion"
+    default_params:
+      window: 20
+      num_std: 2.0
+    grid:
+      - { window: 10, num_std: 1.5 }
+      - { window: 15, num_std: 2.0 }
+      - { window: 20, num_std: 2.0 }
+      - { window: 20, num_std: 2.5 }
+      - { window: 30, num_std: 3.0 }
+
+  - name: "volatility"
+    default_params:
+      window: 21
+      vol_threshold: 0.2
+
+  - name: "trend_following"
+    default_params:
+      short_window: 10
+      medium_window: 50
+      long_window: 100
+
+  - name: "breakout"
+    default_params:
+      window: 20
+      threshold_pct: 0.02
+
+# Results storage
+results_db_path: "experiments/results.db"

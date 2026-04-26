@@ -1,5 +1,34 @@
+# Environment & secrets
 .env
+*.ini
+
+# Python
 __pycache__/
 *.pyc
-.DS_Store
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Data (download on demand)
+data_store/*.parquet
+
+# Generated outputs
+figures/
+experiments/*.csv
+experiments/*.db
+
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Legacy config (standardized to config.yaml)
+config.json
+new_env.ini
