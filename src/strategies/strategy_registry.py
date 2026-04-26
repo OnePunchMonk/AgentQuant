@@ -1,32 +1,28 @@
-from src.strategies.momentum import create_momentum_signals
-from src.strategies.multi_strategy import (
-    calculate_momentum_signal,
-    calculate_mean_reversion_signal,
-    calculate_volatility_signal,
-    calculate_trend_following_signal,
-    calculate_breakout_signal,
-    calculate_regime_based_signal,
-    run_multi_asset_strategy
+"""Strategy Registry — maps strategy names to Strategy instances."""
+
+from src.strategies.base import (
+    BreakoutStrategy,
+    MeanReversionStrategy,
+    MomentumStrategy,
+    RegimeBasedStrategy,
+    TrendFollowingStrategy,
+    VolatilityStrategy,
 )
 
-strategy_registry = {
-    # Legacy momentum strategy
-    "momentum": create_momentum_signals,
-    
-    # New multi-asset strategy implementations
-    "momentum_multi": calculate_momentum_signal,
-    "mean_reversion": calculate_mean_reversion_signal,
-    "volatility": calculate_volatility_signal,
-    "trend_following": calculate_trend_following_signal,
-    "breakout": calculate_breakout_signal,
-    "regime_based": calculate_regime_based_signal,
-    
-    # Multi-asset runner
-    "run_multi_asset": run_multi_asset_strategy
+STRATEGY_REGISTRY = {
+    "momentum": MomentumStrategy(),
+    "mean_reversion": MeanReversionStrategy(),
+    "volatility": VolatilityStrategy(),
+    "trend_following": TrendFollowingStrategy(),
+    "breakout": BreakoutStrategy(),
+    "regime_based": RegimeBasedStrategy(),
 }
 
-def get_strategy_function(name):
-    """Retrieves a strategy function from the registry."""
-    if name not in strategy_registry:
-        raise ValueError(f"Strategy '{name}' not found in registry. Available: {list(strategy_registry.keys())}")
-    return strategy_registry[name]
+
+def get_strategy_function(name: str):
+    """Backward-compat shim: returns strategy.generate_signal bound method."""
+    if name not in STRATEGY_REGISTRY:
+        raise ValueError(
+            f"Strategy '{name}' not found in registry. Available: {list(STRATEGY_REGISTRY.keys())}"
+        )
+    return STRATEGY_REGISTRY[name].generate_signal
