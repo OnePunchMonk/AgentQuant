@@ -1,695 +1,337 @@
-# AgentQuant: Autonomous Trading Research Platform — Technical Design Document
+# AgentQuant — Technical Design Document (v2.0)
 
-## 🎯 Executive Summary
-
-**AgentQuant** is an AI-powered autonomous trading research platform that leverages Large Language Models (LLMs) to generate, optimize, and backtest quantitative trading strategies. The system combines modern Python data science tools with advanced AI reasoning to create a comprehensive research environment for algorithmic trading.
-
-### Key Features
-- **🤖 AI-Powered Strategy Generation**: Uses Google Gemini Pro for intelligent strategy creation
-- **⚡ Vectorized Backtesting**: High-performance backtesting with vectorbt integration
-- **📊 Advanced Visualization**: Interactive charts and comprehensive performance analytics
-- **🔍 Market Regime Detection**: Automatic classification of market environments
-- **🎛️ Parameter Optimization**: Automated hyperparameter tuning for strategies
-- **🖥️ Web Interface**: User-friendly Streamlit dashboard for interaction
+> **Last updated:** April 2026. This document reflects the post-refactor architecture.
+> The original design document is preserved in `docs/EXPERIMENTAL_DETAILS.md`.
 
 ---
 
-## 🏗️ System Architecture
+## Executive Summary
 
-### High-Level Architecture Diagram
+AgentQuant is a regime-adaptive quantitative research platform. The v2.0 refactor transforms it from a stateless parameter-tuning script into a defensible research tool with:
 
-```mermaid
-flowchart TB
-    %% Input Layer
-    UI[🖥️ Streamlit Dashboard] 
-    CONFIG[📋 config.yaml<br/>Stock Universe Definition]
-    ENV[🔐 .env<br/>API Keys]
-    
-    %% Agent Orchestration Layer
-    ORCHESTRATOR[🤖 Agent Orchestrator<br/>LangGraph StateGraph]
-    
-    %% Core Agent Components
-    PLANNER[🧠 Planning Agent<br/>LangChain + Gemini 2.5 Flash]
-    EXECUTOR[⚡ Execution Agent<br/>Strategy Implementation]
-    ANALYZER[📊 Analysis Agent<br/>Performance Evaluation]
-    
-    %% Data Processing Pipeline
-    INGEST[📥 Data Ingestion<br/>yfinance + FRED APIs]
-    FEATURES[⚙️ Feature Engineering<br/>Technical Indicators]
-    REGIME[🔍 Market Regime Detection<br/>Bull/Bear/Sideways Classification]
-    
-    %% Strategy Development Pipeline
-    REGISTRY[📚 Strategy Registry<br/>Momentum, Mean Reversion, etc.]
-    GENERATOR[🎯 Strategy Generator<br/>LLM-Powered Creation]
-    OPTIMIZER[🎛️ Parameter Optimizer<br/>Hyperparameter Tuning]
-    
-    %% Backtesting & Analysis
-    BACKTEST[⚡ Vectorized Backtesting<br/>vectorbt Engine]
-    METRICS[📈 Performance Metrics<br/>Risk-Adjusted Returns]
-    RISK[🛡️ Risk Management<br/>Drawdown & Position Limits]
-    
-    %% Output Generation
-    VISUALIZER[📊 Visualization Engine<br/>matplotlib + plotly]
-    FORMATTER[📋 Report Generator<br/>Mathematical Formulas]
-    STORAGE[💾 Results Storage<br/>Timestamped Archives]
-    
-    %% Data Flow Connections
-    UI --> ORCHESTRATOR
-    CONFIG --> ORCHESTRATOR
-    ENV --> ORCHESTRATOR
-    
-    ORCHESTRATOR --> PLANNER
-    ORCHESTRATOR --> EXECUTOR  
-    ORCHESTRATOR --> ANALYZER
-    
-    PLANNER --> INGEST
-    INGEST --> FEATURES
-    FEATURES --> REGIME
-    REGIME --> GENERATOR
-    
-    GENERATOR --> REGISTRY
-    GENERATOR --> OPTIMIZER
-    OPTIMIZER --> BACKTEST
-    
-    EXECUTOR --> BACKTEST
-    BACKTEST --> METRICS
-    METRICS --> RISK
-    
-    ANALYZER --> VISUALIZER
-    ANALYZER --> FORMATTER
-    VISUALIZER --> STORAGE
-    FORMATTER --> STORAGE
-    
-    STORAGE --> UI
-    
-    %% Styling
-    classDef agent fill:#ffd700,stroke:#333,stroke-width:3px
-    classDef data fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef strategy fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
-    classDef output fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    classDef input fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    
-    class UI,CONFIG,ENV input
-    class ORCHESTRATOR,PLANNER,EXECUTOR,ANALYZER agent
-    class INGEST,FEATURES,REGIME,BACKTEST,METRICS data
-    class REGISTRY,GENERATOR,OPTIMIZER,RISK strategy
-    class VISUALIZER,FORMATTER,STORAGE output
+- A **real ReAct agent loop** (analyze → hypothesize → backtest → reflect → store)
+- **Scientific comparability**: LLM proposals are constrained to a canonical `ParameterGrid`, making LLM vs. grid-search comparisons valid
+- **Statistical regime detection**: VIX percentile (relative) instead of hardcoded absolute thresholds
+- **Look-ahead bias guards** enforced at the backtest engine level
+- **Cross-session memory** via SQLite so the agent can learn across runs
+- **42 unit tests** and a GitHub Actions CI gate
+
+---
+
+## 1. Agent Orchestration
+
+### 1.1 Agent Loop (`src/agent/agent_graph.py`)
+
+The agent runs a bounded ReAct loop with 5 explicit typed nodes:
+
 ```
-
-### Component Architecture
-
-The system follows a modular, agent-based architecture with clear separation of concerns:
-
-1. **Input Layer**: User interface, configuration, and environment setup
-2. **Agent Layer**: AI-powered reasoning and decision making
-3. **Data Layer**: Market data processing and feature engineering
-4. **Strategy Layer**: Strategy development and optimization
-5. **Output Layer**: Visualization, reporting, and storage
-
----
-
-## 🤖 Agent Reasoning Framework
-
-### LangGraph Agent Workflow
-
-```mermaid
-stateDiagram-v2
-    [*] --> InitializeAgent
-    InitializeAgent --> AnalyzeMarket
-    AnalyzeMarket --> DetectRegime
-    DetectRegime --> GenerateStrategies
-    GenerateStrategies --> OptimizeParameters
-    OptimizeParameters --> ExecuteBacktests
-    ExecuteBacktests --> EvaluatePerformance
-    EvaluatePerformance --> GenerateReports
-    GenerateReports --> [*]
-    
-    AnalyzeMarket --> DataInsufficient : Missing Data
-    DataInsufficient --> FetchAdditionalData
-    FetchAdditionalData --> AnalyzeMarket
-    
-    GenerateStrategies --> StrategyValidation
-    StrategyValidation --> RiskAssessment
-    RiskAssessment --> GenerateStrategies : High Risk
-    RiskAssessment --> OptimizeParameters : Acceptable Risk
+analyze ──► hypothesize ──► backtest ──► reflect
+              ▲                              │
+              └────────── (retry ≤ N) ◄──────┘
+                                             │
+                                           store
 ```
-
-### Agent Decision Tree
-
-1. **Initialization Phase**
-   - Parse configuration from `config.yaml`
-   - Validate API keys and data sources
-   - Initialize strategy registry and backtesting engine
-
-2. **Market Analysis Phase** 
-   - Fetch OHLCV data for specified universe
-   - Compute technical indicators (50+ features)
-   - Classify market regime (Bull/Bear/Sideways)
-   - Analyze correlation structure between assets
-
-3. **Strategy Generation Phase**
-   - Query LLM for strategy ideas based on market regime
-   - Generate mathematical formulations
-   - Create parameter ranges for optimization
-   - Validate strategy logic and constraints
-
-4. **Optimization Phase**
-   - Grid search or Bayesian optimization for parameters
-   - Walk-forward analysis for robustness
-   - Risk-adjusted performance evaluation
-   - Multi-objective optimization (return vs risk)
-
-5. **Execution Phase**
-   - Vectorized backtesting using historical data
-   - Transaction cost modeling
-   - Position sizing and risk management
-   - Performance attribution analysis
-
-6. **Reporting Phase**
-   - Generate interactive visualizations
-   - Create mathematical strategy documentation
-   - Export results in multiple formats
-   - Archive with timestamps for tracking
-
----
-
-## 📊 Data Architecture
-
-### Data Sources & Integration
-
-```mermaid
-erDiagram
-    MARKET_DATA {
-        string ticker
-        datetime timestamp
-        float open
-        float high
-        float low
-        float close
-        int volume
-        float adj_close
-    }
-    
-    MACRO_DATA {
-        string series_id
-        datetime date
-        float value
-        string description
-    }
-    
-    FEATURES {
-        string ticker
-        datetime timestamp
-        float rsi_14
-        float macd_signal
-        float bb_upper
-        float bb_lower
-        float volatility_20
-        float momentum_21
-    }
-    
-    REGIMES {
-        datetime timestamp
-        string regime_type
-        float confidence
-        string description
-    }
-    
-    STRATEGIES {
-        string strategy_id
-        string strategy_type
-        json parameters
-        json allocation_weights
-        string mathematical_formula
-        datetime created_at
-    }
-    
-    BACKTEST_RESULTS {
-        string strategy_id
-        datetime timestamp
-        float portfolio_value
-        float daily_return
-        float drawdown
-        float sharpe_ratio
-        float max_drawdown
-    }
-    
-    MARKET_DATA ||--o{ FEATURES : generates
-    FEATURES ||--o{ REGIMES : creates
-    REGIMES ||--o{ STRATEGIES : influences
-    STRATEGIES ||--o{ BACKTEST_RESULTS : produces
-```
-
-### Data Processing Pipeline
-
-1. **Ingestion Layer**
-   - **yfinance API**: Real-time market data for stocks, ETFs, indices
-   - **FRED API**: Macroeconomic indicators (interest rates, inflation, etc.)
-   - **Data Validation**: Completeness checks, outlier detection
-   - **Storage Format**: Parquet files for efficient compression and querying
-
-2. **Feature Engineering Layer**
-   - **Technical Indicators**: RSI, MACD, Bollinger Bands, Moving Averages
-   - **Volatility Metrics**: Realized volatility, GARCH models
-   - **Momentum Factors**: Price momentum, earnings momentum
-   - **Cross-Asset Features**: Correlations, spreads, ratios
-
-3. **Regime Detection Layer**
-   - **Volatility Regime**: VIX-based classification
-   - **Trend Regime**: Moving average relationships
-   - **Correlation Regime**: Cross-asset correlation analysis
-   - **Macro Regime**: Economic indicators integration
-
----
-
-## 🎯 Strategy Development Framework
-
-### Strategy Registry Architecture
-
-```mermaid
-classDiagram
-    class StrategyBase {
-        +string name
-        +dict parameters
-        +generate_signals(data)
-        +calculate_positions(signals)
-        +get_formula()
-    }
-    
-    class MomentumStrategy {
-        +int fast_window
-        +int slow_window
-        +generate_signals(data)
-    }
-    
-    class MeanReversionStrategy {
-        +int bollinger_window
-        +float num_std
-        +generate_signals(data)
-    }
-    
-    class VolatilityStrategy {
-        +int vol_window
-        +float target_vol
-        +generate_signals(data)
-    }
-    
-    class MultiAssetStrategy {
-        +dict asset_weights
-        +string rebalance_freq
-        +generate_signals(data)
-    }
-    
-    StrategyBase <|-- MomentumStrategy
-    StrategyBase <|-- MeanReversionStrategy
-    StrategyBase <|-- VolatilityStrategy
-    StrategyBase <|-- MultiAssetStrategy
-```
-
-### Available Strategy Types
-
-1. **Momentum Strategies**
-   - Moving average crossovers
-   - Price momentum signals
-   - Trend following algorithms
-
-2. **Mean Reversion Strategies**
-   - Bollinger Bands
-   - RSI-based signals
-   - Statistical arbitrage
-
-3. **Volatility Strategies**
-   - Volatility targeting
-   - VIX-based signals
-   - Risk parity approaches
-
-4. **Regime-Based Strategies**
-   - Market regime adaptive allocation
-   - Dynamic strategy switching
-   - Conditional strategy execution
-
----
-
-## ⚡ Backtesting Engine
-
-### Vectorized Backtesting with vectorbt
 
 ```python
-# Example backtesting workflow
-import vectorbt as vbt
+class AgentState(TypedDict, total=False):
+    ohlcv_data: Dict[str, pd.DataFrame]
+    features_df: pd.DataFrame
+    context: Optional[RegimeContext]
+    proposals: List[Proposal]
+    results: List[Dict]
+    best_result: Optional[Dict]
+    iteration: int
+    max_iterations: int
+    strategy_type: str
+    asset: str
+    should_continue: bool
+    memory_context: str
+    run_log: List[str]
+```
 
-# Load data and signals
-data = vbt.YFData.download(["SPY", "QQQ"], period="2y")
-signals = generate_strategy_signals(data.get("Close"))
+**Nodes:**
 
-# Execute portfolio simulation
-portfolio = vbt.Portfolio.from_signals(
-    data.get("Close"),
-    entries=signals["entries"],
-    exits=signals["exits"],
-    init_cash=100000,
-    fees=0.001
+| Node | Purpose |
+|---|---|
+| `analyze` | Build `RegimeContext` from features + regime detector |
+| `hypothesize` | Generate proposals via `ProposalGenerator` |
+| `backtest` | Run tournament: all proposals → rank by Sharpe |
+| `reflect` | Accept if Sharpe ≥ `min_acceptable_sharpe`, else retry |
+| `store` | Persist best result to `StrategyMemory` SQLite |
+
+The loop retries at most `config.agent.max_iterations` times (default 3). On max iteration, accepts the best result found regardless of threshold.
+
+### 1.2 LLM Abstraction (`src/agent/base_planner.py`)
+
+```python
+class BasePlanner(ABC):
+    def generate_proposals(self, prompt: str, n: int) -> List[Dict]: ...
+    def is_available(self) -> bool: ...
+```
+
+Concrete implementations:
+- `GeminiPlanner` — `google-generativeai` SDK
+- `LangChainPlanner` — `langchain-google-genai`
+- `OpenAIPlanner` — `openai`
+- `FallbackPlanner` — returns `[]`, triggering grid search
+
+`create_planner()` factory checks credential availability in order and returns the first viable planner.
+
+### 1.3 Proposal Generator (`src/agent/proposal_generator.py`)
+
+Single entrypoint replacing 4 legacy planner files:
+
+**Fallback chain:**
+1. LLM (via `BasePlanner`) → validates JSON response
+2. Grid search with regime-aware prior (shorter windows in Crisis/Bear, longer in LowVol/Bull)
+3. Random sample from canonical grid
+
+All proposals are constrained to the `ParameterGrid` — the LLM **selects from** the grid, not generates free-form integers. This makes A/B comparison against grid-search baselines statistically valid.
+
+```python
+@dataclass
+class Proposal:
+    params: Dict[str, Any]
+    confidence: float          # LLM self-assessed
+    regime_characteristic_used: str
+    reasoning: str
+    generation_method: str     # "llm" | "grid_search" | "random"
+```
+
+### 1.4 Strategy Memory (`src/agent/strategy_memory.py`)
+
+SQLite-backed memory providing cross-session learning:
+
+```sql
+CREATE TABLE strategy_runs (
+    run_id TEXT PRIMARY KEY,
+    timestamp TEXT,
+    regime TEXT,
+    strategy_type TEXT,
+    params TEXT,      -- JSON
+    sharpe REAL,
+    total_return REAL,
+    max_drawdown REAL,
+    confidence REAL,
+    generation_method TEXT,
+    reasoning TEXT
 )
-
-# Calculate performance metrics
-stats = portfolio.stats()
 ```
 
-### Performance Metrics Calculation
-
-The system calculates comprehensive performance metrics:
-
-- **Return Metrics**: Total return, annual return, excess return
-- **Risk Metrics**: Volatility, Sharpe ratio, Sortino ratio, maximum drawdown
-- **Risk-Adjusted Metrics**: Information ratio, Calmar ratio, Sterling ratio
-- **Trade Analysis**: Win rate, average trade, profit factor
-- **Portfolio Metrics**: Beta, alpha, correlation, tracking error
+`StrategyMemory.to_prompt_context(regime)` injects past results into the next LLM prompt so the agent can avoid repeating failures.
 
 ---
 
-## 📈 Visualization & Reporting
+## 2. Regime Detection (`src/features/regime.py`)
 
-### Interactive Dashboard Components
+### 2.1 VIX Percentile Classification
 
-1. **Portfolio Performance Charts**
-   - Equity curve visualization
-   - Drawdown analysis
-   - Rolling performance metrics
+**Old approach (removed):**
+```python
+if vix > 30: return "High Volatility"
+if vix > 20: return "Medium Volatility"
+```
+This breaks when VIX structurally shifts (e.g., post-2020 baseline is higher).
 
-2. **Strategy Composition**
-   - Asset allocation pie charts
-   - Weight evolution over time
-   - Rebalancing frequency analysis
+**New approach:**
+```python
+vix_percentile = percentileofscore(vix_history_252d, current_vix)
+# Crisis: >85th | HighVol: >65th | MidVol: >35th | LowVol: <35th
+```
 
-3. **Risk Analytics**
-   - VaR and CVaR analysis
-   - Risk-return scatter plots
-   - Correlation heatmaps
+### 2.2 Regime Label Format
 
-### Report Generation Pipeline
+`{VolRegime}-{TrendRegime}`: e.g., `LowVol-Bull`, `Crisis-Bear`, `HighVol-Neutral`
+
+**Vol regimes:** based on VIX percentile vs. trailing 252d
+**Trend regimes:** based on 63-day momentum: `Bull` (>5%), `Bear` (<-5%), `Neutral`
+
+### 2.3 Confidence Score
 
 ```python
-# Example report generation
-def generate_strategy_report(strategy_results):
-    """
-    Generate comprehensive strategy report with:
-    - Mathematical formulation
-    - Performance summary
-    - Risk analysis
-    - Visual charts
-    """
-    report = {
-        'strategy_formula': get_strategy_formula(strategy_results),
-        'performance_metrics': calculate_metrics(strategy_results),
-        'risk_analysis': analyze_risk(strategy_results),
-        'charts': create_visualizations(strategy_results)
-    }
-    return report
+vol_confidence = 2 * abs(vix_percentile / 100 - 0.5)   # distance from 50th pct
+mom_confidence = min(abs(momentum_63d) / 0.10, 1.0)     # normalized abs momentum
+regime_confidence = (vol_confidence + mom_confidence) / 2
+```
+
+### 2.4 Optional HMM (install `hmmlearn`)
+
+If `hmmlearn` is installed, `_try_hmm_regime()` fits a 3-state Gaussian HMM on (returns, realized_vol) features and labels states by volatility rank. Used informatively; rule-based label takes precedence.
+
+---
+
+## 3. Feature Engineering (`src/features/engine.py`)
+
+Features computed (all single-level string columns after flattening):
+
+| Feature | Details |
+|---|---|
+| `volatility_5d/21d/63d` | Realized vol, annualized (√252 scale) |
+| `momentum_21d/63d/252d` | `close.pct_change(N)` |
+| `sma_21/50/63/200` | Simple moving averages |
+| `price_vs_sma63/200` | `(close/sma) - 1` |
+| `rsi_14` | Wilder's smoothing RSI, bounded [0, 100] |
+| `macd/macd_signal/macd_hist` | EMA(12,26,9) standard |
+| `bb_upper/lower/width/pct_b` | Bollinger Bands (20, 2σ) |
+| `atr_14` | Average True Range, Wilder's EWM |
+| `drawdown_from_peak` | Rolling 252d drawdown |
+| `vix_close` | Forward-filled from `^VIX` data |
+
+**Stationarity check:** ADF test (via `statsmodels`) on `momentum_63d`, `volatility_21d`, `rsi_14` — logs a warning if non-stationary. Informational; does not block execution.
+
+### 3.1 Lookback Guard (`src/features/lookback_guard.py`)
+
+```python
+@enforce_lookback(min_periods=200)
+def compute_sma200(close): ...
+
+enforcer = WarmupEnforcer(min_warmup_periods=252)
+enforcer.check(df, eval_start)  # raises InsufficientWarmupError if violated
 ```
 
 ---
 
-## 🔧 Configuration Management
+## 4. Backtest Engine (`src/backtest/`)
 
-### config.yaml Structure
+### 4.1 Runner (`src/backtest/runner.py`)
 
-```yaml
-# Project Configuration
-project_name: "AgentQuant"
-log_level: "INFO"
+All strategies produce `pd.Series` of `{-1, 0, 1}` via the `Strategy` ABC. The runner applies:
 
-# Universe Definition
-universe:
-  - "SPY"   # S&P 500 ETF
-  - "QQQ"   # NASDAQ 100 ETF
-  - "IWM"   # Russell 2000 ETF
-  - "TLT"   # 20+ Year Treasury ETF
-  - "GLD"   # Gold ETF
-
-# Data Configuration
-data:
-  yfinance_period: "5y"
-  update_frequency: "daily"
-  cache_enabled: true
-  
-# Agent Configuration  
-agent:
-  model: "gemini-2.5-flash"
-  temperature: 0.1
-  max_strategies: 10
-  optimization_method: "bayesian"
-  
-# Backtesting Parameters
-backtest:
-  initial_cash: 100000
-  commission: 0.001  # 0.1%
-  slippage: 0.0005   # 0.05%
-  start_date: "2020-01-01"
-  
-# Risk Management
-risk:
-  max_position_size: 0.5
-  max_drawdown: 0.2
-  stop_loss: 0.05
-  
-# Output Configuration
-output:
-  save_results: true
-  figure_format: "png"
-  report_format: "html"
+```
+strategy_return[t] = daily_return[t] × signal[t-1] − transaction_cost[t]
 ```
 
-### Environment Variables (.env)
+**Transaction costs:**
+```
+cost = commission + slippage + (market_impact_bps / 10000)
+```
+Applied proportionally to `signal.diff().abs()` (trade turnover).
 
-```bash
-# Required: Google Gemini API Key for AI strategy generation
-GOOGLE_API_KEY=your_gemini_api_key_here
+**Warmup enforcement:** If `eval_start` is provided, the runner calls `WarmupEnforcer.check()` using `slow_window` (or `window`) as `min_window`. Raises `InsufficientWarmupError` rather than silently using stale indicators.
 
-# Optional: FRED API Key for macroeconomic data
-FRED_API_KEY=your_fred_api_key_here
+### 4.2 PerformanceMetrics (`src/backtest/metrics.py`)
 
-# Optional: Logging configuration
-LOG_LEVEL=INFO
+Single source of truth — replaces all inline Sharpe calculations:
+
+```python
+PerformanceMetrics.sharpe(returns)              # annualized
+PerformanceMetrics.max_drawdown(equity)         # positive fraction
+PerformanceMetrics.calmar(equity)               # ann_ret / max_dd
+PerformanceMetrics.sortino(returns)             # downside deviation
+PerformanceMetrics.bootstrap_sharpe(returns, n=200, pct=5)  # p5 bootstrap
+PerformanceMetrics.from_equity(equity)          # → dict of all metrics
 ```
 
 ---
 
-## 🚀 Deployment Architecture
+## 5. Strategy Class Hierarchy (`src/strategies/`)
 
-### Local Development Setup
+All strategies implement `Strategy(ABC)` with:
+- `generate_signal(df, params) → pd.Series` — values in `{-1, 0, 1}`
+- `param_schema → Dict` — JSON-serializable schema for validation
 
-```bash
-# Environment Setup
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+| Class | Strategy |
+|---|---|
+| `MomentumStrategy` | Dual MA crossover |
+| `MeanReversionStrategy` | Bollinger Band reversion |
+| `VolatilityStrategy` | Go long when realized vol < threshold |
+| `TrendFollowingStrategy` | Triple MA (short > mid > long) |
+| `BreakoutStrategy` | Price breaks rolling high/low + threshold |
+| `RegimeBasedStrategy` | Dispatches to momentum/mean-reversion/vol by regime |
 
-# Configuration
-cp .env.example .env
-# Edit .env with your API keys
+Registry: `STRATEGY_REGISTRY: Dict[str, Strategy]`
 
-# Run Application
-streamlit run src/app/streamlit_app.py
+Legacy code using `calculate_momentum_signal()` or `run_multi_asset_strategy()` from `multi_strategy.py` continues to work via thin shims.
+
+---
+
+## 6. Configuration (`src/utils/config.py`)
+
+Pydantic v2 `AppConfig` with field-level validation:
+
+```python
+cfg = load_config()              # returns AppConfig
+cfg["reference_asset"]           # dict-like access (backward compat)
+cfg.backtest.min_warmup_periods  # typed attribute access
+cfg.get_strategy("momentum")     # → StrategyConfig with param grid
 ```
 
-### Production Deployment Options
-
-1. **Docker Containerization**
-   ```dockerfile
-   FROM python:3.11-slim
-   WORKDIR /app
-   COPY requirements.txt .
-   RUN pip install -r requirements.txt
-   COPY . .
-   EXPOSE 8501
-   CMD ["streamlit", "run", "src/app/streamlit_app.py"]
-   ```
-
-2. **Cloud Deployment**
-   - **Streamlit Cloud**: Direct GitHub integration
-   - **Heroku**: Container-based deployment
-   - **AWS/GCP/Azure**: VM or container services
+Invalid config (bad log level, unknown LLM provider) raises `ValidationError` at import time — fails fast instead of silently using defaults.
 
 ---
 
-## 📂 Repository Structure
+## 7. Data Layer (`src/data/ingest.py`)
 
-```
-AgentQuant/
-├── 📋 config.yaml              # Configuration file
-├── 📊 requirements.txt         # Python dependencies
-├── 🔐 .env.example            # Environment template
-├── 📚 README.md               # Project documentation
-├── 🏗️ DESIGN.md              # Technical design (this file)
-├── 📁 src/                    # Source code
-│   ├── 🤖 agent/             # AI Agent Components
-│   │   ├── simple_planner.py      # Basic strategy planner
-│   │   └── langchain_planner.py   # Advanced LLM integration
-│   ├── 💾 data/              # Data Pipeline
-│   │   ├── ingest.py             # Market data fetching
-│   │   └── schemas.py            # Data structures
-│   ├── ⚙️ features/          # Feature Engineering
-│   │   ├── engine.py             # Technical indicators
-│   │   └── regime.py             # Market regime detection
-│   ├── 📈 strategies/        # Strategy Library
-│   │   ├── momentum.py           # Momentum strategies
-│   │   ├── multi_strategy.py     # Advanced strategies
-│   │   └── strategy_registry.py  # Strategy catalog
-│   ├── ⚡ backtest/          # Backtesting Engine
-│   │   ├── runner.py             # Backtest execution
-│   │   ├── metrics.py            # Performance analytics
-│   │   └── simple_backtest.py    # Basic backtesting
-│   ├── 📊 visualization/     # Charts & Reports
-│   │   └── plots.py              # Interactive visualizations
-│   ├── 🖥️ app/              # User Interface
-│   │   └── streamlit_app.py      # Web dashboard
-│   └── 🔧 utils/             # Utilities
-│       ├── config.py             # Configuration management
-│       ├── logging.py            # System logging
-│       └── backtest_utils.py     # Backtesting utilities
-├── 💾 data_store/            # Market data cache
-├── 📊 figures/               # Generated charts
-├── 📁 docs/                  # Documentation
-└── 🧪 tests/                # Test suite
+**TTL-based cache invalidation:**
+```python
+def _is_cache_valid(file_path) -> bool:
+    age_hours = (now - file_mtime).total_seconds() / 3600
+    return age_hours <= config.cache.ttl_hours   # default 24h
 ```
 
----
-
-## 🔄 Data Flow Architecture
-
-### End-to-End Process Flow
-
-1. **User Input** → Streamlit UI collects user preferences
-2. **Configuration** → System loads config.yaml and .env settings
-3. **Data Ingestion** → Fetch market data via yfinance/FRED APIs
-4. **Feature Engineering** → Compute technical indicators and features
-5. **Regime Detection** → Classify current market environment
-6. **Strategy Generation** → AI agent creates strategy proposals
-7. **Parameter Optimization** → Fine-tune strategy parameters
-8. **Backtesting** → Execute vectorized performance simulation
-9. **Risk Analysis** → Calculate comprehensive metrics
-10. **Visualization** → Generate interactive charts and reports
-11. **Storage** → Archive results with timestamps
-
-### API Integration Points
-
-- **yfinance**: Primary market data source
-- **FRED**: Macroeconomic indicators
-- **Google Gemini**: LLM-powered strategy generation
-- **vectorbt**: High-performance backtesting
-- **matplotlib/plotly**: Visualization rendering
+All `print()` calls replaced with `logger`. FRED fetch is fully optional and gracefully skipped if `FRED_API_KEY` is absent.
 
 ---
 
-## 🛡️ Risk Management Framework
+## 8. Experiment Tracking (`experiments/results_store.py`)
 
-### Risk Controls
-
-1. **Position Sizing Limits**
-   - Maximum position size per asset
-   - Portfolio concentration limits
-   - Leverage constraints
-
-2. **Drawdown Controls**
-   - Maximum drawdown thresholds
-   - Stop-loss mechanisms
-   - Dynamic position sizing
-
-3. **Correlation Management**
-   - Cross-asset correlation monitoring
-   - Diversification requirements
-   - Sector exposure limits
-
-### Performance Attribution
-
-The system provides detailed performance attribution analysis:
-
-- **Asset Contribution**: Individual asset performance impact
-- **Strategy Attribution**: Strategy-specific return sources
-- **Risk Factor Analysis**: Exposure to market factors
-- **Transaction Cost Analysis**: Impact of fees and slippage
-
----
-
-## 🎓 Mathematical Foundations
-
-### Strategy Formulation
-
-Each strategy is mathematically formulated with clear entry and exit rules:
-
-```
-Example: Momentum Crossover Strategy
-
-Entry Signal: MA_fast(t) > MA_slow(t) AND MA_fast(t-1) <= MA_slow(t-1)
-Exit Signal: MA_fast(t) < MA_slow(t) AND MA_fast(t-1) >= MA_slow(t-1)
-
-Where:
-- MA_fast(t) = Simple Moving Average over N_fast periods
-- MA_slow(t) = Simple Moving Average over N_slow periods
-- t = current time period
+```python
+run = ResultsStore.make_run("walk_forward", windows=[...], notes="v2 run")
+store = ResultsStore()
+run_id = store.save_run(run)
 ```
 
-### Performance Metrics
-
-Key mathematical formulations used in the system:
-
-**Sharpe Ratio**: `(Portfolio Return - Risk-Free Rate) / Portfolio Volatility`
-
-**Maximum Drawdown**: `min(Portfolio Value / Peak Portfolio Value - 1)`
-
-**Sortino Ratio**: `(Portfolio Return - Risk-Free Rate) / Downside Deviation`
+Each record stores: `run_id`, `timestamp`, `git_hash`, `config_snapshot` (JSON), `windows` (JSON), `aggregate_metrics`.
 
 ---
 
-## 🚧 Future Enhancements
+## 9. Testing (`tests/`)
 
-### Planned Features
+| File | Coverage |
+|---|---|
+| `test_config.py` | Pydantic validation, invalid log level, invalid provider, dict access |
+| `test_metrics.py` | Sharpe (flat, known), drawdown (zero, known), from_equity keys, zero-signal flat equity |
+| `test_regime.py` | LowVol-Bull, Crisis-Bear, confidence score, no-VIX fallback, VIX spike |
+| `test_features.py` | Expected columns, RSI bounds, momentum accuracy, no-VIX, no-NaN |
+| `test_strategies.py` | All 6 strategies registered, valid signals, backward compat, invalid strategy error |
+| `test_backtest.py` | Returns result dict, invalid strategy raises, zero-signal flat equity, metrics keys |
+| `test_proposal_generator.py` | Fallback without API key, valid params, correct count |
 
-1. **Advanced AI Integration**
-   - GPT-4 integration for enhanced reasoning
-   - Multi-agent orchestration with specialized roles
-   - Reinforcement learning for strategy optimization
-
-2. **Extended Asset Coverage**
-   - Cryptocurrency markets
-   - International equities
-   - Options and derivatives
-
-3. **Real-Time Execution**
-   - Live trading integration
-   - Order management system
-   - Risk monitoring dashboard
-
-4. **Advanced Analytics**
-   - Factor model analysis
-   - Alternative data integration
-   - Regime prediction models
-
-### Technical Debt & Improvements
-
-- Code optimization for larger universes
-- Enhanced error handling and logging
-- Comprehensive test suite expansion
-- Performance profiling and optimization
+Run: `pytest tests/ -v`
 
 ---
 
-## 📞 Support & Contributing
+## 10. CI/CD (`.github/workflows/ci.yml`)
 
-### Getting Help
-
-- **Documentation**: Comprehensive guides in `/docs`
-- **Examples**: Sample configurations and strategies
-- **Issues**: GitHub issue tracker for bug reports
-
-### Contributing Guidelines
-
-1. Fork the repository
-2. Create feature branch
-3. Add comprehensive tests
-4. Update documentation
-5. Submit pull request
+- **Matrix:** Python 3.10, 3.11, 3.12
+- **Steps:** `pip install -e ".[dev]"` → `ruff check` → `pytest tests/`
+- **Security:** Checks that `.env` is not tracked by git
 
 ---
 
-*This document serves as the comprehensive technical design reference for AgentQuant. For implementation details, see the source code and accompanying documentation.*
+## 11. Removed / Replaced Components
+
+| What was removed | Why | Replacement |
+|---|---|---|
+| `src/agent/planner.py` | Hardcoded Gemini, one-shot | `base_planner.py` + `proposal_generator.py` |
+| `src/agent/langchain_planner.py` | Inconsistent, no fallback | `proposal_generator.py` |
+| `src/agent/langchain_planner_new.py` | Dead code | Deleted |
+| `src/agent/simple_planner.py` | Disconnected | Merged into fallback chain |
+| `config.json` | Duplicate config | Deleted; `config.yaml` is canonical |
+| `new_env.ini` | Duplicate env template | Deleted; `.env.example` is canonical |
+| `quick_test.py` | Root-level test script | Moved to `tests/` |
+| `requirements.txt` | Duplicate dep list | `pyproject.toml` with optional groups |
+
+---
+
+## 12. Future Work
+
+- **Walk-forward with `ResultsStore`**: Update `experiments/walk_forward.py` to write each window to `ResultsStore` with git hash for full reproducibility
+- **Mann-Whitney U ablation**: Compare LLM-generated proposals vs. grid-search baselines using statistical test over ≥30 windows
+- **Bootstrap Sharpe tournament**: Rank proposals by `bootstrap_sharpe_p5` instead of raw Sharpe to penalize lucky parameter sets
+- **Alpaca data source**: Add as optional alternative to yfinance (avoids adjusted-price inconsistencies)
+- **LangGraph native StateGraph**: Replace the pure-Python loop in `agent_graph.py` with `langgraph.StateGraph` for conditional edge visualization and checkpointing
+
+---
+
+*For usage details, see `README.md`. For experiment results, see `docs/EXPERIMENTAL_DETAILS.md`.*
