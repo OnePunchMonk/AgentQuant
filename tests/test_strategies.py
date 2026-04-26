@@ -47,8 +47,9 @@ def test_get_strategy_function_backward_compat():
 
 def test_invalid_strategy_raises():
     from src.backtest.runner import run_backtest
+    from src.exceptions import StrategyNotFoundError
     df = _make_df(n=300)
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(StrategyNotFoundError, match="not found"):
         run_backtest({"SPY": df}, ["SPY"], "nonexistent_strategy", {})
 
 

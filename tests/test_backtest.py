@@ -28,8 +28,9 @@ def test_momentum_backtest_returns_result():
 
 
 def test_invalid_strategy_raises():
+    from src.exceptions import StrategyNotFoundError
     df = _make_df()
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(StrategyNotFoundError, match="not found"):
         run_backtest({"SPY": df}, ["SPY"], "nonexistent_strat", {})
 
 

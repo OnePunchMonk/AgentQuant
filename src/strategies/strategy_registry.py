@@ -1,5 +1,6 @@
 """Strategy Registry — maps strategy names to Strategy instances."""
 
+from src.exceptions import StrategyNotFoundError
 from src.strategies.base import (
     BreakoutStrategy,
     MeanReversionStrategy,
@@ -22,7 +23,5 @@ STRATEGY_REGISTRY = {
 def get_strategy_function(name: str):
     """Backward-compat shim: returns strategy.generate_signal bound method."""
     if name not in STRATEGY_REGISTRY:
-        raise ValueError(
-            f"Strategy '{name}' not found in registry. Available: {list(STRATEGY_REGISTRY.keys())}"
-        )
+        raise StrategyNotFoundError(name, list(STRATEGY_REGISTRY.keys()))
     return STRATEGY_REGISTRY[name].generate_signal

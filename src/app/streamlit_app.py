@@ -2,547 +2,408 @@
 AgentQuant: AI-Powered Autonomous Trading Research Platform
 ===========================================================
 
-This module provides the main Streamlit web interface for the AgentQuant platform.
-Users can generate AI-powered trading strategies, run backtests, and visualize results
-through an intuitive dashboard.
+Streamlit dashboard for strategy generation, backtesting, and analysis.
 
-Key Features:
-- AI strategy generation using LLM agents
-- Interactive backtesting with real market data
-- Comprehensive performance visualization
-- Risk analysis and portfolio optimization
-- Export capabilities for further analysis
-
-Dependencies:
-- Streamlit: Web application framework
-- pandas/numpy: Data manipulation and numerical computing
-- matplotlib: Visualization and charting
-- Custom modules: Agent planning, backtesting, data ingestion
-
-Author: AgentQuant Development Team
-License: MIT
+Fixes applied vs. original:
+  - st.experimental_rerun() → st.rerun() (#23)
+  - Progress bar during generation (#24)
+  - Comparative metrics table across all strategies (#25)
+  - @st.cache_data for data fetch and feature computation (#26)
+  - Prominent regime banner in the header (#27)
+  - Grid-based parameter optimization replacing pure random search (#20)
+  - Import from new unified modules (proposal_generator, strategy_registry)
 """
 
+import logging
 import os
-import streamlit as st
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
-import json
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
-# Internal module imports for core functionality
-from src.agent.simple_planner import generate_strategy_proposals
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import streamlit as st
+
+from src.agent.context_builder import build_context
+from src.agent.parameter_grid import ParameterGrid
+from src.agent.proposal_generator import ProposalGenerator
+from src.backtest.metrics import PerformanceMetrics
 from src.backtest.runner import run_backtest
 from src.data.ingest import fetch_ohlcv_data
 from src.features.engine import compute_features
-from src.features.regime import detect_regime
+from src.features.regime import detect_regime, detect_regime_full
+from src.strategies.strategy_registry import STRATEGY_REGISTRY
 from src.utils.config import config
-from src.visualization.plots import (
-    plot_portfolio_performance,
-    plot_portfolio_composition,
-    create_combined_plot,
-    plot_strategy_formula,
-    create_strategy_dashboard,
-    get_timestamp_folder
-)
+from src.utils.logging import setup_logging
 
+setup_logging(config.log_level)
+logger = logging.getLogger(__name__)
 
-# Configure Streamlit page settings for optimal user experience
 st.set_page_config(
-    page_title="AgentQuant: AI Trading Research Platform",
+    page_title="AgentQuant — AI Trading Research",
     page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-
-def load_available_assets() -> List[str]:
-    """
-    Load available assets from the data store directory.
-    
-    Scans the data_store directory for parquet files and extracts asset symbols.
-    This allows the UI to dynamically populate available assets without hardcoding.
-    
-    Returns:
-        List[str]: List of available asset symbols (e.g., ['SPY', 'QQQ', 'TLT'])
-        
-    Note:
-        Returns empty list if data_store directory doesn't exist or contains no parquet files.
-    """
-    data_dir = os.path.join(os.getcwd(), "data_store")
-    assets = []
-    
-    if os.path.exists(data_dir):
-        for file in os.listdir(data_dir):
-            if file.endswith(".parquet"):
-                # Extract symbol by removing .parquet extension
-                assets.append(file.split(".")[0])
-    
-    return assets
+# ─── Custom CSS ────────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+  .regime-banner {
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+  .regime-bull   { background: #d4edda; color: #155724; }
+  .regime-bear   { background: #f8d7da; color: #721c24; }
+  .regime-crisis { background: #f8d7da; color: #721c24; border: 2px solid #721c24; }
+  .regime-neutral{ background: #fff3cd; color: #856404; }
+  .metric-card   { background: #f8f9fa; border-radius: 8px; padding: 0.8rem; margin: 0.3rem; }
+</style>
+""", unsafe_allow_html=True)
 
 
-def load_available_strategies() -> List[str]:
-    """
-    Load the list of available strategy types supported by the platform.
-    
-    This function returns the strategy types that are implemented in the
-    multi_strategy module and can be executed by the backtesting engine.
-    
-    Returns:
-        List[str]: List of strategy names available for selection
-        
-    Strategy Types:
-        - momentum: Moving average crossover and trend following
-        - mean_reversion: Bollinger Bands and RSI-based signals  
-        - volatility: Volatility targeting and VIX-based strategies
-        - trend_following: Directional trend capture strategies
-        - breakout: Range breakout and momentum strategies
-        - regime_based: Market regime adaptive allocation
-    """
-    return [
-        "momentum",
-        "mean_reversion",
-        "volatility",
-        "trend_following",
-        "breakout",
-        "regime_based"
-    ]
+# ─── Cached helpers ────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=3600, show_spinner="Fetching market data…")
+def _fetch_data_cached(assets: tuple, start: str, end: str) -> Dict[str, pd.DataFrame]:
+    """Cache market data for 1 hour to avoid re-downloading on every rerun."""
+    all_data: Dict[str, pd.DataFrame] = {}
+    for ticker in assets:
+        result = fetch_ohlcv_data(ticker, start, end)
+        if ticker in result:
+            all_data[ticker] = result[ticker]
+    return all_data
 
 
-def optimize_strategy_parameters(strategy_info, data, num_trials=50):
-    """
-    Perform hyperparameter optimization for a strategy.
-    
-    Args:
-        strategy_info: Dictionary with strategy information
-        data: DataFrame with market data
-        num_trials: Number of optimization trials
-        
-    Returns:
-        Dictionary with optimized parameters
-    """
-    strategy_type = strategy_info["strategy_type"]
-    assets = strategy_info["asset_tickers"]
-    params = strategy_info["params"].copy()
-    
-    # Define parameter search spaces based on strategy type
-    param_spaces = {}
-    
-    if strategy_type == "momentum":
-        param_spaces = {
-            "fast_window": {"min": 5, "max": 30},
-            "slow_window": {"min": 30, "max": 100}
-        }
-    elif strategy_type == "mean_reversion":
-        param_spaces = {
-            "window": {"min": 10, "max": 60},
-            "num_std": {"min": 1.0, "max": 3.0, "step": 0.2}
-        }
-    elif strategy_type == "volatility":
-        param_spaces = {
-            "window": {"min": 10, "max": 60},
-            "vol_threshold": {"min": 0.01, "max": 0.05, "step": 0.005}
-        }
-    
-    # Create trials with different parameter combinations
-    best_sharpe = -np.inf
-    best_params = params.copy()
-    results = []
-    
-    for _ in range(num_trials):
-        trial_params = params.copy()
-        
-        # Generate random parameters within the search space
-        for param, space in param_spaces.items():
-            if param in trial_params:
-                if isinstance(trial_params[param], int):
-                    trial_params[param] = np.random.randint(space["min"], space["max"])
-                else:
-                    step = space.get("step", 0.1)
-                    trial_params[param] = np.random.choice(
-                        np.arange(space["min"], space["max"] + step, step)
-                    )
-        
-        # Run backtest with the trial parameters
-        trial_info = strategy_info.copy()
-        trial_info["params"] = trial_params
-        
-        try:
-            backtest_result = run_backtest(
-                data,
-                trial_info["asset_tickers"],
-                trial_info["strategy_type"],
-                trial_info["params"],
-                trial_info.get("allocation_weights")
-            )
-            
-            sharpe = backtest_result.get("metrics", {}).get("Sharpe Ratio", -np.inf)
-            
-            # Store result
-            result = {
-                "params": trial_params,
-                "sharpe": sharpe
-            }
-            results.append(result)
-            
-            # Update best parameters if better Sharpe ratio
-            if sharpe > best_sharpe:
-                best_sharpe = sharpe
-                best_params = trial_params.copy()
-        
-        except Exception as e:
-            st.error(f"Error during optimization trial: {str(e)}")
-            continue
-    
-    # Return the optimized parameters
-    return {
-        "optimized_params": best_params,
-        "trials": results,
-        "best_sharpe": best_sharpe
-    }
+@st.cache_data(ttl=3600, show_spinner="Computing features…")
+def _compute_features_cached(
+    data_json: str,   # JSON-serialized key list (for cache key stability)
+    ref_asset: str,
+    vix_ticker: str,
+) -> pd.DataFrame:
+    """Cache feature computation (expensive for large date ranges)."""
+    import json
+    keys = json.loads(data_json)
+    # Reconstruct from session state
+    data = {k: st.session_state._data_cache[k] for k in keys if k in st.session_state._data_cache}
+    return compute_features(data, ref_asset, vix_ticker)
 
 
-def main():
-    # Add sidebar
-    st.sidebar.title("AgentQuant Dashboard")
-    
-    # Load available assets and strategies
-    available_assets = load_available_assets()
-    available_strategies = load_available_strategies()
-    
-    # Sidebar inputs
-    st.sidebar.header("Backtest Settings")
-    
-    # Date range selection
+def _regime_badge(regime_label: str) -> str:
+    label_l = regime_label.lower()
+    if "crisis" in label_l:
+        cls = "regime-crisis"
+    elif "bear" in label_l:
+        cls = "regime-bear"
+    elif "bull" in label_l:
+        cls = "regime-bull"
+    else:
+        cls = "regime-neutral"
+    return f'<div class="regime-banner {cls}">📊 Market Regime: <b>{regime_label}</b></div>'
+
+
+# ─── Sidebar ───────────────────────────────────────────────────────────────────
+
+def render_sidebar() -> Dict[str, Any]:
+    st.sidebar.title("⚙️ AgentQuant")
+    st.sidebar.markdown("---")
+
+    available_assets = [f.stem for f in (
+        __import__("pathlib").Path(config.data_path).glob("*.parquet")
+    ) if not f.stem.startswith("FRED_")] or config.universe
+
+    st.sidebar.header("Date Range")
     today = datetime.now()
-    default_end_date = today - timedelta(days=1)
-    default_start_date = default_end_date - timedelta(days=365*3)  # 3 years
-    
-    start_date = st.sidebar.date_input(
-        "Start Date",
-        value=default_start_date,
-        max_value=default_end_date
-    )
-    
-    end_date = st.sidebar.date_input(
-        "End Date",
-        value=default_end_date,
-        max_value=today
-    )
-    
-    # Asset selection
+    end_default = today - timedelta(days=1)
+    start_default = end_default - timedelta(days=365 * 3)
+
+    start_date = st.sidebar.date_input("Start Date", value=start_default, max_value=end_default)
+    end_date = st.sidebar.date_input("End Date", value=end_default, max_value=today)
+
+    st.sidebar.header("Assets")
     selected_assets = st.sidebar.multiselect(
         "Select Assets",
         options=available_assets,
-        default=available_assets[:4] if len(available_assets) >= 4 else available_assets
+        default=available_assets[:4] if len(available_assets) >= 4 else available_assets,
     )
-    
-    # Strategy generation options
-    st.sidebar.header("Strategy Generation")
-    
-    num_strategies = st.sidebar.slider(
-        "Number of Strategies to Generate",
-        min_value=1,
-        max_value=10,
-        value=5
+
+    st.sidebar.header("Strategy")
+    strategy_type = st.sidebar.selectbox(
+        "Strategy Type",
+        options=list(STRATEGY_REGISTRY.keys()),
+        index=0,
     )
-    
-    # AI Agent settings
-    run_agent = st.sidebar.button("Generate Strategies with AI Agent")
-    
-    # Main content area
-    st.title("AgentQuant: AI-Powered Backtesting Platform")
-    
-    # Initialize session state for storing generated strategies
-    if "strategies" not in st.session_state:
-        st.session_state.strategies = []
-    
-    if "backtest_results" not in st.session_state:
-        st.session_state.backtest_results = {}
-    
-    if "current_timestamp" not in st.session_state:
-        st.session_state.current_timestamp = None
-    
-    # Run the AI agent if requested
-    if run_agent:
-        if not selected_assets:
+    n_proposals = st.sidebar.slider("Proposals to Generate", 1, 10, 5)
+
+    st.sidebar.markdown("---")
+    run_btn = st.sidebar.button("🚀 Run Agent", use_container_width=True)
+
+    return {
+        "start_date": start_date,
+        "end_date": end_date,
+        "selected_assets": selected_assets,
+        "strategy_type": strategy_type,
+        "n_proposals": n_proposals,
+        "run_agent": run_btn,
+    }
+
+
+# ─── Main ──────────────────────────────────────────────────────────────────────
+
+def main():
+    st.title("🤖 AgentQuant: AI Trading Research Platform")
+
+    # Session state init
+    for key, default in [
+        ("strategies", []),
+        ("backtest_results", {}),
+        ("regime_label", ""),
+        ("regime_signals", None),
+        ("_data_cache", {}),
+    ]:
+        if key not in st.session_state:
+            st.session_state[key] = default
+
+    opts = render_sidebar()
+
+    # ── Regime banner (always show if we have a regime) ──────────────────────
+    if st.session_state.regime_label:
+        st.markdown(_regime_badge(st.session_state.regime_label), unsafe_allow_html=True)
+        if st.session_state.regime_signals:
+            sig = st.session_state.regime_signals
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("VIX Level", f"{sig.vix_level:.1f}")
+            c2.metric("VIX Percentile (1Y)", f"{sig.vix_percentile_252d:.0f}th pct")
+            c3.metric("3M Momentum", f"{sig.momentum_63d * 100:.1f}%")
+            c4.metric("Regime Confidence", f"{sig.regime_confidence:.0%}")
+
+    # ── Agent run ─────────────────────────────────────────────────────────────
+    if opts["run_agent"]:
+        if not opts["selected_assets"]:
             st.error("Please select at least one asset.")
             return
-        
-        # Show spinner during processing
-        with st.spinner("Generating strategies with AI agent..."):
-            try:
-                # Fetch data (ensure SPY is included for reference calculations)
-                data = {}
-                assets_to_fetch = list(set(selected_assets + ['SPY']))  # Include SPY if not already selected
-                for asset in assets_to_fetch:
-                    data[asset] = fetch_ohlcv_data(asset, start_date, end_date)
-                
-                # Compute features using all data and SPY as reference
-                features_df = compute_features(data, ref_asset_ticker='SPY')
-                
-                # Detect market regime
-                regime = detect_regime(features_df)
-                
-                # Run a baseline momentum strategy for comparison
-                baseline_params = {"fast_window": 21, "slow_window": 63}
-                baseline_result = run_backtest(
-                    data,
-                    [selected_assets[0]],
-                    "momentum",
-                    baseline_params
-                )
-                # Make robust to different return types (dict/Series/None)
-                if isinstance(baseline_result, dict):
-                    baseline_stats = pd.Series(baseline_result.get("metrics", {}))
-                elif isinstance(baseline_result, pd.Series):
-                    baseline_stats = baseline_result
-                else:
-                    baseline_stats = pd.Series({})
-                
-                # Normalize regime to a dict payload for downstream compatibility
-                if isinstance(regime, str):
-                    if 'HighVol' in regime or 'Crisis' in regime:
-                        est_vol = 0.25
-                    elif 'MidVol' in regime:
-                        est_vol = 0.18
-                    else:
-                        est_vol = 0.12
-                    regime_payload = {
-                        'name': regime,
-                        'current_regime': regime,
-                        'current_volatility': est_vol
-                    }
-                elif isinstance(regime, dict):
-                    regime_payload = regime
-                else:
-                    regime_payload = {'name': str(regime)}
 
-                # Generate strategies with the AI agent
-                proposals = generate_strategy_proposals(
-                    regime_data=regime_payload,
-                    features_df=features_df,
-                    baseline_stats=baseline_stats,
-                    strategy_types=available_strategies,
-                    available_assets=selected_assets,
-                    num_proposals=num_strategies
+        assets_tuple = tuple(sorted(set(opts["selected_assets"] + [config.reference_asset])))
+        start_str = opts["start_date"].strftime("%Y-%m-%d")
+        end_str = opts["end_date"].strftime("%Y-%m-%d")
+
+        progress = st.progress(0, text="Starting…")
+
+        try:
+            # Step 1: Fetch data
+            progress.progress(10, text="📥 Fetching market data…")
+            data = _fetch_data_cached(assets_tuple, start_str, end_str)
+            st.session_state._data_cache = data
+
+            if config.reference_asset not in data:
+                st.error(f"Reference asset {config.reference_asset} data not available.")
+                return
+
+            # Step 2: Compute features
+            progress.progress(25, text="⚙️ Computing features…")
+            features_df = compute_features(data, config.reference_asset, config.vix_ticker)
+
+            # Step 3: Detect regime
+            progress.progress(35, text="🔍 Detecting market regime…")
+            signals = detect_regime_full(features_df)
+            context = build_context(features_df)
+            context.regime_label = signals.regime_label
+            st.session_state.regime_label = signals.regime_label
+            st.session_state.regime_signals = signals
+
+            # Refresh regime banner immediately
+            st.markdown(_regime_badge(signals.regime_label), unsafe_allow_html=True)
+
+            # Step 4: Generate proposals
+            progress.progress(50, text="🧠 Generating strategy proposals…")
+            generator = ProposalGenerator()
+            proposals = generator.generate(
+                context=context,
+                n_proposals=opts["n_proposals"],
+                strategy_type=opts["strategy_type"],
+            )
+
+            # Step 5: Backtest each proposal
+            backtest_results = {}
+            for i, proposal in enumerate(proposals):
+                pct = 55 + int(40 * (i + 1) / len(proposals))
+                progress.progress(
+                    pct,
+                    text=f"⚡ Backtesting proposal {i + 1}/{len(proposals)}: {proposal.params}…",
                 )
-                
-                # Store the generated strategies
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                st.session_state.current_timestamp = timestamp
-                st.session_state.strategies = proposals
-                
-                # Create folder for saving results
-                results_folder = get_timestamp_folder()
-                
-                # Run backtest for each strategy
-                backtest_results = {}
-                for i, strategy in enumerate(proposals):
-                    try:
-                        # Sanitize strategy params: rename threshold->threshold_pct, remove stray window keys
-                        params = strategy.get("params", {}).copy()
-                        if 'threshold' in params and 'threshold_pct' not in params:
-                            params['threshold_pct'] = params.pop('threshold')
-                        if strategy.get("strategy_type") in ['trend_following', 'regime_based'] and 'window' in params:
-                            params.pop('window')
-                        result = run_backtest(
-                            data,
-                            strategy["asset_tickers"],
-                            strategy["strategy_type"],
-                            params,
-                            strategy.get("allocation_weights")
-                        )
-                        
-                        # Store the result if backtest succeeded
-                        strategy_key = f"Strategy {i+1}: {strategy['strategy_type']}"
-                        if result is not None:
-                            backtest_results[strategy_key] = {
-                                "strategy_info": strategy,
-                                "result": result,
-                                "equity_curve": result.get("equity_curve"),
-                                "weights": result.get("weights"),
-                                "metrics": result.get("metrics")
-                            }
-                            
-                            # Create dashboard plots
-                            try:
-                                # Get benchmark data safely
-                                benchmark_data = None
-                                try:
-                                    if selected_assets[0] in data:
-                                        benchmark_df = data[selected_assets[0]]
-                                        if 'Close' in benchmark_df.columns:
-                                            benchmark_data = benchmark_df["Close"]
-                                        elif 'close' in benchmark_df.columns:
-                                            benchmark_data = benchmark_df["close"]
-                                        elif 'Adj Close' in benchmark_df.columns:
-                                            benchmark_data = benchmark_df["Adj Close"]
-                                except Exception:
-                                    benchmark_data = None
-                                
-                                create_strategy_dashboard(
-                                    equity_curve=result.get("equity_curve"),
-                                    weights_df=result.get("weights"),
-                                    strategy_info=strategy,
-                                    benchmark=benchmark_data,
-                                    save_path=results_folder
-                                )
-                            except Exception as plot_error:
-                                st.warning(f"Failed to create plots for strategy {i+1}: {plot_error}")
-                        else:
-                            st.error(f"Backtest failed for strategy {i+1}: {strategy['strategy_type']}")
-                        
-                    except Exception as e:
-                        st.error(f"Error running backtest for strategy {i+1}: {str(e)}")
-                
-                # Store the backtest results
-                st.session_state.backtest_results = backtest_results
-                
-                st.success(f"Generated {len(proposals)} strategies and saved results to {results_folder}")
-            
-            except Exception as e:
-                st.error(f"Error generating strategies: {str(e)}")
-    
-    # Display the generated strategies and results
-    if st.session_state.strategies:
-        st.header("Generated Trading Strategies")
-        
-        # Create tabs for the strategies
-        strategy_tabs = st.tabs([f"Strategy {i+1}: {s['strategy_type']}" for i, s in enumerate(st.session_state.strategies)])
-        
-        for i, (tab, strategy) in enumerate(zip(strategy_tabs, st.session_state.strategies)):
-            strategy_key = f"Strategy {i+1}: {strategy['strategy_type']}"
-            
+                try:
+                    result = run_backtest(
+                        data,
+                        list(opts["selected_assets"]),
+                        opts["strategy_type"],
+                        proposal.params,
+                    )
+                    if result:
+                        key = f"Proposal {i + 1}"
+                        backtest_results[key] = {
+                            "proposal": proposal,
+                            "result": result,
+                        }
+                except Exception as e:
+                    logger.warning("Backtest failed for proposal %d: %s", i + 1, e)
+
+            st.session_state.strategies = proposals
+            st.session_state.backtest_results = backtest_results
+
+            progress.progress(100, text="✅ Done!")
+            st.success(
+                f"Generated {len(proposals)} proposals, {len(backtest_results)} backtested successfully."
+            )
+
+        except Exception as e:
+            logger.exception("Agent run failed: %s", e)
+            st.error(f"Agent run failed: {e}")
+        finally:
+            progress.empty()
+
+    # ── Results display ───────────────────────────────────────────────────────
+    if st.session_state.backtest_results:
+        results = st.session_state.backtest_results
+
+        # #25: Comparative table — most important quant view
+        st.subheader("📊 Strategy Comparison")
+        rows = []
+        for key, data in results.items():
+            m = data["result"]["metrics"]
+            p = data["proposal"]
+            rows.append({
+                "Strategy": key,
+                "Type": st.session_state.strategies[int(key.split()[-1]) - 1].generation_method
+                        if st.session_state.strategies else "",
+                "Params": str(p.params),
+                "Sharpe": round(m.get("sharpe_ratio", 0), 3),
+                "Return": f"{m.get('total_return', 0) * 100:.1f}%",
+                "Max DD": f"{m.get('max_drawdown', 0) * 100:.1f}%",
+                "Calmar": round(m.get("calmar", 0), 3),
+                "Trades": m.get("num_trades", 0),
+                "Method": data["proposal"].generation_method,
+            })
+        if rows:
+            df_cmp = pd.DataFrame(rows).set_index("Strategy")
+            # Highlight best Sharpe
+            best_sharpe_idx = df_cmp["Sharpe"].astype(float).idxmax()
+            st.dataframe(
+                df_cmp.style.highlight_max(subset=["Sharpe"], color="#d4edda")
+                            .highlight_min(subset=["Max DD"], color="#d4edda"),
+                use_container_width=True,
+            )
+
+        # Individual strategy tabs
+        st.subheader("📈 Individual Strategy Details")
+        keys = list(results.keys())
+        tabs = st.tabs(keys)
+        for tab, key in zip(tabs, keys):
+            data = results[key]
+            proposal = data["proposal"]
+            result = data["result"]
+            metrics = result["metrics"]
+            equity = result["equity_curve"]
+
             with tab:
-                # Display strategy details
-                st.subheader(f"{strategy['strategy_type'].title()} Strategy")
-                st.write(f"**Rationale**: {strategy['rationale']}")
-                
-                # Display parameters
-                st.write("**Parameters:**")
-                for param, value in strategy['params'].items():
-                    st.write(f"- {param}: {value}")
-                
-                # Display asset allocation
-                st.write("**Asset Allocation:**")
-                if strategy.get('allocation_weights'):
-                    allocation_df = pd.DataFrame([strategy['allocation_weights']])
-                    st.dataframe(allocation_df)
-                else:
-                    st.write("Equal weighting across assets")
-                
-                # Display backtest results if available
-                if strategy_key in st.session_state.backtest_results and st.session_state.backtest_results[strategy_key]["result"] is not None:
-                    result_data = st.session_state.backtest_results[strategy_key]
-                    
-                    # Display metrics
-                    st.subheader("Performance Metrics")
-                    metrics_df = pd.DataFrame([result_data["metrics"]])
-                    st.dataframe(metrics_df)
-                    
-                    # Create columns for the plots
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        # Plot equity curve
-                        st.subheader("Portfolio Performance")
-                        fig = plot_portfolio_performance(
-                            result_data["equity_curve"],
-                            benchmark=None  # We could add a benchmark here
-                        )
-                        st.pyplot(fig)
-                        plt.close(fig)
-                    
-                    with col2:
-                        # Plot allocation weights
-                        st.subheader("Asset Allocation")
-                        weights_data = result_data["weights"]
-                        if isinstance(weights_data, dict):
-                            # Convert static weights dict to DataFrame for display
-                            weights_df = pd.DataFrame([weights_data])
-                            st.dataframe(weights_df)
-                            # Also create a simple pie chart
-                            fig, ax = plt.subplots(figsize=(8, 6))
-                            assets = list(weights_data.keys())
-                            weights = list(weights_data.values())
-                            ax.pie(weights, labels=assets, autopct='%1.1f%%')
-                            ax.set_title("Asset Allocation")
-                            st.pyplot(fig)
-                            plt.close(fig)
-                        elif isinstance(weights_data, pd.DataFrame):
-                            fig = plot_portfolio_composition(weights_data)
-                            st.pyplot(fig)
-                            plt.close(fig)
-                        else:
-                            st.write("No allocation data available")
-                    
-                    # Plot strategy formula
-                    st.subheader("Strategy Formula")
-                    fig = plot_strategy_formula(strategy)
+                col_l, col_r = st.columns([2, 1])
+
+                with col_l:
+                    # Equity curve
+                    fig, ax = plt.subplots(figsize=(9, 4))
+                    ax.plot(equity.index, equity.values, linewidth=1.5, color="#1f77b4")
+                    ax.fill_between(equity.index, equity.values,
+                                    equity.min(), alpha=0.08, color="#1f77b4")
+                    ax.set_title(f"{key} — Equity Curve")
+                    ax.set_ylabel("Portfolio Value ($)")
+                    ax.grid(True, alpha=0.3)
                     st.pyplot(fig)
                     plt.close(fig)
-                    
-                    # Add hyperparameter optimization option
-                    st.subheader("Hyperparameter Optimization")
-                    if st.button("Optimize Parameters", key=f"optimize_{i}"):
-                        with st.spinner("Optimizing parameters..."):
-                            try:
-                                # Get the data for optimization (ensure SPY is included for reference)
-                                data = {}
-                                assets_to_fetch = list(set(strategy["asset_tickers"] + ['SPY']))
-                                for asset in assets_to_fetch:
-                                    data[asset] = fetch_ohlcv_data(asset, start_date, end_date)
-                                
-                                # Run optimization
-                                opt_result = optimize_strategy_parameters(
-                                    strategy,
-                                    data,
-                                    num_trials=30
-                                )
-                                
-                                # Display optimization results
-                                st.success("Optimization complete!")
-                                
-                                # Show optimized parameters
-                                st.write("**Optimized Parameters:**")
-                                for param, value in opt_result["optimized_params"].items():
-                                    st.write(f"- {param}: {value}")
-                                
-                                st.write(f"**Best Sharpe Ratio:** {opt_result['best_sharpe']:.4f}")
-                                
-                                # Option to apply optimized parameters
-                                if st.button("Apply Optimized Parameters", key=f"apply_opt_{i}"):
-                                    # Update strategy with optimized parameters
-                                    strategy["params"] = opt_result["optimized_params"]
-                                    
-                                    # Re-run backtest with optimized parameters
-                                    result = run_backtest(
-                                        data,
-                                        strategy["asset_tickers"],
-                                        strategy["strategy_type"],
-                                        strategy["params"],
-                                        strategy.get("allocation_weights")
-                                    )
-                                    
-                                    # Update stored results
-                                    st.session_state.backtest_results[strategy_key]["result"] = result
-                                    st.session_state.backtest_results[strategy_key]["equity_curve"] = result.get("equity_curve")
-                                    st.session_state.backtest_results[strategy_key]["weights"] = result.get("weights")
-                                    st.session_state.backtest_results[strategy_key]["metrics"] = result.get("metrics")
-                                    
-                                    # Rerun the app to show updated results
-                                    st.experimental_rerun()
-                            
-                            except Exception as e:
-                                st.error(f"Error during optimization: {str(e)}")
-                else:
-                    st.warning("No backtest results available for this strategy.")
-    
+
+                with col_r:
+                    st.markdown("**Parameters**")
+                    for k, v in proposal.params.items():
+                        st.write(f"- `{k}`: {v}")
+
+                    st.markdown("**Performance**")
+                    st.metric("Sharpe Ratio", f"{metrics.get('sharpe_ratio', 0):.3f}")
+                    st.metric("Total Return", f"{metrics.get('total_return', 0) * 100:.1f}%")
+                    st.metric("Max Drawdown", f"{metrics.get('max_drawdown', 0) * 100:.1f}%")
+                    st.metric("Calmar Ratio", f"{metrics.get('calmar', 0):.3f}")
+
+                    st.markdown("**Generation**")
+                    st.caption(f"Method: `{proposal.generation_method}`")
+                    if proposal.reasoning:
+                        st.caption(f"Reasoning: {proposal.reasoning}")
+
+                # Grid optimization
+                with st.expander("🎛️ Optimize Parameters (Grid Search)"):
+                    if st.button("Run Optimization", key=f"opt_{key}"):
+                        _run_grid_optimization(
+                            key=key,
+                            strategy_type=opts["strategy_type"],
+                            assets=list(opts["selected_assets"]),
+                            data_dict=st.session_state._data_cache,
+                        )
+
     else:
-        st.info("Click 'Generate Strategies with AI Agent' to get started.")
+        st.info("Click **Run Agent** in the sidebar to generate and backtest strategies.")
+
+
+def _run_grid_optimization(
+    key: str,
+    strategy_type: str,
+    assets: List[str],
+    data_dict: Dict[str, pd.DataFrame],
+):
+    """
+    Grid-based parameter optimization (#20 fix).
+    Evaluates the full canonical grid and shows results ranked by Sharpe.
+    Much more efficient and reproducible than pure random sampling.
+    """
+    pg = ParameterGrid()
+    grid = pg.get_grid(strategy_type)
+
+    if not grid:
+        st.warning(f"No parameter grid defined for '{strategy_type}'.")
+        return
+
+    progress = st.progress(0, text="Running grid optimization…")
+    opt_results = []
+
+    for i, params in enumerate(grid):
+        progress.progress(
+            int((i + 1) / len(grid) * 100),
+            text=f"Testing {params}…",
+        )
+        try:
+            result = run_backtest(data_dict, assets, strategy_type, params)
+            if result:
+                metrics = result["metrics"]
+                opt_results.append({
+                    "Params": str(params),
+                    "Sharpe": round(metrics.get("sharpe_ratio", 0), 3),
+                    "Return": f"{metrics.get('total_return', 0) * 100:.1f}%",
+                    "Max DD": f"{metrics.get('max_drawdown', 0) * 100:.1f}%",
+                })
+        except Exception as e:
+            logger.debug("Grid trial failed: %s — %s", params, e)
+
+    progress.empty()
+
+    if opt_results:
+        df_opt = pd.DataFrame(opt_results).sort_values("Sharpe", ascending=False)
+        st.markdown(f"**Grid results for `{strategy_type}` ({len(df_opt)}/{len(grid)} trials succeeded)**")
+        st.dataframe(
+            df_opt.style.highlight_max(subset=["Sharpe"], color="#d4edda"),
+            use_container_width=True,
+        )
+        best = df_opt.iloc[0]
+        st.success(f"Best: {best['Params']} → Sharpe {best['Sharpe']}")
+    else:
+        st.warning("No optimization trials succeeded.")
 
 
 if __name__ == "__main__":
