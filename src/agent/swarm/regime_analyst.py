@@ -42,14 +42,16 @@ def _build_narrative(signals, context: RegimeContext) -> str:
     }
     parts.append(vol_phrases.get(signals.vol_regime, f"Vol regime: {signals.vol_regime}"))
 
-    # Trend description
+    # Trend description — derived from momentum and regime_label
+    rl_lower = signals.regime_label.lower()
     mom_pct = signals.momentum_63d * 100
-    if signals.trend_regime == "Bull":
-        parts.append(f"📈 TREND: Strong uptrend ({mom_pct:.1f}% 3M return). Above SMA-200: {context.price_vs_sma200 > 0}.")
-    elif signals.trend_regime == "Bear":
+    if "bull" in rl_lower or signals.momentum_63d > 0.03:
+        parts.append(f"📈 TREND: Uptrend ({mom_pct:.1f}% 3M return). Above SMA-200: {signals.above_200sma}.")
+    elif "bear" in rl_lower or signals.momentum_63d < -0.03:
         parts.append(f"📉 TREND: Downtrend ({mom_pct:.1f}% 3M return). Caution on long-only momentum.")
     else:
         parts.append(f"↔️ TREND: Neutral ({mom_pct:.1f}% 3M return). Range-bound conditions likely.")
+
 
     # Regime confidence
     conf_pct = signals.regime_confidence * 100
