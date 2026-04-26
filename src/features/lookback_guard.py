@@ -2,8 +2,7 @@
 Lookback Guard — Look-Ahead Bias Prevention
 ============================================
 
-Decorator and class that enforce minimum warmup periods for feature
-functions, preventing look-ahead bias in backtests.
+Uses domain exceptions from src.exceptions for clear error semantics.
 """
 
 import logging
@@ -12,18 +11,15 @@ from typing import Callable
 
 import pandas as pd
 
+from src.exceptions import InsufficientWarmupError
+
 logger = logging.getLogger(__name__)
-
-
-class InsufficientWarmupError(ValueError):
-    """Raised when a backtest requests signals before the minimum warmup period."""
-    pass
 
 
 def enforce_lookback(min_periods: int):
     """
     Decorator that validates a feature function's output has at least
-    `min_periods` non-NaN values, catching potential look-ahead issues.
+    `min_periods` non-NaN values.
 
     Usage:
         @enforce_lookback(min_periods=200)
@@ -53,7 +49,7 @@ class WarmupEnforcer:
 
     Usage:
         enforcer = WarmupEnforcer(min_warmup_periods=200)
-        enforcer.check(signal_series, eval_start=pd.Timestamp("2022-01-01"))
+        enforcer.check(df, eval_start=pd.Timestamp("2022-01-01"))
     """
 
     def __init__(self, min_warmup_periods: int = 252):
@@ -62,11 +58,6 @@ class WarmupEnforcer:
     def check(self, df: pd.DataFrame, eval_start: pd.Timestamp, min_window: int = None):
         """
         Check that `df` has sufficient bars before `eval_start`.
-
-        Args:
-            df: The full DataFrame including warmup data.
-            eval_start: Timestamp marking the start of the evaluation window.
-            min_window: Override minimum window (defaults to self.min_warmup_periods).
 
         Raises:
             InsufficientWarmupError: If warmup is insufficient.
@@ -78,4 +69,7 @@ class WarmupEnforcer:
                 f"Insufficient warmup: need {required} bars before {eval_start.date()}, "
                 f"got {n_before}. Provide more historical data."
             )
-        logger.debug("Warmup check passed: %d bars before %s (required %d).", n_before, eval_start.date(), required)
+        logger.debug(
+            "Warmup check passed: %d bars before %s (required %d).",
+            n_before, eval_start.date(), required,
+        )

@@ -6,10 +6,17 @@ on:
   pull_request:
     branches: [ main, master ]
 
+# Minimal permissions — least privilege principle
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    # Job-level permissions override workflow-level where needed
+    permissions:
+      contents: read
 
     strategy:
       fail-fast: false
@@ -37,11 +44,13 @@ jobs:
           GOOGLE_API_KEY: ""
           FRED_API_KEY: ""
         run: |
-          pytest tests/ -v --tb=short --ignore=tests/test_backtest.py
+          pytest tests/ -v --tb=short
 
   security-check:
     name: Secret Scanning
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Check for secrets in .env files

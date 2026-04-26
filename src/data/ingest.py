@@ -1,9 +1,9 @@
 """
-Data Ingestion with TTL-Based Cache Invalidation
-================================================
+Data Ingestion with TTL Cache & Correct Ticker→Filename Mapping
+================================================================
 
-Fetches OHLCV and FRED data. Re-fetches if cached file is older
-than config.cache.ttl_hours. Replaces print() with logging.
+Fixes VIX ticker filename collisions by using a proper safe-name map
+instead of just stripping `^`. All logging via `logger`, no print().
 """
 
 import logging
@@ -22,6 +22,24 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+# ── Ticker → safe filename mapping (prevents ^ collisions) ──────────────────
+_TICKER_FILENAME_MAP: Dict[str, str] = {
+    "^VIX": "VIX",
+    "^GSPC": "GSPC",
+    "^DJI": "DJI",
+    "^IXIC": "IXIC",
+    "^RUT": "RUT",
+    "^TNX": "TNX",
+}
+
+
+def _ticker_to_filename(ticker: str) -> str:
+    """Map a ticker symbol to a safe parquet filename (without extension)."""
+    if ticker in _TICKER_FILENAME_MAP:
+        return _TICKER_FILENAME_MAP[ticker]
+    # Generic fallback: replace any non-alphanumeric chars with underscore
+    return "".join(c if c.isalnum() else "_" for c in ticker).strip("_")
+
 
 def get_data_path() -> Path:
     """Create and return the data storage path."""
@@ -31,7 +49,7 @@ def get_data_path() -> Path:
 
 
 def _is_cache_valid(file_path: Path) -> bool:
-    """Return True if the cached file is fresh enough."""
+    """Return True if the cached file is fresh enough per TTL config."""
     if not config.cache.enabled:
         return False
     if not file_path.exists():
@@ -39,7 +57,10 @@ def _is_cache_valid(file_path: Path) -> bool:
     mtime = datetime.fromtimestamp(file_path.stat().st_mtime, tz=timezone.utc)
     age_hours = (datetime.now(tz=timezone.utc) - mtime).total_seconds() / 3600
     if age_hours > config.cache.ttl_hours:
-        logger.info("Cache expired for %s (age=%.1fh > ttl=%dh).", file_path.name, age_hours, config.cache.ttl_hours)
+        logger.info(
+            "Cache expired for %s (age=%.1fh > ttl=%dh).",
+            file_path.name, age_hours, config.cache.ttl_hours,
+        )
         return False
     logger.debug("Cache hit for %s (age=%.1fh).", file_path.name, age_hours)
     return True
@@ -52,11 +73,10 @@ def fetch_ohlcv_data(
     force_download: bool = False,
 ) -> Dict[str, pd.DataFrame]:
     """
-    Fetch OHLCV data for the universe from yfinance.
-    Uses TTL-based cache: re-fetches if cached file is stale.
+    Fetch OHLCV data for the universe from yfinance with TTL cache.
 
     Args:
-        ticker: Specific ticker. If None, fetches full universe + VIX.
+        ticker: Single ticker. If None, fetches full universe + VIX.
         start_date: Start date string or date object.
         end_date: End date string or date object.
         force_download: Bypass cache and force fresh download.
@@ -77,7 +97,7 @@ def fetch_ohlcv_data(
     logger.info("Fetching OHLCV data for: %s", ", ".join(tickers))
 
     for t in tickers:
-        safe_name = t.replace("^", "")
+        safe_name = _ticker_to_filename(t)
         file_path = data_path / f"{safe_name}.parquet"
 
         if not force_download and _is_cache_valid(file_path):
@@ -93,26 +113,26 @@ def fetch_ohlcv_data(
             except Exception as e:
                 logger.warning("Cache read failed for %s: %s. Re-fetching.", t, e)
 
-        # Download from yfinance
         try:
             if start_date and end_date:
-                df = yf.download(t, start=start_date, end=end_date, auto_adjust=True, progress=False)
+                df = yf.download(t, start=start_date, end=end_date,
+                                 auto_adjust=True, progress=False)
             else:
-                df = yf.download(t, period=config.data.yfinance_period, auto_adjust=True, progress=False)
+                df = yf.download(
+                    t, period=config.data.yfinance_period,
+                    auto_adjust=True, progress=False,
+                )
 
             if df.empty:
                 logger.warning("No data found for %s. Skipping.", t)
                 continue
 
             df.to_parquet(file_path)
-            logger.info("Downloaded and cached %s (%d rows).", t, len(df))
+            logger.info("Downloaded and cached %s (%d rows) → %s", t, len(df), file_path.name)
             all_data[t] = df
 
         except Exception as e:
             logger.error("Failed to download %s: %s", t, e)
-
-    if ticker and ticker in all_data:
-        return all_data  # keep dict interface
 
     return all_data
 
