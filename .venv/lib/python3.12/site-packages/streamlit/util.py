@@ -1,0 +1,188 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""A bunch of useful utilities."""
+
+from __future__ import annotations
+
+import dataclasses
+import functools
+import hashlib
+from typing import TYPE_CHECKING, Any
+
+from streamlit.proto.RootContainer_pb2 import RootContainer
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from hashlib import _Hash
+
+    from streamlit.delta_generator import DeltaGenerator
+
+
+def memoize(func: Callable[..., Any]) -> Callable[..., Any]:
+    """Decorator to memoize the result of a no-args func."""
+    result: list[Any] = []
+
+    @functools.wraps(func)
+    def wrapped_func() -> Any:
+        if not result:
+            result.append(func())
+        return result[0]
+
+    return wrapped_func
+
+
+def repr_(self: Any) -> str:
+    """A clean repr for a class, excluding both values that are likely defaults,
+    and those explicitly default for dataclasses.
+    """
+    classname = self.__class__.__name__
+    # Most of the falsey value, but excluding 0 and 0.0, since those often have
+    # semantic meaning within streamlit.
+    defaults: list[Any] = [None, "", False, [], set(), {}]
+    if dataclasses.is_dataclass(self):
+        fields_vals = (
+            (f.name, getattr(self, f.name))
+            for f in dataclasses.fields(self)
+            if f.repr
+            and getattr(self, f.name) != f.default
+            and getattr(self, f.name) not in defaults
+        )
+    else:
+        fields_vals = ((f, v) for (f, v) in self.__dict__.items() if v not in defaults)
+
+    field_reprs = ", ".join(f"{field}={value!r}" for field, value in fields_vals)
+    return f"{classname}({field_reprs})"
+
+
+def create_fast_hasher() -> _Hash:
+    """Create a fast hasher for incremental hashing.
+
+    Uses BLAKE2b which produces 32-character hex digests (16 bytes).
+    """
+    return hashlib.blake2b(digest_size=16)  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
+
+
+def calc_hash(s: bytes | str) -> str:
+    """Return a fast hash of the given string.
+
+    Uses BLAKE2b (~2.4x faster than MD5) and produces 32-character hex digests.
+    This should not be used for security-related purposes.
+    """
+    b = s.encode("utf-8") if isinstance(s, str) else s
+    h = create_fast_hasher()
+    h.update(b)
+    return h.hexdigest()
+
+
+class AttributeDictionary(dict[Any, Any]):  # noqa: FURB189
+    """
+    A dictionary subclass that supports attribute-style access.
+
+    This class extends the functionality of a standard dictionary to allow items
+    to be accessed via attribute-style dot notation in addition to the traditional
+    key-based access. If a dictionary item is accessed and is itself a dictionary,
+    it is automatically wrapped in another `AttributeDictionary`, enabling recursive
+    attribute-style access.
+    """
+
+    def __getattr__(self, key: str) -> Any:
+        try:
+            item = self.__getitem__(key)
+            return AttributeDictionary(item) if isinstance(item, dict) else item
+        except KeyError as err:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{key}'"
+            ) from err
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        self[name] = value
+
+
+_READ_ONLY_ERROR_MSG = (
+    "Widget state is read-only. To programmatically update widget state, "
+    "assign a new dictionary to the session state key instead of modifying "
+    "nested values. For example, use:\n"
+    "    st.session_state['my_key'] = {'selection': {'rows': [0]}}\n"
+    "Instead of:\n"
+    "    st.session_state.my_key.selection = {'rows': [0]}"
+)
+
+
+class ReadOnlyAttributeDictionary(AttributeDictionary):
+    """Read-only dictionary subclass with attribute-style access.
+
+    Similar to AttributeDictionary, but raises TypeError on any mutation attempt.
+    Used for widget state return values (e.g., dataframe selections) to prevent
+    users from modifying values in ways that don't trigger proper state updates.
+
+    Modifications should be done by assigning a new dictionary to the session
+    state key, e.g., ``st.session_state['key'] = {'selection': {'rows': [0]}}``.
+    """
+
+    def __getitem__(self, key: Any) -> Any:
+        item = super().__getitem__(key)
+        # Wrap nested dicts in ReadOnlyAttributeDictionary to protect bracket access
+        return ReadOnlyAttributeDictionary(item) if isinstance(item, dict) else item
+
+    def __getattr__(self, key: str) -> Any:
+        # Delegate directly to self[key] which handles wrapping in __getitem__
+        try:
+            return self[key]
+        except KeyError as err:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{key}'"
+            ) from err
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def __delitem__(self, key: Any) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def __ior__(self, other: Any) -> ReadOnlyAttributeDictionary:  # type: ignore[misc]  # noqa: PYI034
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def clear(self) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def pop(self, *args: Any) -> Any:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def popitem(self) -> tuple[Any, Any]:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def setdefault(self, key: Any, default: Any = None) -> Any:  # noqa: ARG002
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def update(self, *args: Any, **kwargs: Any) -> None:
+        raise TypeError(_READ_ONLY_ERROR_MSG)
+
+    def __copy__(self) -> ReadOnlyAttributeDictionary:
+        return ReadOnlyAttributeDictionary(dict.copy(self))
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> ReadOnlyAttributeDictionary:
+        import copy
+
+        return ReadOnlyAttributeDictionary(
+            {copy.deepcopy(k, memo): copy.deepcopy(v, memo) for k, v in self.items()}
+        )
+
+
+def in_sidebar(dg: DeltaGenerator) -> bool:
+    """Check if the DeltaGenerator is in the sidebar."""
+    return dg._active_dg._root_container == RootContainer.SIDEBAR

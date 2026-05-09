@@ -1,0 +1,7 @@
+import{o as e}from"./chunk.DuxOD-Sk.js";import{r as t}from"./emotion-is-prop-valid.esm.DV_OErv-.js";import{c as n,o as r,t as i}from"./emotion-styled.browser.esm.BPUx6WuE.js";import{t as a}from"./UriUtil.B2jDpauP.js";import{n as o,t as s}from"./Particles.C1r5kkxp.js";var c=e(t()),l=``+new URL(`../media/flake-0.DgWaVvm5.png`,import.meta.url).href,u=``+new URL(`../media/flake-1.B2r5AHMK.png`,import.meta.url).href,d=``+new URL(`../media/flake-2.BnWSExPC.png`,import.meta.url).href,f=150,p=150,m=10,h=90,g=4e3,_=(e,t=0)=>Math.random()*(e-t)+t,v=()=>r(`from{transform:translateY(0)
+      rotateX(`,_(360),`deg)
+      rotateY(`,_(360),`deg)
+      rotateZ(`,_(360),`deg);}to{transform:translateY(calc(100vh + `,f,`px))
+      rotateX(0)
+      rotateY(0)
+      rotateZ(0);}`),y=i(`img`,{target:`e1usw70z0`})(({theme:e})=>({position:`fixed`,top:`${-f}px`,marginLeft:`${-p/2}px`,zIndex:e.zIndices.balloons,left:`${_(h,m)}vw`,animationDelay:`${_(g)}ms`,height:`${f}px`,width:`${p}px`,pointerEvents:`none`,animationDuration:`3000ms`,animationName:v(),animationTimingFunction:`ease-in`,animationDirection:`normal`,animationIterationCount:1,opacity:1})),b=100,x=[l,u,d],S=x.length,C=(0,c.memo)(({particleType:e,resourceCrossOriginMode:t})=>{let r=x[e];return n(y,{src:r,crossOrigin:a(t,r)})}),w=(0,c.memo)(function({scriptRunId:e}){return n(o,{children:n(s,{className:`stSnow`,"data-testid":`stSnow`,scriptRunId:e,numParticleTypes:S,numParticles:100,ParticleComponent:C})})});export{b as NUM_FLAKES,w as default};

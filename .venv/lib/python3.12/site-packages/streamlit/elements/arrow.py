@@ -1,0 +1,1352 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    TypeAlias,
+    TypedDict,
+    cast,
+    overload,
+)
+
+from streamlit import dataframe_util
+from streamlit.deprecation_util import (
+    make_deprecated_name_warning,
+    show_deprecation_warning,
+)
+from streamlit.elements.lib.column_config_utils import (
+    INDEX_IDENTIFIER,
+    ColumnConfigMappingInput,
+    apply_data_specific_configs,
+    marshall_column_config,
+    process_config_mapping,
+    update_column_config,
+)
+from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.layout_utils import (
+    Height,
+    LayoutConfig,
+    Width,
+    validate_height,
+    validate_width,
+)
+from streamlit.elements.lib.pandas_styler_utils import marshall_styler
+from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    enqueue_message,
+    get_script_run_ctx,
+)
+from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.util import ReadOnlyAttributeDictionary
+
+if TYPE_CHECKING:
+    from collections.abc import Hashable, Iterable
+
+    from numpy import typing as npt
+    from pandas import DataFrame
+
+    from streamlit.dataframe_util import Data
+    from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
+    from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
+
+
+SelectionMode: TypeAlias = Literal[
+    "single-row",
+    "single-row-required",
+    "multi-row",
+    "single-column",
+    "multi-column",
+    "single-cell",
+    "multi-cell",
+]
+_SELECTION_MODES: Final[set[SelectionMode]] = {
+    "single-row",
+    "single-row-required",
+    "multi-row",
+    "single-column",
+    "multi-column",
+    "single-cell",
+    "multi-cell",
+}
+_ROW_SELECTION_MODES: Final[set[SelectionMode]] = {
+    "single-row",
+    "single-row-required",
+    "multi-row",
+}
+
+
+class DataframeSelectionState(TypedDict, total=False):
+    """
+    The schema for the dataframe selection state.
+
+    The selection state is stored in a dictionary-like object that supports both
+    key and attribute notation. Selection states can be programmatically set
+    through Session State by assigning a ``DataframeSelectionState`` dictionary
+    to the ``"selection"`` key of a ``DataframeState`` dictionary.
+
+    Programmatic selection is supported for all selection modes
+    except ``"multi-cell"``. If ``"single-cell"`` isn't included in the
+    selection modes of the dataframe, programmatic cell selections are ignored.
+
+    .. warning::
+        If a user sorts a dataframe, row selections will be reset. If your
+        users need to sort and filter the dataframe to make selections, direct
+        them to use the search function in the dataframe toolbar instead.
+
+    Attributes
+    ----------
+    rows : list[int]
+        The selected rows, identified by their integer position. The integer
+        positions match the original dataframe, even if the user sorts the
+        dataframe in their browser. For a ``pandas.DataFrame``, you can
+        retrieve data from its integer position using methods like ``.iloc[]``
+        or ``.iat[]``.
+    columns : list[str]
+        The selected columns, identified by their names.
+    cells : list[tuple[int, str]]
+        The selected cells, provided as a tuple of row integer position
+        and column name. For example, the first cell in a column named "col 1"
+        is represented as ``(0, "col 1")``. Cells within index columns are not
+        returned.
+
+    Examples
+    --------
+    **Example 1: Enable dataframe selections**
+
+    The following example has multi-row and multi-column selections enabled.
+    Try selecting some rows. To select multiple columns, hold ``CMD`` (macOS)
+    or ``Ctrl`` (Windows) while selecting columns. Hold ``Shift`` to select a
+    range of columns.
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+        from numpy.random import default_rng as rng
+
+        df = pd.DataFrame(
+            rng(0).standard_normal((12, 5)), columns=["a", "b", "c", "d", "e"]
+        )
+
+        event = st.dataframe(
+            df,
+            key="data",
+            on_select="rerun",
+            selection_mode=["multi-row", "multi-column", "multi-cell"],
+        )
+
+        event.selection
+
+    .. output::
+        https://doc-dataframe-events-selection-state.streamlit.app
+        height: 600px
+
+    **Example 2: Programmatically set selections**
+
+    To programmatically set dataframe selections, assign a key to your
+    dataframe and set the selection through Session State.
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import pandas as pd
+        import streamlit as st
+        from numpy.random import default_rng as rng
+
+        df = pd.DataFrame(
+            rng(0).standard_normal((12, 5)), columns=["a", "b", "c", "d", "e"]
+        )
+
+        if st.button("Select the first row"):
+            st.session_state.data = {"selection": {"rows": [0]}}
+        if st.button("Select column a"):
+            st.session_state.data = {"selection": {"columns": ["a"]}}
+        if st.button("Select the first cell of column a"):
+            st.session_state.data = {"selection": {"cells": [[0, "a"]]}}
+
+        event = st.dataframe(
+            df,
+            key="data",
+            on_select="rerun",
+            selection_mode=["single-cell", "single-row", "single-column"],
+        )
+
+        event.selection
+
+    .. output::
+        https://doc-dataframe-programmatic-selections.streamlit.app
+        height: 600px
+
+    """
+
+    rows: list[int]
+    columns: list[str]
+    cells: list[tuple[int, str]]
+
+
+class DataframeState(TypedDict, total=False):
+    """
+    The schema for the dataframe event state.
+
+    The event state is stored in a dictionary-like object that supports both
+    key and attribute notation. Event states can be programmatically set
+    through session state by assigning a dictionary with the same schema to the
+    widget's key, e.g.,
+    ``st.session_state["my_key"] = {"selection": {"rows": [0, 2]}}``.
+
+    Only selection events are supported at this time.
+
+    Attributes
+    ----------
+    selection : dict
+        The state of the ``on_select`` event. This attribute returns a
+        dictionary-like object that supports both key and attribute notation.
+        The attributes are described by the ``DataframeSelectionState``
+        dictionary schema.
+
+    """
+
+    selection: DataframeSelectionState
+
+
+@dataclass
+class DataframeSelectionSerde:
+    """DataframeSelectionSerde is used to serialize and deserialize the dataframe selection state."""
+
+    selection_default: DataframeState | None = None
+    is_required_row_mode: bool = False
+    num_rows: int = 0
+
+    def deserialize(self, ui_value: str | None) -> DataframeState:
+        empty_selection_state: DataframeState = {
+            "selection": {
+                "rows": [],
+                "columns": [],
+                "cells": [],
+            },
+        }
+
+        if ui_value is not None:
+            selection_state: DataframeState = json.loads(ui_value)
+        elif self.selection_default is not None:
+            # When a selection_default is provided, use it as the initial
+            # deserialized value so the first-render Python return matches
+            # the default selection the frontend will display.
+            selection_state = self.selection_default
+        else:
+            selection_state = empty_selection_state
+
+        if "selection" not in selection_state:
+            selection_state = empty_selection_state
+
+        if "rows" not in selection_state["selection"]:
+            selection_state["selection"]["rows"] = []
+
+        if "columns" not in selection_state["selection"]:
+            selection_state["selection"]["columns"] = []
+
+        if "cells" not in selection_state["selection"]:
+            selection_state["selection"]["cells"] = []
+        else:
+            # Explicitly convert all cells to a tuple (from list).
+            # This is necessary since there isn't a concept of tuples in JSON
+            # The format that the data is transferred to the backend.
+            selection_state["selection"]["cells"] = [
+                tuple(cell)  # type: ignore
+                for cell in selection_state["selection"]["cells"]
+            ]
+
+        # In single-row-required mode, auto-select the first row if no rows
+        # are selected (and the dataframe has at least one row).
+        if (
+            self.is_required_row_mode
+            and self.num_rows > 0
+            and not selection_state["selection"]["rows"]
+        ):
+            selection_state["selection"]["rows"] = [0]
+
+        return cast("DataframeState", ReadOnlyAttributeDictionary(selection_state))
+
+    def serialize(self, state: DataframeState) -> str:
+        return json.dumps(state)
+
+
+def parse_selection_mode(
+    selection_mode: SelectionMode | Iterable[SelectionMode],
+) -> set[DataframeProto.SelectionMode.ValueType]:
+    """Parse and check the user provided selection modes."""
+    selection_mode_set = _normalize_selection_mode(selection_mode)
+    return _selection_mode_set_to_proto_values(selection_mode_set)
+
+
+def _normalize_selection_mode(
+    selection_mode: SelectionMode | Iterable[SelectionMode],
+) -> set[SelectionMode]:
+    """Normalize and validate the user provided selection modes."""
+    if isinstance(selection_mode, str):
+        # Only a single selection mode was passed
+        raw_selection_mode_set = {selection_mode}
+    else:
+        # Multiple selection modes were passed
+        raw_selection_mode_set = set(selection_mode)
+
+    if not raw_selection_mode_set <= _SELECTION_MODES:
+        raise StreamlitAPIException(
+            f"Invalid selection mode: {selection_mode}. "
+            f"Valid options are: {_SELECTION_MODES}"
+        )
+
+    # Intersection preserves the SelectionMode literal type for ty/mypy.
+    selection_mode_set = _SELECTION_MODES & raw_selection_mode_set
+
+    # Ensure at most one row selection mode is specified.
+    row_modes = selection_mode_set & _ROW_SELECTION_MODES
+    if len(row_modes) > 1:
+        raise StreamlitAPIException(
+            "Only one row selection mode can be specified. "
+            f"Found: {', '.join(f'`{m}`' for m in sorted(row_modes))}."
+        )
+
+    if selection_mode_set.issuperset({"single-column", "multi-column"}):
+        raise StreamlitAPIException(
+            "Only one of `single-column` or `multi-column` can be selected as selection mode."
+        )
+
+    if selection_mode_set.issuperset({"single-cell", "multi-cell"}):
+        raise StreamlitAPIException(
+            "Only one of `single-cell` or `multi-cell` can be selected as selection mode."
+        )
+
+    return selection_mode_set
+
+
+_SELECTION_MODE_TO_PROTO: Final[
+    dict[SelectionMode, DataframeProto.SelectionMode.ValueType]
+] = {
+    "single-row": DataframeProto.SelectionMode.SINGLE_ROW,
+    "single-row-required": DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED,
+    "multi-row": DataframeProto.SelectionMode.MULTI_ROW,
+    "single-column": DataframeProto.SelectionMode.SINGLE_COLUMN,
+    "multi-column": DataframeProto.SelectionMode.MULTI_COLUMN,
+    "single-cell": DataframeProto.SelectionMode.SINGLE_CELL,
+    "multi-cell": DataframeProto.SelectionMode.MULTI_CELL,
+}
+
+
+def _selection_mode_set_to_proto_values(
+    selection_mode_set: set[SelectionMode],
+) -> set[DataframeProto.SelectionMode.ValueType]:
+    """Convert normalized selection mode strings to protobuf enum values."""
+    return {_SELECTION_MODE_TO_PROTO[mode] for mode in selection_mode_set}
+
+
+def _validate_selection_state(
+    value: Any,
+    num_rows: int,
+    column_names: list[str],
+    selection_mode_set: set[SelectionMode],
+) -> DataframeState:
+    """Validate a programmatically set selection state.
+
+    Parameters
+    ----------
+    value
+        The untrusted selection state to validate. Typed as ``Any`` because
+        users can assign arbitrary values via ``st.session_state``.
+    num_rows
+        The number of rows in the dataframe.
+    column_names
+        The list of column names in the dataframe.
+    selection_mode_set
+        The set of allowed selection modes.
+
+    Returns
+    -------
+    DataframeState
+        The validated selection state (with invalid entries filtered out).
+
+    Raises
+    ------
+    StreamlitAPIException
+        If the selection state structure is invalid.
+    """
+    if not isinstance(value, dict) or not isinstance(value.get("selection"), dict):
+        raise StreamlitAPIException(
+            "Selection state must be a dictionary with a 'selection' key "
+            "containing 'rows', 'columns', and 'cells' arrays."
+        )
+
+    selection = value["selection"]
+
+    validated_selection: DataframeSelectionState = {
+        "rows": [],
+        "columns": [],
+        "cells": [],
+    }
+
+    column_name_set = set(column_names)
+
+    # Validate and filter rows.
+    # Non-list values are silently ignored to be defensive against bad input.
+    raw_rows = selection.get("rows")
+    is_row_selection_mode = bool(selection_mode_set & _ROW_SELECTION_MODES)
+    if isinstance(raw_rows, list) and is_row_selection_mode:
+        valid_rows = list(
+            dict.fromkeys(
+                row_idx
+                for row_idx in raw_rows
+                if isinstance(row_idx, int) and 0 <= row_idx < num_rows
+            )
+        )
+        validated_selection["rows"] = (
+            valid_rows if "multi-row" in selection_mode_set else valid_rows[:1]
+        )
+
+    # In single-row-required mode, auto-select first row if no rows are selected
+    # (and the dataframe has at least one row).
+    if (
+        "single-row-required" in selection_mode_set
+        and num_rows > 0
+        and not validated_selection["rows"]
+    ):
+        validated_selection["rows"] = [0]
+
+    # Validate and filter columns.
+    # Non-list values are silently ignored to be defensive against bad input.
+    raw_columns = selection.get("columns")
+    if isinstance(raw_columns, list) and selection_mode_set & {
+        "single-column",
+        "multi-column",
+    }:
+        valid_columns = list(
+            dict.fromkeys(
+                col_name
+                for col_name in raw_columns
+                if isinstance(col_name, str) and col_name in column_name_set
+            )
+        )
+        validated_selection["columns"] = (
+            valid_columns if "multi-column" in selection_mode_set else valid_columns[:1]
+        )
+
+    # Validate and filter cells (single-cell mode only).
+    # Multi-cell selections use rectangular ranges that cannot be reconstructed
+    # from individual cell positions, so programmatic cell setting is only
+    # supported for single-cell mode. Non-list values are silently ignored.
+    raw_cells = selection.get("cells")
+    if isinstance(raw_cells, list) and "single-cell" in selection_mode_set:
+        valid_cells: list[tuple[int, str]] = list(
+            dict.fromkeys(
+                (cell[0], cell[1])
+                for cell in raw_cells
+                if isinstance(cell, (list, tuple))
+                and len(cell) == 2
+                and isinstance(cell[0], int)
+                and 0 <= cell[0] < num_rows
+                and isinstance(cell[1], str)
+                and cell[1] in column_name_set
+            )
+        )
+        validated_selection["cells"] = valid_cells[:1]
+
+    return {"selection": validated_selection}
+
+
+class ArrowMixin:
+    @overload
+    def dataframe(
+        self,
+        data: Data = None,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        *,
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        key: Key | None = None,
+        on_select: Literal["ignore"] = "ignore",
+        selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
+        selection_default: DataframeState | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+    ) -> DeltaGenerator: ...
+
+    @overload
+    def dataframe(
+        self,
+        data: Data = None,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        *,
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        key: Key | None = None,
+        on_select: Literal["rerun"] | WidgetCallback,
+        selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
+        selection_default: DataframeState | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+    ) -> DataframeState: ...
+
+    @gather_metrics("dataframe")
+    def dataframe(
+        self,
+        data: Data = None,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        *,
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        key: Key | None = None,
+        on_select: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
+        selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
+        selection_default: DataframeState | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+    ) -> DeltaGenerator | DataframeState:
+        """Display a dataframe as an interactive table.
+
+        This command works with a wide variety of collection-like and
+        dataframe-like object types.
+
+        Parameters
+        ----------
+        data : dataframe-like, collection-like, or None
+            The data to display.
+
+            Dataframe-like objects include dataframe and series objects from
+            popular libraries like Dask, Modin, Numpy, pandas, Polars, PyArrow,
+            Snowpark, Xarray, and more. You can use database cursors and
+            clients that comply with the
+            `Python Database API Specification v2.0 (PEP 249)
+            <https://peps.python.org/pep-0249/>`_. Additionally, you can use
+            anything that supports the `Python dataframe interchange protocol
+            <https://data-apis.org/dataframe-protocol/latest/>`_.
+
+            For example, you can use the following:
+
+            - ``pandas.DataFrame``, ``pandas.Series``, ``pandas.Index``,
+              ``pandas.Styler``, and ``pandas.Array``
+            - ``polars.DataFrame``, ``polars.LazyFrame``, and ``polars.Series``
+            - ``snowflake.snowpark.dataframe.DataFrame``,
+              ``snowflake.snowpark.table.Table``
+
+            If a data type is not recognized, Streamlit will convert the object
+            to a ``pandas.DataFrame`` or ``pyarrow.Table`` using a
+            ``.to_pandas()`` or ``.to_arrow()`` method, respectively, if
+            available.
+
+            If ``data`` is a ``pandas.Styler``, it will be used to style its
+            underlying ``pandas.DataFrame``. Streamlit supports custom cell
+            values, colors, and font weights. It does not support some of the
+            more exotic styling options, like bar charts, hovering, and
+            captions. For these styling options, use column configuration
+            instead. Text and number formatting from ``column_config`` always
+            takes precedence over text and number formatting from ``pandas.Styler``.
+
+            Collection-like objects include all Python-native ``Collection``
+            types, such as ``dict``, ``list``, and ``set``.
+
+            If ``data`` is ``None``, Streamlit renders an empty table.
+
+        width : "stretch", "content", or int
+            The width of the dataframe element. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
+
+        height : "auto", "content", "stretch", or int
+            The height of the dataframe element. This can be one of the following:
+
+            - ``"auto"`` (default): Streamlit sets the height to show at most
+              ten rows.
+            - ``"content"``: The height of the element matches the height of
+              its content. The height is capped at 10,000 pixels to prevent
+              performance issues with very large dataframes.
+            - ``"stretch"``: The height of the element expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same container, they
+              share the available vertical space evenly. The dataframe will
+              maintain a minimum height to display up to three rows, but
+              otherwise won't exceed the available height in its parent
+              container.
+            - An integer specifying the height in pixels: The element has a
+              fixed height.
+
+            Vertical scrolling within the dataframe element is enabled when the
+            height does not accommodate all rows.
+
+        use_container_width : bool
+            Whether to override ``width`` with the width of the parent
+            container. If this is ``True`` (default), Streamlit sets the width
+            of the dataframe to match the width of the parent container. If
+            this is ``False``, Streamlit sets the dataframe's width according
+            to ``width``.
+
+            .. deprecated::
+                ``use_container_width`` is deprecated and will be removed in a
+                future release. For ``use_container_width=True``, use
+                ``width="stretch"``.
+
+        hide_index : bool or None
+            Whether to hide the index column(s). If ``hide_index`` is ``None``
+            (default), the visibility of index columns is automatically
+            determined based on the data and other configurations.
+
+        column_order : Iterable[str] or None
+            The ordered list of columns to display. If this is ``None``
+            (default), Streamlit displays all columns in the order inherited
+            from the underlying data structure. If this is a list, the
+            indicated columns will display in the order they appear within the
+            list. Columns may be omitted or repeated within the list.
+
+            For example, ``column_order=("col2", "col1")`` will display
+            ``"col2"`` first, followed by ``"col1"``, and will hide all other
+            non-index columns.
+
+            ``column_order`` does not accept positional column indices and
+            can't move the index column(s).
+
+            .. note::
+                Columns omitted from ``column_order`` are hidden by default
+                but can still be shown by the user via the column visibility
+                menu in the table toolbar. If a column contains sensitive data
+                that should not be exposed to the user, remove it from the
+                data before passing it to the function.
+
+        column_config : dict or None
+            Configuration to customize how columns are displayed. If this is
+            ``None`` (default), columns are styled based on the underlying data
+            type of each column.
+
+            Column configuration can modify column names, visibility, type,
+            width, format, and more. If this is a dictionary, the keys are
+            column names (strings) and/or positional column indices (integers),
+            and the values are one of the following:
+
+            - ``None`` to hide the column. Hidden columns can still be shown
+              by the user via the table toolbar.
+            - A string to set the display label of the column.
+            - One of the column types defined under ``st.column_config``. For
+              example, to show a column as dollar amounts, use
+              ``st.column_config.NumberColumn("Dollar values", format="$ %d")``.
+              See more info on the available column types and config options
+              `here <https://docs.streamlit.io/develop/api-reference/data/st.column_config>`_.
+
+            To configure the index column(s), use ``"_index"`` as the column
+            name, or use a positional column index where ``0`` refers to the
+            first index column.
+
+        key : str, int, or None
+            An optional string to use for giving this element a stable
+            identity. If this is ``None`` (default), the element's identity
+            will be determined based on the values of the other parameters.
+
+            If selections are activated, a key lets you read or update the
+            selection state via ``st.session_state[key]``. The value in
+            Session State must be a dictionary consistent with the
+            ``DataframeState`` schema. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
+
+        on_select : "ignore" or "rerun" or callable
+            How the dataframe should respond to user selection events. This
+            controls whether or not the dataframe behaves like an input widget.
+            ``on_select`` can be one of the following:
+
+            - ``"ignore"`` (default): Streamlit will not react to any selection
+              events in the dataframe. The dataframe will not behave like an
+              input widget.
+
+            - ``"rerun"``: Streamlit will rerun the app when the user selects
+              rows, columns, or cells in the dataframe. In this case,
+              ``st.dataframe`` will return the selection data as a dictionary.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+              In this case, ``st.dataframe`` will return the selection data
+              as a dictionary.
+
+        selection_mode : "single-row", "single-row-required", "multi-row", \
+            "single-column", "multi-column", "single-cell", "multi-cell", \
+            or Iterable of these
+            The types of selections Streamlit should allow when selections are
+            enabled with ``on_select``. This can be one of the following:
+
+            - "multi-row" (default): Multiple rows can be selected at a time.
+            - "single-row": Only one row can be selected at a time.
+            - "single-row-required": Exactly one row must always be selected
+              (radio-like behavior). Auto-selects the first row if no default
+              is given.
+            - "multi-column": Multiple columns can be selected at a time.
+            - "single-column": Only one column can be selected at a time.
+            - "multi-cell": A rectangular range of cells can be selected.
+            - "single-cell": Only one cell can be selected at a time.
+            - An ``Iterable`` of the above options: The table will allow
+              selection based on the modes specified. For example, to allow the
+              user to select multiple rows and multiple cells, use
+              ``["multi-row", "multi-cell"]``.
+
+            When column selections are enabled, column sorting is disabled.
+
+        selection_default : dict or None
+            The default selection state to apply on first render when selections
+            are activated and no prior selection is stored. This uses the same
+            schema as ``st.session_state[key]`` for selections, for example:
+            ``{"selection": {"rows": [0, 2]}}``.
+
+            ``selection_default`` is only applied when ``on_select`` is not
+            ``"ignore"``. It does not override user selections on subsequent
+            runs, and multi-cell selections cannot be set programmatically.
+
+        row_height : int or None
+            The height of each row in the dataframe in pixels. If ``row_height``
+            is ``None`` (default), Streamlit will use a default row height,
+            which fits one line of text.
+
+        placeholder : str or None
+            The text that should be shown for missing values. If this is
+            ``None`` (default), missing values are displayed as "None". To
+            leave a cell empty, use an empty string (``""``). Other common
+            values are ``"null"``, ``"NaN"`` and ``"-"``.
+
+        Returns
+        -------
+        element or dict
+            If ``on_select`` is ``"ignore"`` (default), this command returns an
+            internal placeholder for the dataframe element that can be used
+            with the ``.add_rows()`` method. Otherwise, this command returns a
+            dictionary-like object that supports both key and attribute
+            notation. The attributes are described by the ``DataframeState``
+            dictionary schema.
+
+        Examples
+        --------
+        **Example 1: Display a dataframe**
+
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
+        >>>
+        >>> df = pd.DataFrame(
+        ...     rng(0).standard_normal((50, 20)), columns=("col %d" % i for i in range(20))
+        ... )
+        >>>
+        >>> st.dataframe(df)
+
+        .. output::
+           https://doc-dataframe.streamlit.app/
+           height: 500px
+
+        **Example 2: Use Pandas Styler**
+
+        You can also pass a Pandas Styler object to change the style of
+        the rendered DataFrame:
+
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
+        >>>
+        >>> df = pd.DataFrame(
+        ...     rng(0).standard_normal((10, 20)), columns=("col %d" % i for i in range(20))
+        ... )
+        >>>
+        >>> st.dataframe(df.style.highlight_max(axis=0))
+
+        .. output::
+           https://doc-dataframe1.streamlit.app/
+           height: 500px
+
+        **Example 3: Use column configuration**
+
+        You can customize a dataframe via ``column_config``, ``hide_index``, or ``column_order``.
+
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
+        >>>
+        >>> df = pd.DataFrame(
+        ...     {
+        ...         "name": ["Roadmap", "Extras", "Issues"],
+        ...         "url": [
+        ...             "https://roadmap.streamlit.app",
+        ...             "https://extras.streamlit.app",
+        ...             "https://issues.streamlit.app",
+        ...         ],
+        ...         "stars": rng(0).integers(0, 1000, size=3),
+        ...         "views_history": rng(0).integers(0, 5000, size=(3, 30)).tolist(),
+        ...     }
+        ... )
+        >>>
+        >>> st.dataframe(
+        ...     df,
+        ...     column_config={
+        ...         "name": "App name",
+        ...         "stars": st.column_config.NumberColumn(
+        ...             "Github Stars",
+        ...             help="Number of stars on GitHub",
+        ...             format="%d ⭐",
+        ...         ),
+        ...         "url": st.column_config.LinkColumn("App URL"),
+        ...         "views_history": st.column_config.LineChartColumn(
+        ...             "Views (past 30 days)", y_min=0, y_max=5000
+        ...         ),
+        ...     },
+        ...     hide_index=True,
+        ... )
+
+        .. output::
+           https://doc-dataframe-config.streamlit.app/
+           height: 350px
+
+        **Example 4: Customize your index**
+
+        You can use column configuration to format your index.
+
+        >>> from datetime import datetime, date
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>>
+        >>> @st.cache_data
+        >>> def load_data():
+        >>>     year = datetime.now().year
+        >>>     df = pd.DataFrame(
+        ...         {
+        ...             "Date": [date(year, month, 1) for month in range(1, 4)],
+        ...             "Total": np.random.randint(1000, 5000, size=3),
+        ...         }
+        ...     )
+        >>>     df.set_index("Date", inplace=True)
+        >>>     return df
+        >>>
+        >>> df = load_data()
+        >>> config = {
+        ...     "_index": st.column_config.DateColumn("Month", format="MMM YYYY"),
+        ...     "Total": st.column_config.NumberColumn("Total ($)"),
+        ... }
+        >>>
+        >>> st.dataframe(df, column_config=config)
+
+        .. output::
+           https://doc-dataframe-config-index.streamlit.app/
+           height: 225px
+
+        """
+        import pyarrow as pa
+
+        if on_select not in {"ignore", "rerun"} and not callable(on_select):
+            raise StreamlitAPIException(
+                f"You have passed {on_select} to `on_select`. But only 'ignore', "
+                "'rerun', or a callable is supported."
+            )
+
+        key = to_key(key)
+        is_selection_activated = on_select != "ignore"
+        selection_mode_set: set[SelectionMode] = set()
+
+        if selection_default is not None and not is_selection_activated:
+            raise StreamlitAPIException(
+                "selection_default can only be used when on_select is not 'ignore'."
+            )
+
+        if is_selection_activated:
+            # Run some checks that are only relevant when selections are activated
+            is_callback = callable(on_select)
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=cast("WidgetCallback", on_select) if is_callback else None,
+                default_value=None,
+                writes_allowed=True,
+                enable_check_callback_rules=is_callback,
+            )
+            selection_mode_set = _normalize_selection_mode(selection_mode)
+
+        if use_container_width is not None:
+            show_deprecation_warning(
+                make_deprecated_name_warning(
+                    "use_container_width",
+                    "width",
+                    "2025-12-31",
+                    "For `use_container_width=True`, use `width='stretch'`. "
+                    "For `use_container_width=False`, use `width='content'`.",
+                    include_st_prefix=False,
+                ),
+                show_in_browser=False,
+            )
+            if use_container_width:
+                width = "stretch"
+            elif not isinstance(width, int):
+                width = "content"
+
+        validate_width(width, allow_content=True)
+        validate_height(
+            height,
+            allow_content=True,
+            additional_allowed=["auto"],
+        )
+
+        # Convert the user provided column config into the frontend compatible format:
+        column_config_mapping = process_config_mapping(column_config)
+
+        proto = DataframeProto()
+
+        if row_height:
+            proto.row_height = row_height
+
+        if column_order:
+            proto.column_order[:] = column_order
+
+        if placeholder is not None:
+            proto.placeholder = placeholder
+
+        proto.editing_mode = DataframeProto.EditingMode.READ_ONLY
+
+        # Track data dimensions for selection validation
+        num_rows: int = 0
+        column_names: list[str] = []
+
+        has_range_index: bool = False
+        if isinstance(data, pa.Table):
+            # For pyarrow tables, we can just serialize the table directly
+            proto.arrow_data.data = dataframe_util.convert_arrow_table_to_arrow_bytes(
+                data
+            )
+            num_rows = data.num_rows
+            column_names = data.column_names
+        else:
+            # For all other data formats, we need to convert them to a pandas.DataFrame
+            # thereby, we also apply some data specific configs
+
+            # Determine the input data format
+            data_format = dataframe_util.determine_data_format(data)
+
+            if dataframe_util.is_pandas_styler(data):
+                # If pandas.Styler uuid is not provided, a hash of the position
+                # of the element will be used. This will cause a rerender of the table
+                # when the position of the element is changed.
+                delta_path = self.dg._get_delta_path_str()
+                default_uuid = str(hash(delta_path))
+                marshall_styler(proto.arrow_data, data, default_uuid)
+
+            # Convert the input data into a pandas.DataFrame
+            data_df = dataframe_util.convert_anything_to_pandas_df(
+                data, ensure_copy=False
+            )
+            has_range_index = dataframe_util.has_range_index(data_df)
+            apply_data_specific_configs(column_config_mapping, data_format)
+            # Serialize the data to bytes:
+            proto.arrow_data.data = dataframe_util.convert_pandas_df_to_arrow_bytes(
+                data_df
+            )
+            num_rows = len(data_df)
+            column_names = list(data_df.columns)
+
+        if hide_index is not None:
+            update_column_config(
+                column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
+            )
+
+        elif (
+            # Hide index column if row selections are activated and the dataframe has a range index.
+            # The range index usually does not add a lot of value.
+            is_selection_activated
+            and has_range_index
+            and selection_mode_set & _ROW_SELECTION_MODES
+        ):
+            update_column_config(
+                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+            )
+
+        marshall_column_config(proto, column_config_mapping)
+
+        # Create layout configuration
+        # For height, only include it in LayoutConfig if it's not "auto"
+        # "auto" is the default behavior and doesn't need to be sent
+        layout_config = LayoutConfig(
+            width=width, height=height if height != "auto" else None
+        )
+
+        if is_selection_activated:
+            # If selection events are activated, we need to register the dataframe
+            # element as a widget.
+            proto.selection_mode.extend(
+                _selection_mode_set_to_proto_values(selection_mode_set)
+            )
+            proto.form_id = current_form_id(self.dg)
+
+            normalized_selection_mode = tuple(sorted(selection_mode_set))
+
+            selection_default_json: str | None = None
+            validated_default: DataframeState | None = None
+            if selection_default is not None:
+                validated_default = _validate_selection_state(
+                    selection_default,
+                    num_rows=num_rows,
+                    column_names=column_names,
+                    selection_mode_set=selection_mode_set,
+                )
+                selection_default_json = json.dumps(validated_default)
+                proto.selection_default = selection_default_json
+
+            ctx = get_script_run_ctx()
+
+            proto.id = compute_and_register_element_id(
+                "dataframe",
+                user_key=key,
+                # There are some edge cases where selections can become orphaned when the data changes
+                # - e.g. when rows get removed. The frontend can handle this without errors,
+                # but it might be a nice enhancement to automatically reset the backend & frontend
+                # selection state in this case.
+                key_as_main_identity={"selection_mode", "is_selection_activated"},
+                dg=self.dg,
+                data=proto.arrow_data.data,
+                width=width,
+                height=height,
+                use_container_width=use_container_width,
+                column_order=proto.column_order,
+                column_config=proto.columns,
+                selection_mode=normalized_selection_mode,
+                is_selection_activated=is_selection_activated,
+                selection_default=selection_default_json,
+                row_height=row_height,
+                placeholder=placeholder,
+            )
+
+            serde = DataframeSelectionSerde(
+                selection_default=validated_default,
+                is_required_row_mode="single-row-required" in selection_mode_set,
+                num_rows=num_rows,
+            )
+            widget_state = register_widget(
+                proto.id,
+                on_change_handler=on_select if callable(on_select) else None,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="string_value",
+            )
+
+            # Handle programmatic selection via session state
+            if widget_state.value_changed:
+                validated_state = _validate_selection_state(
+                    widget_state.value,
+                    num_rows=num_rows,
+                    column_names=column_names,
+                    selection_mode_set=selection_mode_set,
+                )
+                proto.selection_state = json.dumps(validated_state)
+                self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+                # Return validated state wrapped in ReadOnlyAttributeDictionary for attribute-style access.
+                return cast(
+                    "DataframeState", ReadOnlyAttributeDictionary(validated_state)
+                )
+
+            self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+            # Wrap in ReadOnlyAttributeDictionary for attribute-style access
+            return cast(
+                "DataframeState", ReadOnlyAttributeDictionary(widget_state.value)
+            )
+        return self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+
+    @gather_metrics("add_rows")
+    def add_rows(self, data: Data = None, **kwargs: Any) -> DeltaGenerator | None:
+        """Concatenate a dataframe to the bottom of the current one.
+
+        .. important::
+            ``add_rows`` is deprecated and might be removed in a future version.
+            If you have a specific use-case that requires the ``add_rows``
+            functionality, please tell us via this
+            [issue on Github](https://github.com/streamlit/streamlit/issues/13063).
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
+            Table to concat. Optional.
+
+        **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
+            The named dataset to concat. Optional. You can only pass in 1
+            dataset (including the one in the data parameter).
+
+        Examples
+        --------
+        >>> import time
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
+        >>>
+        >>> df1 = pd.DataFrame(
+        >>>     rng(0).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
+        >>> )
+        >>>
+        >>> df2 = pd.DataFrame(
+        >>>     rng(1).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
+        >>> )
+        >>>
+        >>> my_table = st.table(df1)
+        >>> time.sleep(1)
+        >>> my_table.add_rows(df2)
+
+        You can do the same thing with plots. For example, if you want to add
+        more data to a line chart:
+
+        >>> # Assuming df1 and df2 from the example above still exist...
+        >>> my_chart = st.line_chart(df1)
+        >>> time.sleep(1)
+        >>> my_chart.add_rows(df2)
+
+        And for plots whose datasets are named, you can pass the data with a
+        keyword argument where the key is the name:
+
+        >>> my_chart = st.vega_lite_chart(
+        ...     {
+        ...         "mark": "line",
+        ...         "encoding": {"x": "a", "y": "b"},
+        ...         "datasets": {
+        ...             "some_fancy_name": df1,  # <-- named dataset
+        ...         },
+        ...         "data": {"name": "some_fancy_name"},
+        ...     }
+        ... )
+        >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
+
+        """  # noqa: E501
+        show_deprecation_warning(
+            "`add_rows` is deprecated and might be removed in a future version."
+            " If you have a specific use-case that requires the `add_rows` "
+            "functionality, please tell us via this "
+            "[issue on Github](https://github.com/streamlit/streamlit/issues/13063).",
+            show_in_browser=True,
+            show_once=True,
+        )
+
+        return _arrow_add_rows(self.dg, data, **kwargs)
+
+    @property
+    def dg(self) -> DeltaGenerator:
+        """Get our DeltaGenerator."""
+        return cast("DeltaGenerator", self)
+
+
+def _prep_data_for_add_rows(
+    data: Data,
+    add_rows_metadata: AddRowsMetadata | None,
+) -> tuple[Data, AddRowsMetadata | None]:
+    if not add_rows_metadata:
+        if dataframe_util.is_pandas_styler(data):
+            # When calling add_rows on st.table or st.dataframe we want styles to
+            # pass through.
+            return data, None
+        return dataframe_util.convert_anything_to_pandas_df(data), None
+
+    # If add_rows_metadata is set, it indicates that the add_rows used called
+    # on a chart based on our built-in chart commands.
+
+    # For built-in chart commands we have to reshape the data structure
+    # otherwise the input data and the actual data used
+    # by vega_lite will be different, and it will throw an error.
+    from streamlit.elements.lib.built_in_chart_utils import prep_chart_data_for_add_rows
+
+    return prep_chart_data_for_add_rows(data, add_rows_metadata)
+
+
+def _arrow_add_rows(
+    dg: DeltaGenerator,
+    data: Data = None,
+    **kwargs: DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None,
+) -> DeltaGenerator | None:
+    """Concatenate a dataframe to the bottom of the current one.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        Table to concat. Optional.
+
+    **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
+        The named dataset to concat. Optional. You can only pass in 1
+        dataset (including the one in the data parameter).
+
+    Example
+    -------
+    >>> import time
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>> from numpy.random import default_rng as rng
+    >>>
+    >>> df1 = pd.DataFrame(
+    >>>     rng(0).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
+    >>> )
+    >>>
+    >>> df2 = pd.DataFrame(
+    >>>     rng(1).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
+    >>> )
+    >>>
+    >>> my_table = st.table(df1)
+    >>> time.sleep(1)
+    >>> my_table.add_rows(df2)
+
+    You can do the same thing with plots. For example, if you want to add
+    more data to a line chart:
+
+    >>> # Assuming df1 and df2 from the example above still exist...
+    >>> my_chart = st.line_chart(df1)
+    >>> time.sleep(1)
+    >>> my_chart.add_rows(df2)
+
+    And for plots whose datasets are named, you can pass the data with a
+    keyword argument where the key is the name:
+
+    >>> my_chart = st.vega_lite_chart(
+    ...     {
+    ...         "mark": "line",
+    ...         "encoding": {"x": "a", "y": "b"},
+    ...         "datasets": {
+    ...             "some_fancy_name": df1,  # <-- named dataset
+    ...         },
+    ...         "data": {"name": "some_fancy_name"},
+    ...     }
+    ... )
+    >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
+
+    """
+    if dg._root_container is None or dg._cursor is None:
+        return dg
+
+    if not dg._cursor.is_locked:
+        raise StreamlitAPIException("Only existing elements can `add_rows`.")
+
+    # Accept syntax st._arrow_add_rows(df).
+    if data is not None and len(kwargs) == 0:
+        name = ""
+    # Accept syntax st._arrow_add_rows(foo=df).
+    elif len(kwargs) == 1:
+        name, data = kwargs.popitem()
+    # Raise error otherwise.
+    else:
+        raise StreamlitAPIException(
+            "Wrong number of arguments to add_rows()."
+            "Command requires exactly one dataset"
+        )
+
+    # When doing _arrow_add_rows on an element that does not already have data
+    # (for example, st.line_chart() without any args), call the original
+    # st.foo() element with new data instead of doing a _arrow_add_rows().
+    if (
+        "add_rows_metadata" in dg._cursor.props
+        and dg._cursor.props["add_rows_metadata"]
+        and dg._cursor.props["add_rows_metadata"].last_index is None
+    ):
+        st_method = getattr(dg, dg._cursor.props["add_rows_metadata"].chart_command)
+        metadata = dg._cursor.props["add_rows_metadata"]
+
+        # Pass the styling properties stored in add_rows_metadata
+        # to the new element call.
+        kwargs = {}
+        if metadata.color is not None:
+            kwargs["color"] = metadata.color
+        if metadata.width is not None:
+            kwargs["width"] = metadata.width
+        if metadata.height is not None:
+            kwargs["height"] = metadata.height
+        if metadata.stack is not None:
+            kwargs["stack"] = metadata.stack
+
+        if metadata.chart_command == "bar_chart":
+            kwargs["horizontal"] = metadata.horizontal
+            kwargs["sort"] = metadata.sort
+
+        if metadata.use_container_width is not None:
+            kwargs["use_container_width"] = metadata.use_container_width
+
+        st_method(data, **kwargs)
+        return None
+
+    new_data, dg._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
+        data,
+        dg._cursor.props["add_rows_metadata"],
+    )
+
+    msg = ForwardMsg()
+    msg.metadata.delta_path[:] = dg._cursor.delta_path
+
+    default_uuid = str(hash(dg._get_delta_path_str()))
+    marshall(msg.delta.arrow_add_rows.data, new_data, default_uuid)
+
+    if name:
+        msg.delta.arrow_add_rows.name = name
+        msg.delta.arrow_add_rows.has_name = True
+
+    enqueue_message(msg)
+
+    return dg
+
+
+def marshall(
+    proto: ArrowDataProto, data: Data, default_uuid: str | None = None
+) -> None:
+    """Marshall pandas.DataFrame into an ArrowData proto.
+
+    Parameters
+    ----------
+    proto : proto.ArrowData
+        Output. The protobuf for Streamlit ArrowData proto.
+
+    data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
+        Something that is or can be converted to a dataframe.
+
+    default_uuid : str | None
+        If pandas.Styler UUID is not provided, this value will be used.
+        This attribute is optional and only used for pandas.Styler, other elements
+        (e.g. charts) can ignore it.
+
+    """  # noqa: E501
+
+    if dataframe_util.is_pandas_styler(data):
+        # default_uuid is a string only if the data is a `Styler`,
+        # and `None` otherwise.
+        if not isinstance(default_uuid, str):
+            raise StreamlitAPIException(
+                "Default UUID must be a string for Styler data."
+            )
+        marshall_styler(proto, data, default_uuid)
+
+    proto.data = dataframe_util.convert_anything_to_arrow_bytes(data)

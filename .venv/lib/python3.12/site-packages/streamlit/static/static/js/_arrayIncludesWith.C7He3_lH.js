@@ -1,0 +1,1 @@
+import{t as e}from"./_baseIndexOf.DmzSbCrC.js";function t(t,n){return!!(t!=null&&t.length)&&e(t,n,0)>-1}function n(e,t,n){for(var r=-1,i=e==null?0:e.length;++r<i;)if(n(t,e[r]))return!0;return!1}export{t as n,n as t};

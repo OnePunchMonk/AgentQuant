@@ -1,0 +1,1 @@
+var e=class e{setStatus(t){return new e(this.name,this.size,this.id,t,this.file)}constructor(e,t,n,r,i){this.name=e,this.size=t,this.id=n,this.status=r,this.file=i}};export{e as t};
