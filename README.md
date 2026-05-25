@@ -52,6 +52,25 @@ analyze ──► hypothesize ──► backtest ──► reflect
 
 ---
 
+### Experimental Agent Swarm Branch
+
+The `agent-swarm-method` branch explores a multi-agent version of AgentQuant. It decomposes the research loop into specialized agents:
+
+- **Memory Agent** retrieves and stores strategy patterns across runs.
+- **Regime Analyst** builds the market/macro context used by downstream agents.
+- **Strategy Specialists** generate proposals for momentum, mean reversion, volatility, and trend-following approaches.
+- **Critic Agent** pre-screens proposals before expensive backtests.
+- **Backtest Coordinator** validates approved proposals across multiple time windows and ranks by robustness.
+
+That branch is intentionally experimental and sits alongside the main ReAct pipeline. To inspect it:
+
+```bash
+git checkout agent-swarm-method
+pytest tests/test_swarm.py -v
+```
+
+---
+
 ## Quick Start
 
 **Prerequisites:** Python 3.10+, Google Gemini API Key (optional — works without it via grid search).
