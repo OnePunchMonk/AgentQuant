@@ -84,11 +84,16 @@ st.markdown("""
 # ─── Cached helpers ────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=3600, show_spinner="Fetching market data…")
-def _fetch_data_cached(assets: tuple, start: str, end: str) -> Dict[str, pd.DataFrame]:
+def _fetch_data_cached(
+    assets: tuple,
+    start: str,
+    end: str,
+    force_download: bool = False,
+) -> Dict[str, pd.DataFrame]:
     """Cache market data for 1 hour to avoid re-downloading on every rerun."""
     all_data: Dict[str, pd.DataFrame] = {}
     for ticker in assets:
-        result = fetch_ohlcv_data(ticker, start, end)
+        result = fetch_ohlcv_data(ticker, start, end, force_download=force_download)
         if ticker in result:
             all_data[ticker] = result[ticker]
     return all_data
@@ -129,6 +134,18 @@ def _status_html(status: str) -> str:
     status_l = status.lower()
     label = {"pass": "Pass", "warn": "Review", "fail": "Fail"}.get(status_l, status.title())
     return f'<span class="status-{status_l}">{label}</span>'
+
+
+def _normalize_tickers(tickers: List[str]) -> List[str]:
+    normalized = []
+    seen = set()
+    for ticker in tickers:
+        clean = ticker.strip().upper()
+        if not clean or clean in seen:
+            continue
+        seen.add(clean)
+        normalized.append(clean)
+    return normalized
 
 
 def _alpha_candidates_to_dataframe(candidates: List[AlphaCandidate]) -> pd.DataFrame:
@@ -276,10 +293,6 @@ def render_sidebar() -> Dict[str, Any]:
     st.sidebar.title("⚙️ AgentQuant")
     st.sidebar.markdown("---")
 
-    available_assets = [f.stem for f in (
-        __import__("pathlib").Path(config.data_path).glob("*.parquet")
-    ) if not f.stem.startswith("FRED_")] or config.universe
-
     st.sidebar.header("Date Range")
     today = datetime.now()
     end_default = today - timedelta(days=1)
@@ -289,11 +302,35 @@ def render_sidebar() -> Dict[str, Any]:
     end_date = st.sidebar.date_input("End Date", value=end_default, max_value=today)
 
     st.sidebar.header("Assets")
-    selected_assets = st.sidebar.multiselect(
-        "Select Assets",
-        options=available_assets,
-        default=available_assets[:4] if len(available_assets) >= 4 else available_assets,
+    starter_assets = _normalize_tickers(
+        config.universe
+        + [
+            "AAPL",
+            "MSFT",
+            "NVDA",
+            "AMZN",
+            "META",
+            "GOOGL",
+            "TSLA",
+            "JPM",
+            "XOM",
+            "BTC-USD",
+            "ETH-USD",
+        ]
     )
+    selected_presets = st.sidebar.multiselect(
+        "Choose stocks or ETFs",
+        options=starter_assets,
+        default=config.universe[:4] if len(config.universe) >= 4 else config.universe,
+    )
+    custom_tickers = st.sidebar.text_input(
+        "Add tickers",
+        value="",
+        placeholder="e.g. AAPL, MSFT, NVDA",
+    )
+    custom_assets = custom_tickers.replace("\n", ",").split(",")
+    selected_assets = _normalize_tickers(selected_presets + custom_assets)
+    force_download = st.sidebar.checkbox("Refresh market data now", value=False)
 
     st.sidebar.header("Strategy")
     strategy_type = st.sidebar.selectbox(
@@ -310,6 +347,7 @@ def render_sidebar() -> Dict[str, Any]:
         "start_date": start_date,
         "end_date": end_date,
         "selected_assets": selected_assets,
+        "force_download": force_download,
         "strategy_type": strategy_type,
         "n_proposals": n_proposals,
         "run_agent": run_btn,
@@ -375,7 +413,12 @@ def main():
         try:
             # Step 1: Fetch data
             progress.progress(10, text="📥 Fetching market data…")
-            data = _fetch_data_cached(assets_tuple, start_str, end_str)
+            data = _fetch_data_cached(
+                assets_tuple,
+                start_str,
+                end_str,
+                force_download=opts["force_download"],
+            )
             st.session_state._data_cache = data
 
             if config.reference_asset not in data:

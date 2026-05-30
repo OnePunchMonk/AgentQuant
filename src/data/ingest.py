@@ -66,6 +66,29 @@ def _is_cache_valid(file_path: Path) -> bool:
     return True
 
 
+def _cache_covers_range(df: pd.DataFrame, start_date=None, end_date=None) -> bool:
+    """Return True when a cached frame covers the requested date range."""
+    if df.empty:
+        return False
+    if not isinstance(df.index, pd.DatetimeIndex):
+        return False
+
+    index = df.index.tz_localize(None) if df.index.tz is not None else df.index
+    min_date = index.min().normalize()
+    max_date = index.max().normalize()
+
+    if start_date:
+        requested_start = pd.to_datetime(start_date).normalize()
+        if min_date > requested_start:
+            return False
+    if end_date:
+        requested_end = pd.to_datetime(end_date).normalize()
+        # yfinance treats end as exclusive. Permit a small weekend/holiday gap.
+        if max_date < requested_end - pd.Timedelta(days=3):
+            return False
+    return True
+
+
 def fetch_ohlcv_data(
     ticker: Optional[str] = None,
     start_date=None,
@@ -103,6 +126,9 @@ def fetch_ohlcv_data(
         if not force_download and _is_cache_valid(file_path):
             try:
                 df = pd.read_parquet(file_path)
+                if not _cache_covers_range(df, start_date, end_date):
+                    logger.info("Cache for %s does not cover requested range. Re-fetching.", t)
+                    raise ValueError("cache does not cover requested date range")
                 if start_date:
                     df = df[df.index >= pd.to_datetime(start_date)]
                 if end_date:
