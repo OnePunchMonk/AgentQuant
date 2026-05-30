@@ -17,6 +17,7 @@ dependencies = [
     "scipy>=1.12",
     "streamlit>=1.39",
     "plotly>=5.17",
+    "matplotlib>=3.8",
     "pyarrow>=16.0",
     "tabulate>=0.9",
     "statsmodels>=0.14",

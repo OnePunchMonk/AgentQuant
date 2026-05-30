@@ -7,10 +7,8 @@ providing structured information the LLM can reason about.
 """
 
 import logging
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
-import numpy as np
 import pandas as pd
 from scipy import stats as scipy_stats
 
@@ -36,10 +34,12 @@ class RegimeContext:
     rsi_14: float = 50.0
     price_vs_sma200: float = 0.0
     regime_confidence: float = 0.5
+    alpha_memory_context: str = ""
+    nla_memory_context: str = ""
 
     def to_prompt_string(self) -> str:
         """Format context as structured text for LLM prompt injection."""
-        return (
+        context = (
             f"MARKET CONTEXT:\n"
             f"  Regime: {self.regime_label} (confidence: {self.regime_confidence:.0%})\n"
             f"  VIX: {self.vix_level:.1f} (at {self.vix_percentile:.0f}th percentile, trailing 1Y)\n"
@@ -55,6 +55,11 @@ class RegimeContext:
             f"    RSI (14): {self.rsi_14:.1f}\n"
             f"  Drawdown from peak: {self.drawdown_from_peak * 100:.1f}%\n"
         )
+        if self.alpha_memory_context:
+            context += f"\n{self.alpha_memory_context}\n"
+        if self.nla_memory_context:
+            context += f"\n{self.nla_memory_context}\n"
+        return context
 
 
 def build_context(features_df: pd.DataFrame) -> RegimeContext:

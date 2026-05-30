@@ -11,16 +11,15 @@ based on backtest results.
 
 import json
 import logging
-from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, TypedDict
 
-import numpy as np
 import pandas as pd
 
 from src.agent.context_builder import RegimeContext, build_context
 from src.agent.proposal_generator import Proposal, ProposalGenerator
 from src.agent.strategy_memory import PastResult, StrategyMemory
-from src.backtest.metrics import PerformanceMetrics
+from src.research.alpha_store import AlphaStore
+from src.research.nla_memory import NLAMemoryStore
 from src.utils.config import config
 
 logger = logging.getLogger(__name__)
@@ -60,10 +59,16 @@ def analyze_node(state: AgentState) -> AgentState:
     # Get memory context
     memory = StrategyMemory()
     memory_ctx = memory.to_prompt_context(regime_label, state.get("strategy_type", "momentum"))
+    alpha_memory = AlphaStore()
+    alpha_ctx = alpha_memory.to_prompt_context(regime_label, state.get("strategy_type", "momentum"))
+    nla_memory = NLAMemoryStore()
+    nla_ctx = nla_memory.to_prompt_context(regime_label, state.get("strategy_type", "momentum"))
+    context.alpha_memory_context = alpha_ctx
+    context.nla_memory_context = nla_ctx
 
     state["features_df"] = features_df
     state["context"] = context
-    state["memory_context"] = memory_ctx
+    state["memory_context"] = f"{memory_ctx}\n\n{alpha_ctx}\n\n{nla_ctx}"
     state["run_log"] = state.get("run_log", [])
     state["run_log"].append(f"Regime: {regime_label} (confidence: {context.regime_confidence:.0%})")
 
@@ -212,8 +217,40 @@ def store_node(state: AgentState) -> AgentState:
         reasoning=best.get("reasoning", ""),
     )
     run_id = memory.store(result)
-    state["run_log"].append(f"Store: Persisted result {run_id} to memory.")
-    logger.info("Persisted result %s to strategy memory.", run_id)
+    alpha = AlphaStore().store_backtest_result(
+        regime=regime,
+        strategy_type=state.get("strategy_type", "momentum"),
+        params=best["params"],
+        metrics={
+            "sharpe_ratio": best.get("sharpe", 0.0),
+            "total_return": best.get("total_return", 0.0),
+            "max_drawdown": best.get("max_drawdown", 0.0),
+            "num_trades": best.get("num_trades", 0),
+        },
+        assets=[state.get("asset", config.reference_asset)],
+        generation_method=best.get("generation_method", ""),
+        confidence=best.get("confidence", 0.0),
+        reasoning=best.get("reasoning", ""),
+        source="agent_graph",
+    )
+    nla = NLAMemoryStore().store_agent_summary(
+        regime=regime,
+        strategy_type=state.get("strategy_type", "momentum"),
+        params=best["params"],
+        metrics={
+            "sharpe_ratio": best.get("sharpe", 0.0),
+            "total_return": best.get("total_return", 0.0),
+            "max_drawdown": best.get("max_drawdown", 0.0),
+            "num_trades": best.get("num_trades", 0),
+        },
+        narrative=best.get("reasoning", "") or "Stored best proposal from explicit agent run.",
+        alpha_id=alpha.alpha_id,
+        tags=("agent_graph", best.get("generation_method", "")),
+    )
+    state["run_log"].append(
+        f"Store: Persisted result {run_id}, alpha {alpha.alpha_id}, NLA note {nla.record_id}."
+    )
+    logger.info("Persisted result %s, alpha %s, NLA note %s.", run_id, alpha.alpha_id, nla.record_id)
     return state
 
 
