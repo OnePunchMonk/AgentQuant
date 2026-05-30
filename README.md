@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/OnePunchMonk/AgentQuant/actions/workflows/ci.yml/badge.svg)](https://github.com/OnePunchMonk/AgentQuant/actions)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-42%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-55%20passed-brightgreen)
 
 ---
 
@@ -17,6 +17,30 @@ AgentQuant is a regime-adaptive research platform that runs a real **ReAct agent
 3. **Backtests** all proposals in a tournament, computing Sharpe, Calmar, Sortino, max drawdown, and bootstrapped Sharpe (p5).
 4. **Reflects** on results and retries if Sharpe is below the configured threshold (up to `max_iterations` times).
 5. **Stores** the best result to SQLite memory so future runs can recall what worked in similar regimes.
+
+---
+
+## Platform Preview
+
+### Live Data Selection
+
+Choose a date range, select preset stocks/ETFs, or type any yfinance ticker. AgentQuant fetches data on demand and only uses the local cache when it covers the requested range.
+
+![Live data sidebar](screenshots/live_data_sidebar_desktop.jpg)
+
+### Research Workspace
+
+The dashboard tracks experiment runs, baselines, robustness scores, validation checks, and report-ready research notes in one place.
+
+![Research workspace](screenshots/research_workspace_desktop.jpg)
+
+### Alpha + NLA Memory
+
+Agent Lab stores backtested alpha candidates and explicit NLA-style research narratives so future runs can retrieve prior evidence. NLA memory is based on explicit activation narratives or imported `nla-gemma4` JSONL outputs, not hidden chain-of-thought.
+
+![NLA memory](screenshots/nla_memory_desktop.jpg)
+
+![Agent Lab NLA memory](screenshots/agent_lab_nla_memory_desktop.jpg)
 
 ---
 
@@ -40,6 +64,9 @@ analyze ──► hypothesize ──► backtest ──► reflect
 | `src/agent/context_builder.py` | `RegimeContext` dataclass with VIX percentile, multi-horizon momentum |
 | `src/agent/parameter_grid.py` | Canonical grids per strategy; regime-aware prior selection |
 | `src/agent/strategy_memory.py` | SQLite cross-session memory |
+| `src/research/alpha_store.py` | SQLite memory for accepted, watchlisted, and rejected alpha candidates |
+| `src/research/nla_memory.py` | Explicit NLA-style narrative memory and `nla-gemma4` JSONL ingestion |
+| `src/research/workspace.py` | Experiment registry, robustness summaries, and research memo generation |
 | `src/features/regime.py` | Percentile-based regime detection + optional HMM |
 | `src/features/engine.py` | RSI, MACD, Bollinger, ATR, multi-horizon vol, stationarity checks |
 | `src/features/lookback_guard.py` | `WarmupEnforcer` prevents look-ahead bias |
@@ -108,14 +135,18 @@ pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
-**42 tests passing** across:
+**55 tests passing** across:
 - `test_config.py` — Pydantic validation
+- `test_data_ingest.py` — live ticker fetch and cache range coverage
 - `test_metrics.py` — Sharpe, drawdown, Calmar, Sortino
 - `test_regime.py` — VIX percentile regime classification
 - `test_features.py` — RSI bounds, momentum accuracy, new indicator columns
 - `test_strategies.py` — All 6 strategies produce valid `{-1,0,1}` signals
 - `test_backtest.py` — Runner, zero-signal flat equity, metrics keys
 - `test_proposal_generator.py` — Fallback chain without API key
+- `test_alpha_store.py` — alpha memory persistence and retrieval
+- `test_nla_memory.py` — explicit NLA memory and JSONL ingestion
+- `test_research_workspace.py` — experiment registry summaries and memos
 
 ---
 
@@ -136,6 +167,10 @@ AgentQuant/
 │   ├── data/
 │   │   ├── ingest.py               # yfinance + FRED with TTL cache
 │   │   └── schemas.py              # Data schemas
+│   ├── research/
+│   │   ├── alpha_store.py          # SQLite alpha candidate memory
+│   │   ├── nla_memory.py           # Explicit NLA narrative memory
+│   │   └── workspace.py            # Experiment registry + research memos
 │   ├── features/
 │   │   ├── engine.py               # RSI, MACD, Bollinger, ATR, multi-horizon vol
 │   │   ├── regime.py               # VIX-percentile + optional HMM detection
@@ -158,7 +193,7 @@ AgentQuant/
 ├── experiments/
 │   ├── results_store.py            # SQLite experiment tracking
 │   └── walk_forward.py             # Walk-forward validation
-├── tests/                          # 42 tests
+├── tests/                          # 55 tests
 ├── docs/                           # Documentation
 ├── config.yaml                     # Project configuration
 ├── .env.example                    # Environment template

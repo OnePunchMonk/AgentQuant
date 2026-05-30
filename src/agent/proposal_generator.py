@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 from src.agent.base_planner import BasePlanner, create_planner
 from src.agent.context_builder import RegimeContext
 from src.agent.parameter_grid import ParameterGrid
+from src.research.alpha_store import AlphaStore
 
 logger = logging.getLogger(__name__)
 
@@ -94,10 +95,17 @@ class ProposalGenerator:
     Fallback chain: LLM → GridSearch → Random.
     """
 
-    def __init__(self, planner: Optional[BasePlanner] = None):
+    def __init__(
+        self,
+        planner: Optional[BasePlanner] = None,
+        alpha_store: Optional[AlphaStore] = None,
+        use_alpha_memory: bool = True,
+    ):
         self.planner = planner or create_planner()
         self.grid = ParameterGrid()
         self.validator = ProposalValidator()
+        self.alpha_store = alpha_store or AlphaStore()
+        self.use_alpha_memory = use_alpha_memory
 
     def generate(
         self,
@@ -120,6 +128,19 @@ class ProposalGenerator:
         if len(proposals) < n_proposals:
             needed = n_proposals - len(proposals)
             existing_params = {tuple(sorted(p.params.items())) for p in proposals}
+            rejected_params = self._rejected_param_keys(context, strategy_type)
+
+            if self.use_alpha_memory:
+                memory_proposals = self._memory_generate(context, strategy_type, needed)
+                for mp in memory_proposals:
+                    if len(proposals) >= n_proposals:
+                        break
+                    key = tuple(sorted(mp.params.items()))
+                    if key not in existing_params:
+                        proposals.append(mp)
+                        existing_params.add(key)
+
+            needed = n_proposals - len(proposals)
             grid_proposals = self.grid.top_k_by_prior(
                 strategy_type, needed + 3, context.regime_label
             )
@@ -127,7 +148,7 @@ class ProposalGenerator:
                 if len(proposals) >= n_proposals:
                     break
                 key = tuple(sorted(gp.items()))
-                if key not in existing_params:
+                if key not in existing_params and key not in rejected_params:
                     proposals.append(Proposal(
                         params=gp,
                         confidence=0.3,
@@ -139,12 +160,13 @@ class ProposalGenerator:
         # Last resort: random from grid
         if len(proposals) < n_proposals:
             needed = n_proposals - len(proposals)
+            rejected_params = self._rejected_param_keys(context, strategy_type)
             for rp in self.grid.random_k(strategy_type, needed + 5):
                 if len(proposals) >= n_proposals:
                     break
                 existing_params_set = {tuple(sorted(p.params.items())) for p in proposals}
                 key = tuple(sorted(rp.items()))
-                if key not in existing_params_set:
+                if key not in existing_params_set and key not in rejected_params:
                     proposals.append(Proposal(
                         params=rp,
                         confidence=0.1,
@@ -153,6 +175,53 @@ class ProposalGenerator:
                     ))
 
         return proposals[:n_proposals]
+
+    def _memory_generate(
+        self,
+        context: RegimeContext,
+        strategy_type: str,
+        n: int,
+    ) -> List[Proposal]:
+        if n <= 0:
+            return []
+
+        grid_keys = {
+            tuple(sorted(params.items()))
+            for params in self.grid.get_grid(strategy_type)
+        }
+        proposals: List[Proposal] = []
+        candidates = self.alpha_store.recall(
+            regime=context.regime_label,
+            strategy_type=strategy_type,
+            statuses=("accepted", "watch"),
+            n=n,
+        )
+
+        for candidate in candidates:
+            key = tuple(sorted(candidate.params.items()))
+            if grid_keys and key not in grid_keys:
+                continue
+            proposals.append(
+                Proposal(
+                    params=candidate.params,
+                    confidence=max(candidate.confidence, 0.55),
+                    regime_characteristic_used="alpha_memory",
+                    reasoning=f"Retrieved from alpha DB: {candidate.thesis}",
+                    generation_method="alpha_memory",
+                )
+            )
+        return proposals
+
+    def _rejected_param_keys(self, context: RegimeContext, strategy_type: str) -> set:
+        if not self.use_alpha_memory:
+            return set()
+        rejected = self.alpha_store.recall(
+            regime=context.regime_label,
+            strategy_type=strategy_type,
+            statuses=("rejected",),
+            n=50,
+        )
+        return {tuple(sorted(candidate.params.items())) for candidate in rejected}
 
     def _llm_generate(
         self, context: RegimeContext, strategy_type: str, n: int
