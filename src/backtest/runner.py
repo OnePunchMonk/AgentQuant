@@ -10,7 +10,6 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional
 
-import numpy as np
 import pandas as pd
 
 from src.backtest.metrics import PerformanceMetrics
@@ -205,7 +204,7 @@ def run_backtest(
         idx = combined.index.intersection(eq.index)
         combined = combined.loc[idx] + eq.loc[idx]
 
-    combined_metrics = PerformanceMetrics.from_equity(combined)
+    combined_metrics = PerformanceMetrics.from_equity(combined, bootstrap=True)
     combined_metrics["sharpe_ratio"] = combined_metrics.pop("sharpe", 0.0)
     combined_metrics["num_trades"] = sum(r["metrics"]["num_trades"] for r in asset_results)
 

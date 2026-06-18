@@ -20,6 +20,7 @@ dependencies = [
     "matplotlib>=3.8",
     "pyarrow>=16.0",
     "tabulate>=0.9",
+    "rich>=13.7",
     "statsmodels>=0.14",
     "requests>=2.31",
 ]
@@ -54,6 +55,7 @@ dev = [
 
 [project.scripts]
 run-agent = "src.agent.runner:main"
+agentquant = "src.cli:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
@@ -63,6 +65,8 @@ addopts = "-v --tb=short"
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I"]
 ignore = ["E501"]
 

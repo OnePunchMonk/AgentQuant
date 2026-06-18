@@ -18,6 +18,7 @@ import pandas as pd
 from src.agent.context_builder import RegimeContext, build_context
 from src.agent.proposal_generator import Proposal, ProposalGenerator
 from src.agent.strategy_memory import PastResult, StrategyMemory
+from src.agent.trace import TraceRecorder, emit_trace
 from src.research.alpha_store import AlphaStore
 from src.research.nla_memory import NLAMemoryStore
 from src.utils.config import config
@@ -40,6 +41,7 @@ class AgentState(TypedDict, total=False):
     should_continue: bool
     memory_context: str
     run_log: List[str]
+    trace: Optional[TraceRecorder]
 
 
 def analyze_node(state: AgentState) -> AgentState:
@@ -71,6 +73,13 @@ def analyze_node(state: AgentState) -> AgentState:
     state["memory_context"] = f"{memory_ctx}\n\n{alpha_ctx}\n\n{nla_ctx}"
     state["run_log"] = state.get("run_log", [])
     state["run_log"].append(f"Regime: {regime_label} (confidence: {context.regime_confidence:.0%})")
+    emit_trace(
+        state.get("trace"),
+        "analyze",
+        f"Regime {regime_label} detected at {context.regime_confidence:.0%} confidence.",
+        regime=regime_label,
+        confidence=context.regime_confidence,
+    )
 
     logger.info("Regime: %s, Confidence: %.0f%%", regime_label, context.regime_confidence * 100)
     return state
@@ -97,6 +106,14 @@ def hypothesize_node(state: AgentState) -> AgentState:
         f"Iteration {iteration}: Generated {len(proposals)} proposals "
         f"(methods: {[p.generation_method for p in proposals]})"
     )
+    emit_trace(
+        state.get("trace"),
+        "hypothesize",
+        f"Iteration {iteration}: generated {len(proposals)} candidate strategies.",
+        iteration=iteration,
+        methods=[p.generation_method for p in proposals],
+        proposals=[p.params for p in proposals],
+    )
 
     for i, p in enumerate(proposals):
         logger.info("  Proposal %d: %s (confidence=%.2f, method=%s)",
@@ -121,8 +138,12 @@ def backtest_node(state: AgentState) -> AgentState:
                 metrics = bt_result["metrics"]
                 results.append({
                     "proposal_idx": i,
+                    "strategy_type": strategy_type,
                     "params": proposal.params,
                     "sharpe": metrics.get("sharpe_ratio", 0.0),
+                    "calmar": metrics.get("calmar", 0.0),
+                    "sortino": metrics.get("sortino", 0.0),
+                    "bootstrap_sharpe_p5": metrics.get("bootstrap_sharpe_p5", 0.0),
                     "total_return": metrics.get("total_return", 0.0),
                     "max_drawdown": metrics.get("max_drawdown", 0.0),
                     "num_trades": metrics.get("num_trades", 0),
@@ -144,11 +165,22 @@ def backtest_node(state: AgentState) -> AgentState:
             f"Best: Sharpe={best['sharpe']:.2f}, Return={best['total_return']:.1%}, "
             f"Params={best['params']}"
         )
+        emit_trace(
+            state.get("trace"),
+            "backtest",
+            (
+                f"Best candidate Sharpe={best['sharpe']:.2f}, "
+                f"Calmar={best.get('calmar', 0):.2f}, p5={best.get('bootstrap_sharpe_p5', 0):.2f}."
+            ),
+            best=best,
+            results=results,
+        )
         logger.info("Best result: Sharpe=%.2f, Return=%.1f%%, Params=%s",
                      best["sharpe"], best["total_return"] * 100, best["params"])
     else:
         state["best_result"] = None
         state["run_log"].append("No valid backtest results.")
+        emit_trace(state.get("trace"), "backtest", "No valid candidate backtests completed.")
         logger.warning("No valid backtest results produced.")
 
     return state
@@ -166,6 +198,7 @@ def reflect_node(state: AgentState) -> AgentState:
     if best is None:
         state["should_continue"] = iteration < max_iter
         state["run_log"].append(f"Reflect: No results. {'Retrying...' if state['should_continue'] else 'Stopping.'}")
+        emit_trace(state.get("trace"), "reflect", state["run_log"][-1])
         return state
 
     sharpe = best.get("sharpe", 0.0)
@@ -175,18 +208,21 @@ def reflect_node(state: AgentState) -> AgentState:
         state["run_log"].append(
             f"Reflect: Sharpe {sharpe:.2f} >= threshold {min_sharpe:.2f}. ACCEPTING."
         )
+        emit_trace(state.get("trace"), "reflect", state["run_log"][-1], accepted=True)
         logger.info("Result accepted: Sharpe %.2f >= %.2f", sharpe, min_sharpe)
     elif iteration >= max_iter:
         state["should_continue"] = False
         state["run_log"].append(
             f"Reflect: Sharpe {sharpe:.2f} < {min_sharpe:.2f} but max iterations reached. Accepting best available."
         )
+        emit_trace(state.get("trace"), "reflect", state["run_log"][-1], accepted=True)
         logger.info("Max iterations reached. Accepting best: Sharpe %.2f", sharpe)
     else:
         state["should_continue"] = True
         state["run_log"].append(
             f"Reflect: Sharpe {sharpe:.2f} < {min_sharpe:.2f}. Retrying (iteration {iteration}/{max_iter})."
         )
+        emit_trace(state.get("trace"), "reflect", state["run_log"][-1], accepted=False)
         logger.info("Result below threshold. Will retry. (iteration %d/%d)", iteration, max_iter)
 
     return state
@@ -199,6 +235,7 @@ def store_node(state: AgentState) -> AgentState:
     best = state.get("best_result")
     if best is None:
         state["run_log"].append("Store: Nothing to persist.")
+        emit_trace(state.get("trace"), "store", "No accepted result to persist.")
         return state
 
     context = state.get("context")
@@ -223,6 +260,9 @@ def store_node(state: AgentState) -> AgentState:
         params=best["params"],
         metrics={
             "sharpe_ratio": best.get("sharpe", 0.0),
+            "calmar": best.get("calmar", 0.0),
+            "sortino": best.get("sortino", 0.0),
+            "bootstrap_sharpe_p5": best.get("bootstrap_sharpe_p5", 0.0),
             "total_return": best.get("total_return", 0.0),
             "max_drawdown": best.get("max_drawdown", 0.0),
             "num_trades": best.get("num_trades", 0),
@@ -239,6 +279,9 @@ def store_node(state: AgentState) -> AgentState:
         params=best["params"],
         metrics={
             "sharpe_ratio": best.get("sharpe", 0.0),
+            "calmar": best.get("calmar", 0.0),
+            "sortino": best.get("sortino", 0.0),
+            "bootstrap_sharpe_p5": best.get("bootstrap_sharpe_p5", 0.0),
             "total_return": best.get("total_return", 0.0),
             "max_drawdown": best.get("max_drawdown", 0.0),
             "num_trades": best.get("num_trades", 0),
@@ -250,6 +293,7 @@ def store_node(state: AgentState) -> AgentState:
     state["run_log"].append(
         f"Store: Persisted result {run_id}, alpha {alpha.alpha_id}, NLA note {nla.record_id}."
     )
+    emit_trace(state.get("trace"), "store", state["run_log"][-1], run_id=run_id)
     logger.info("Persisted result %s, alpha %s, NLA note %s.", run_id, alpha.alpha_id, nla.record_id)
     return state
 
@@ -259,6 +303,7 @@ def run_agent(
     strategy_type: str = "momentum",
     asset: str = None,
     max_iterations: int = None,
+    trace: Optional[TraceRecorder] = None,
 ) -> AgentState:
     """
     Run the full agent loop: analyze → hypothesize → backtest → reflect → (loop or store).
@@ -280,6 +325,7 @@ def run_agent(
         "should_continue": True,
         "memory_context": "",
         "run_log": [],
+        "trace": trace,
     }
 
     # Step 1: Analyze (once)
