@@ -27,6 +27,7 @@ import streamlit as st
 from src.agent.context_builder import build_context
 from src.agent.parameter_grid import ParameterGrid
 from src.agent.proposal_generator import ProposalGenerator
+from src.agent.reporting import verdict_for_metrics
 from src.backtest.runner import run_backtest
 from src.data.ingest import fetch_ohlcv_data
 from src.features.engine import compute_features
@@ -564,9 +565,16 @@ def main():
                         if st.session_state.strategies else "",
                 "Params": str(p.params),
                 "Sharpe": round(m.get("sharpe_ratio", 0), 3),
+                "Verdict": verdict_for_metrics({
+                    "sharpe": m.get("sharpe_ratio", 0),
+                    "bootstrap_sharpe_p5": m.get("bootstrap_sharpe_p5", 0),
+                    "max_drawdown": m.get("max_drawdown", 0),
+                }),
                 "Return": f"{m.get('total_return', 0) * 100:.1f}%",
                 "Max DD": f"{m.get('max_drawdown', 0) * 100:.1f}%",
                 "Calmar": round(m.get("calmar", 0), 3),
+                "Sortino": round(m.get("sortino", 0), 3),
+                "Boot p5": round(m.get("bootstrap_sharpe_p5", 0), 3),
                 "Trades": m.get("num_trades", 0),
                 "Method": data["proposal"].generation_method,
             })

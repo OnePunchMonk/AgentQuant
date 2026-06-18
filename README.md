@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/OnePunchMonk/AgentQuant/actions/workflows/ci.yml/badge.svg)](https://github.com/OnePunchMonk/AgentQuant/actions)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-55%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-63%20passed-brightgreen)
 
 ---
 
@@ -17,6 +17,8 @@ AgentQuant is a regime-adaptive research platform that runs a real **ReAct agent
 3. **Backtests** all proposals in a tournament, computing Sharpe, Calmar, Sortino, max drawdown, and bootstrapped Sharpe (p5).
 4. **Reflects** on results and retries if Sharpe is below the configured threshold (up to `max_iterations` times).
 5. **Stores** the best result to SQLite memory so future runs can recall what worked in similar regimes.
+
+Every completed run now emits a screenshot-friendly **regime card** and a transparent candidate table with pass/watch/reject verdicts, Sharpe, Calmar, Sortino, max drawdown, and bootstrapped Sharpe p5.
 
 ---
 
@@ -54,6 +56,20 @@ analyze ──► hypothesize ──► backtest ──► reflect
                                            store → SQLite memory
 ```
 
+### Multi-Agent Swarm
+
+The optional swarm mode runs the same research loop through specialized agents:
+
+```mermaid
+flowchart LR
+    M["Memory Agent<br/>learned patterns"] --> R["Regime Analyst<br/>market context"]
+    R --> S["Strategy Specialists<br/>momentum, mean reversion, volatility"]
+    S --> C["Critic Agent<br/>reject invalid or duplicate candidates"]
+    C --> B["Backtest Coordinator<br/>multi-window validation"]
+    B --> M
+    B --> O["Regime card + comparison table"]
+```
+
 ### Key Components
 
 | Module | What it does |
@@ -63,7 +79,11 @@ analyze ──► hypothesize ──► backtest ──► reflect
 | `src/agent/base_planner.py` | `BasePlanner` ABC with Gemini / OpenAI / Fallback |
 | `src/agent/context_builder.py` | `RegimeContext` dataclass with VIX percentile, multi-horizon momentum |
 | `src/agent/parameter_grid.py` | Canonical grids per strategy; regime-aware prior selection |
+| `src/agent/memory_layer.py` | Agentic memory layer that turns SQLite history into strategy patterns |
+| `src/agent/reporting.py` | Regime card, comparison table, and pass/watch/reject verdicts |
+| `src/agent/trace.py` | Live trace event stream for the ReAct loop |
 | `src/agent/strategy_memory.py` | SQLite cross-session memory |
+| `src/agent/swarm/` | Memory Agent, Regime Analyst, Specialists, Critic, and Backtest Coordinator |
 | `src/research/alpha_store.py` | SQLite memory for accepted, watchlisted, and rejected alpha candidates |
 | `src/research/nla_memory.py` | Explicit NLA-style narrative memory and `nla-gemma4` JSONL ingestion |
 | `src/research/workspace.py` | Experiment registry, robustness summaries, and research memo generation |
@@ -79,22 +99,35 @@ analyze ──► hypothesize ──► backtest ──► reflect
 
 ---
 
-### Experimental Agent Swarm Branch
+### Visible Agent Loop
 
-The `agent-swarm-method` branch explores a multi-agent version of AgentQuant. It decomposes the research loop into specialized agents:
-
-- **Memory Agent** retrieves and stores strategy patterns across runs.
-- **Regime Analyst** builds the market/macro context used by downstream agents.
-- **Strategy Specialists** generate proposals for momentum, mean reversion, volatility, and trend-following approaches.
-- **Critic Agent** pre-screens proposals before expensive backtests.
-- **Backtest Coordinator** validates approved proposals across multiple time windows and ranks by robustness.
-
-That branch is intentionally experimental and sits alongside the main ReAct pipeline. To inspect it:
+Run with a live terminal trace to watch the agent move through hypothesis, backtest, reflection, retry, and memory storage:
 
 ```bash
-git checkout agent-swarm-method
-pytest tests/test_swarm.py -v
+agentquant run --ticker SPY --trace
 ```
+
+Run the multi-agent architecture from main:
+
+```bash
+agentquant run --ticker SPY --swarm --strategies momentum mean_reversion volatility
+```
+
+Browse accumulated strategy memory:
+
+```bash
+agentquant memory
+agentquant memory --regime LowVol-Bull --patterns
+agentquant memory --export markdown
+```
+
+Render the latest stored one-page regime card:
+
+```bash
+agentquant regime-card
+```
+
+The Colab quick demo is in `notebooks/agentquant_colab_spy.ipynb`. It runs a full SPY loop in three cells and works with or without a Gemini API key.
 
 ---
 
@@ -120,7 +153,13 @@ cp .env.example .env
 # 5. Run the agent
 python -m src.agent.runner
 
-# 6. Run the dashboard
+# Or use the CLI
+agentquant run --ticker SPY --trace
+
+# 6. Browse memory
+agentquant memory --patterns
+
+# 7. Run the dashboard
 python run_app.py
 ```
 
@@ -135,7 +174,7 @@ pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
-**55 tests passing** across:
+**63 tests passing** across:
 - `test_config.py` — Pydantic validation
 - `test_data_ingest.py` — live ticker fetch and cache range coverage
 - `test_metrics.py` — Sharpe, drawdown, Calmar, Sortino
@@ -147,6 +186,9 @@ pytest tests/ -v
 - `test_alpha_store.py` — alpha memory persistence and retrieval
 - `test_nla_memory.py` — explicit NLA memory and JSONL ingestion
 - `test_research_workspace.py` — experiment registry summaries and memos
+- `test_memory_layer.py` — agentic memory pattern extraction and markdown export
+- `test_reporting_cli.py` — regime card, verdicts, and CLI parsing
+- `test_swarm.py` — synthetic-data smoke tests for the multi-agent swarm
 
 ---
 
@@ -159,9 +201,13 @@ AgentQuant/
 │   │   ├── agent_graph.py          # ReAct agent loop (analyze→hypothesize→backtest→reflect→store)
 │   │   ├── base_planner.py         # LLM abstraction: Gemini / OpenAI / Fallback
 │   │   ├── context_builder.py      # RegimeContext dataclass + builder
+│   │   ├── memory_layer.py         # Agentic memory pattern extraction
 │   │   ├── parameter_grid.py       # Canonical parameter grids per strategy
 │   │   ├── proposal_generator.py   # LLM → Grid → Random fallback chain
+│   │   ├── reporting.py            # Regime card + comparison table renderers
 │   │   ├── strategy_memory.py      # SQLite cross-session memory
+│   │   ├── swarm/                  # Multi-agent Memory/Regime/Critic/Backtest agents
+│   │   ├── trace.py                # Live trace events
 │   │   ├── tools.py                # Tool-calling interface for LangGraph
 │   │   └── runner.py               # Main entry point
 │   ├── data/
@@ -193,7 +239,7 @@ AgentQuant/
 ├── experiments/
 │   ├── results_store.py            # SQLite experiment tracking
 │   └── walk_forward.py             # Walk-forward validation
-├── tests/                          # 55 tests
+├── tests/                          # 63 tests
 ├── docs/                           # Documentation
 ├── config.yaml                     # Project configuration
 ├── .env.example                    # Environment template

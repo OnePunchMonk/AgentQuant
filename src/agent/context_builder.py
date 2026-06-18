@@ -34,6 +34,7 @@ class RegimeContext:
     rsi_14: float = 50.0
     price_vs_sma200: float = 0.0
     regime_confidence: float = 0.5
+    memory_context: str = ""
     alpha_memory_context: str = ""
     nla_memory_context: str = ""
 
@@ -55,6 +56,8 @@ class RegimeContext:
             f"    RSI (14): {self.rsi_14:.1f}\n"
             f"  Drawdown from peak: {self.drawdown_from_peak * 100:.1f}%\n"
         )
+        if self.memory_context:
+            context += f"\n{self.memory_context}\n"
         if self.alpha_memory_context:
             context += f"\n{self.alpha_memory_context}\n"
         if self.nla_memory_context:

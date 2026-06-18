@@ -7,12 +7,12 @@ backtest → reflect → store loop.
 """
 
 import logging
-import os
 
 import pandas as pd
 from dotenv import load_dotenv
 
 from src.agent.agent_graph import run_agent
+from src.agent.reporting import render_comparison_table, render_regime_card
 from src.data.ingest import fetch_ohlcv_data
 from src.utils.config import config
 from src.utils.logging import setup_logging
@@ -85,6 +85,11 @@ def main():
                 print(df[cols].to_markdown(floatfmt=".4f", index=False))
             except Exception:
                 print(df[cols].to_string(index=False))
+
+        print()
+        print(render_regime_card(state))
+        print()
+        print(render_comparison_table(results))
 
     logger.info("Agent run finished.")
 
