@@ -10,6 +10,7 @@ __pycache__/
 dist/
 build/
 *.egg
+.venv/
 
 # Data (download on demand)
 data_store/*.parquet

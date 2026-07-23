@@ -1,7 +1,7 @@
 [project]
 name = "agentquant"
 version = "0.2.0"
-description = "Autonomous quantitative trading research platform with LLM regime-aware strategy optimization."
+description = "Peek: catches look-ahead bias and data leakage in time-series ML pipelines. Also ships AgentQuant, the LLM research agent that motivated it."
 authors = [{ name = "Avaya Aggarwal", email = "aggarwal.avaya27@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -56,6 +56,7 @@ dev = [
 [project.scripts]
 run-agent = "src.agent.runner:main"
 agentquant = "src.cli:main"
+peek = "peek.cli:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
@@ -72,4 +73,4 @@ ignore = ["E501"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*"]
+include = ["src*", "peek*"]
