@@ -37,7 +37,7 @@ jobs:
 
       - name: Run linter (ruff)
         run: |
-          ruff check src/ tests/ --output-format=github
+          ruff check src/ tests/ peek/ --output-format=github
 
       - name: Run tests
         env:
