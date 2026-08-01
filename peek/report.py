@@ -105,5 +105,16 @@ class AuditReport:
         elif self.verdict == "SUSPICIOUS":
             lines.append(f"Verdict: SUSPICIOUS — {n_warning} warning(s), no definitive leak found.")
         else:
-            lines.append("Verdict: CLEAN — no leakage detected by the checks that ran.")
+            ran = ", ".join(self.checks_run) if self.checks_run else "none"
+            lines.append(
+                f"Verdict: CLEAN — no leakage detected by the checks that ran ({ran})."
+            )
+            # Warn when the deep checks were never invoked so users don't treat
+            # the easy CLEAN as a full bill of health.
+            shallow_only = set(self.checks_run) <= {"target_leak"}
+            if shallow_only and self.checks_run:
+                lines.append(
+                    "  ↳ Only the target-leak check ran.  Pass feature_fn, splits, or "
+                    "pipeline+cv+scorer to enable the causality, split, and shuffle checks."
+                )
         return "\n".join(lines)

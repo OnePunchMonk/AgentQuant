@@ -63,19 +63,25 @@ class SplitCheck:
                     ),
                 ))
 
-            train_before = train_times[train_times < test_start]
-            if len(train_before) > 0 and ctx.embargo > 0:
-                gap = ctx.embargo
-                boundary = train_before.max()
-                too_close = train_before[train_before > (test_start - gap)] \
-                    if np.issubdtype(times.dtype, np.number) else np.array([])
-                if len(too_close) > 0:
+            # Embargo: check in row-index space so this works for any time
+            # dtype (datetime, int, float).  `ctx.embargo` is a number of rows.
+            if ctx.embargo > 0:
+                test_start_pos = int(test_idx.min())
+                # Train rows that are within `embargo` rows before the test
+                # window (excluding any already flagged as future-dated).
+                embargo_violators = train_idx[
+                    (train_idx < test_start_pos)
+                    & (train_idx >= (test_start_pos - ctx.embargo))
+                ]
+                if len(embargo_violators) > 0:
+                    boundary = times[train_idx[train_idx < test_start_pos].max()]
                     any_issue = True
                     findings.append(Finding(
                         check=self.name,
                         severity=Severity.WARNING,
-                        message=f"fold {fold_i}: {len(too_close)} training row(s) fall inside "
-                                f"the requested embargo gap ({gap}) before the test window",
+                        message=f"fold {fold_i}: {len(embargo_violators)} training row(s) fall "
+                                f"inside the requested embargo gap ({ctx.embargo} rows) before "
+                                "the test window",
                         detail=f"last training timestamp before test: {boundary}",
                     ))
 

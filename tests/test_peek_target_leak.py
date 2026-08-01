@@ -19,6 +19,19 @@ def test_clean_dataset_target_leak_check_passes():
     assert report.verdict == "CLEAN"
 
 
+def test_non_numeric_features_emit_warning():
+    """Categorical columns must get a WARNING instead of being silently skipped."""
+    df = pd.DataFrame({
+        "date": pd.date_range("2020-01-01", periods=50),
+        "sector": ["tech"] * 50,   # non-numeric
+        "target": range(50),
+    })
+    report = peek.audit(df, time_col="date", target="target")
+    target_findings = [f for f in report.findings if f.check == "target_leak"]
+    messages = " ".join(f.message for f in target_findings)
+    assert "non-numeric" in messages or "skipped" in " ".join(f.detail for f in target_findings)
+
+
 def test_shifted_duplicate_of_target_is_flagged():
     df = pd.DataFrame({
         "date": pd.date_range("2020-01-01", periods=50),

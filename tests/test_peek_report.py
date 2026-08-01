@@ -36,6 +36,29 @@ def test_to_dict_roundtrip_shape():
     assert d["findings"][0]["check"] == "target_leak"
 
 
+def test_clean_verdict_names_checks_run():
+    """CLEAN verdict must tell users which checks actually ran."""
+    report = AuditReport(
+        findings=[Finding(check="target_leak", severity=Severity.PASS, message="ok")],
+        checks_run=["target_leak"],
+    )
+    text = str(report)
+    assert "target_leak" in text
+    assert "feature_fn" in text  # shallow-only hint must appear
+
+
+def test_clean_verdict_no_shallow_hint_when_deep_checks_ran():
+    report = AuditReport(
+        findings=[
+            Finding(check="target_leak", severity=Severity.PASS, message="ok"),
+            Finding(check="causality", severity=Severity.PASS, message="ok"),
+        ],
+        checks_run=["target_leak", "causality"],
+    )
+    text = str(report)
+    assert "feature_fn" not in text  # hint should NOT appear
+
+
 def test_render_includes_verdict_text():
     report = AuditReport(findings=[
         Finding(check="causality", severity=Severity.CRITICAL, message="leak found"),

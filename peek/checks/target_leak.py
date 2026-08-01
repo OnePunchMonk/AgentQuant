@@ -36,6 +36,9 @@ class TargetLeakCheck:
             if c not in (ctx.target, ctx.time_col) and pd.api.types.is_numeric_dtype(ctx.df[c])
         ]
 
+        all_feature_cols = [c for c in ctx.df.columns if c not in (ctx.target, ctx.time_col)]
+        skipped_cols = [c for c in all_feature_cols if c not in feature_cols]
+
         any_leak = False
         for col in feature_cols:
             feature = ctx.df[col]
@@ -59,10 +62,21 @@ class TargetLeakCheck:
                     ))
                     break  # one finding per feature is enough
 
+        if skipped_cols:
+            findings.append(Finding(
+                check=self.name,
+                severity=Severity.WARNING,
+                message=(
+                    f"{len(skipped_cols)} non-numeric column(s) were not checked for "
+                    "target leakage (correlation test requires numeric features)"
+                ),
+                detail=f"skipped: {', '.join(skipped_cols)}",
+            ))
+
         if not any_leak:
             findings.append(Finding(
                 check=self.name,
                 severity=Severity.PASS,
-                message="no feature is a near-exact copy of the (shifted) target",
+                message="no numeric feature is a near-exact copy of the (shifted) target",
             ))
         return findings

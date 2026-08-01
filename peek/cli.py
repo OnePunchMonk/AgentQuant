@@ -9,6 +9,7 @@ Peek CLI
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 
 import pandas as pd
@@ -49,7 +50,10 @@ def _run_demo() -> int:
 def _run_audit(args: argparse.Namespace) -> int:
     df = pd.read_csv(args.path)
     report = audit(df, time_col=args.time, target=args.target, horizon=args.horizon)
-    print(report)
+    if args.json:
+        print(json.dumps(report.to_dict(), indent=2))
+    else:
+        print(report)
     return 1 if report.has_leak else 0
 
 
@@ -64,6 +68,10 @@ def build_parser() -> argparse.ArgumentParser:
     audit_parser.add_argument("--time", required=True, help="Name of the timestamp column")
     audit_parser.add_argument("--target", required=True, help="Name of the target column")
     audit_parser.add_argument("--horizon", type=int, default=1, help="Forecast horizon in rows")
+    audit_parser.add_argument(
+        "--json", action="store_true", default=False,
+        help="Output the audit report as JSON (useful for CI pipelines)",
+    )
 
     return parser
 
