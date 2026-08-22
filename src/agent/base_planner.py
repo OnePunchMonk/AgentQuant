@@ -9,8 +9,9 @@ fallback (no-LLM) planners. Factory function reads provider from config.
 import json
 import logging
 import os
+import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 
 from dotenv import load_dotenv
 
@@ -19,6 +20,35 @@ from src.utils.config import config
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+
+T = TypeVar("T")
+
+_PLACEHOLDER_KEYS = {"your_gemini_api_key_here", "you api key"}
+
+
+def _looks_like_valid_key(key: str) -> bool:
+    """Basic sanity check to reject empty/placeholder/malformed API keys early."""
+    key = key.strip()
+    if not key or key.lower() in _PLACEHOLDER_KEYS:
+        return False
+    return len(key) >= 16 and " " not in key
+
+
+def _call_with_retry(fn: Callable[[], T], max_retries: int, backoff_seconds: float = 1.0) -> T:
+    """Call `fn`, retrying on exception up to `max_retries` times with linear backoff."""
+    last_exc: Optional[Exception] = None
+    for attempt in range(max_retries + 1):
+        try:
+            return fn()
+        except Exception as e:
+            last_exc = e
+            if attempt < max_retries:
+                logger.warning(
+                    "LLM call failed (attempt %d/%d): %s. Retrying...",
+                    attempt + 1, max_retries + 1, e,
+                )
+                time.sleep(backoff_seconds * (attempt + 1))
+    raise last_exc
 
 
 class BasePlanner(ABC):
@@ -55,7 +85,7 @@ class GeminiPlanner(BasePlanner):
         self._model = None
 
     def is_available(self) -> bool:
-        return bool(self._api_key and self._api_key not in ("", "your_gemini_api_key_here", "you api key"))
+        return _looks_like_valid_key(self._api_key)
 
     def _get_model(self):
         if self._model is None:
@@ -69,7 +99,9 @@ class GeminiPlanner(BasePlanner):
 
     def generate_proposals(self, prompt: str, n: int = 5) -> List[Dict[str, Any]]:
         model = self._get_model()
-        response = model.generate_content(prompt)
+        response = _call_with_retry(
+            lambda: model.generate_content(prompt), config.llm.max_retries
+        )
 
         text = response.text.strip()
         return self._parse_json_response(text, n)
@@ -111,7 +143,7 @@ class LangChainPlanner(BasePlanner):
         self._temperature = config.llm.temperature
 
     def is_available(self) -> bool:
-        if not self._api_key or self._api_key in ("", "your_gemini_api_key_here", "you api key"):
+        if not _looks_like_valid_key(self._api_key):
             return False
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI  # noqa: F401
@@ -139,7 +171,7 @@ class OpenAIPlanner(BasePlanner):
         self._api_key = os.getenv("OPENAI_API_KEY", "")
 
     def is_available(self) -> bool:
-        if not self._api_key:
+        if not _looks_like_valid_key(self._api_key):
             return False
         try:
             import openai  # noqa: F401
@@ -151,10 +183,13 @@ class OpenAIPlanner(BasePlanner):
         import openai
 
         client = openai.OpenAI(api_key=self._api_key)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=config.llm.temperature,
+        response = _call_with_retry(
+            lambda: client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=config.llm.temperature,
+            ),
+            config.llm.max_retries,
         )
         text = response.choices[0].message.content or ""
         return GeminiPlanner._parse_json_response(None, text, n)

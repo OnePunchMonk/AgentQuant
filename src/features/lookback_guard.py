@@ -21,6 +21,10 @@ def enforce_lookback(min_periods: int):
     Decorator that validates a feature function's output has at least
     `min_periods` non-NaN values.
 
+    Raises InsufficientWarmupError if the computed feature does not have
+    enough valid history — callers must handle this rather than silently
+    trading on an unreliable warmup window.
+
     Usage:
         @enforce_lookback(min_periods=200)
         def compute_sma200(close: pd.Series) -> pd.Series:
@@ -33,10 +37,9 @@ def enforce_lookback(min_periods: int):
             if isinstance(result, pd.Series):
                 n_valid = result.notna().sum()
                 if n_valid < min_periods:
-                    logger.warning(
-                        "%s produced only %d valid values but requires %d. "
-                        "Signals in this window may be unreliable.",
-                        func.__name__, n_valid, min_periods,
+                    raise InsufficientWarmupError(
+                        f"{func.__name__} produced only {n_valid} valid values "
+                        f"but requires {min_periods}. Provide more historical data."
                     )
             return result
         return wrapper

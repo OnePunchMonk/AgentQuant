@@ -7,10 +7,12 @@ stationarity checks, and drawdown features in addition to base indicators.
 """
 
 import logging
-from typing import Dict, Optional
+from typing import Dict
 
 import numpy as np
 import pandas as pd
+
+from src.features.lookback_guard import enforce_lookback
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,7 @@ def _find_field_series(df: pd.DataFrame, field: str) -> pd.Series:
 # Individual indicator functions
 # ---------------------------------------------------------------------------
 
+@enforce_lookback(min_periods=14)
 def _compute_rsi(close: pd.Series, period: int = 14) -> pd.Series:
     """Compute RSI using Wilder's smoothing."""
     delta = close.diff()
@@ -101,6 +104,7 @@ def _compute_bollinger(close: pd.Series, window: int = 20, num_std: float = 2.0)
     return upper, lower, width, pct_b
 
 
+@enforce_lookback(min_periods=14)
 def _compute_atr(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> pd.Series:
     """Compute Average True Range."""
     prev_close = close.shift(1)

@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 
 ANN_FACTOR = 252  # trading days per year
 
+# Sentinel used instead of float("inf") for near-zero drawdown/downside cases
+# so Calmar/Sortino can safely flow into ranking, sorting, and persisted
+# memory without producing inf/NaN downstream.
+MAX_RATIO = 1e6
+
 
 class PerformanceMetrics:
     """Centralised performance metric computations."""
@@ -44,7 +49,9 @@ class PerformanceMetrics:
             return 0.0
         ann_ret = (eq.iloc[-1] / eq.iloc[0]) ** (ann_factor / len(eq)) - 1
         mdd = PerformanceMetrics.max_drawdown(eq)
-        return float(ann_ret / mdd) if mdd > 1e-9 else float("inf")
+        if mdd <= 1e-9:
+            return MAX_RATIO if ann_ret >= 0 else -MAX_RATIO
+        return float(ann_ret / mdd)
 
     @staticmethod
     def sortino(returns: pd.Series, ann_factor: int = ANN_FACTOR, risk_free: float = 0.0) -> float:
@@ -56,19 +63,33 @@ class PerformanceMetrics:
         downside = excess[excess < 0]
         downside_std = downside.std() if len(downside) > 1 else 1e-12
         if downside_std < 1e-12:
-            return float("inf")
+            return MAX_RATIO if excess.mean() >= 0 else -MAX_RATIO
         return float((excess.mean() / downside_std) * np.sqrt(ann_factor))
 
     @staticmethod
-    def bootstrap_sharpe(returns: pd.Series, n: int = 200, pct: int = 5) -> float:
-        """5th percentile Sharpe from bootstrapped returns (penalizes lucky results)."""
-        r = returns.dropna()
-        if len(r) < 10:
+    def bootstrap_sharpe(
+        returns: pd.Series, n: int = 200, pct: int = 5, block_size: int = 20
+    ) -> float:
+        """
+        5th percentile Sharpe from a moving-block bootstrap (penalizes lucky
+        results). Uses overlapping blocks of `block_size` consecutive daily
+        returns (rather than an IID resample) so autocorrelation/regime
+        structure in the return series is preserved — an IID resample
+        destroys the serial correlation present in trend/momentum strategies
+        and understates the true uncertainty of the Sharpe estimate.
+        """
+        r = returns.dropna().to_numpy()
+        n_obs = len(r)
+        if n_obs < 10:
             return 0.0
-        sharpes = [
-            PerformanceMetrics.sharpe(r.sample(len(r), replace=True))
-            for _ in range(n)
-        ]
+        block_size = max(1, min(block_size, n_obs))
+        n_blocks = int(np.ceil(n_obs / block_size))
+        rng = np.random.default_rng()
+        sharpes = []
+        for _ in range(n):
+            starts = rng.integers(0, n_obs - block_size + 1, size=n_blocks)
+            sample = np.concatenate([r[s:s + block_size] for s in starts])[:n_obs]
+            sharpes.append(PerformanceMetrics.sharpe(pd.Series(sample)))
         return float(np.percentile(sharpes, pct))
 
     @staticmethod
