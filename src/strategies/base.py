@@ -169,8 +169,11 @@ class BreakoutStrategy(Strategy):
         low = _get_low(df).reindex(close.index).ffill()
         window = int(params.get("window", 20))
         threshold = float(params.get("threshold_pct", 0.02))
-        roll_high = high.rolling(window).max()
-        roll_low = low.rolling(window).min()
+        # Use the prior `window` bars only (exclude today) so the breakout
+        # level represents a genuine N-day prior high/low, not one that
+        # already includes today's own high/low.
+        roll_high = high.shift(1).rolling(window).max()
+        roll_low = low.shift(1).rolling(window).min()
         signal = pd.Series(0, index=df.index, dtype=int)
         signal[close > roll_high * (1 + threshold)] = 1
         signal[close < roll_low * (1 - threshold)] = -1
