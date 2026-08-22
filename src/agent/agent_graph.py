@@ -33,6 +33,7 @@ class AgentState(TypedDict, total=False):
     context: Optional[RegimeContext]
     proposals: List[Proposal]
     results: List[Dict[str, Any]]
+    all_results: List[Dict[str, Any]]
     best_result: Optional[Dict[str, Any]]
     iteration: int
     max_iterations: int
@@ -99,6 +100,7 @@ def hypothesize_node(state: AgentState) -> AgentState:
         context=context,
         n_proposals=5,
         strategy_type=strategy_type,
+        prior_results=state.get("all_results"),
     )
 
     state["proposals"] = proposals
@@ -157,6 +159,7 @@ def backtest_node(state: AgentState) -> AgentState:
     # Sort by Sharpe
     results.sort(key=lambda x: x.get("sharpe", 0.0), reverse=True)
     state["results"] = results
+    state["all_results"] = state.get("all_results", []) + results
 
     if results:
         best = results[0]
