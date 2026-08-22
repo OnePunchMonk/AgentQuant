@@ -15,7 +15,6 @@ import pandas as pd
 from src.backtest.metrics import PerformanceMetrics
 from src.exceptions import (
     BacktestFailedError,
-    InsufficientWarmupError,
     SignalGenerationError,
     StrategyNotFoundError,
 )
@@ -50,7 +49,8 @@ def _apply_transaction_costs(
     Compute per-bar cost series.
     - commission: fraction of trade value
     - slippage: one-way slippage fraction (applied directionally)
-    - market_impact_bps: square-root market impact in basis points
+    - market_impact_bps: flat linear market impact in basis points, applied
+      per unit of trade turnover (not a true square-root impact model)
     """
     trades = signal.diff().abs().fillna(0)
     total_one_way = commission + slippage + (market_impact_bps / 10_000.0)
@@ -76,13 +76,12 @@ def _backtest_single_asset(
     except Exception as e:
         raise SignalGenerationError(f"Signal generation failed for {asset}: {e}") from e
 
-    # Warmup check
+    # Warmup check — insufficient history before eval_start means signals in
+    # the warmup window are unreliable, so this must block the backtest
+    # rather than merely log.
     if eval_start is not None:
         slow_w = params.get("slow_window", params.get("window", config.backtest.min_warmup_periods))
-        try:
-            enforcer.check(df, eval_start, min_window=int(slow_w))
-        except InsufficientWarmupError as e:
-            logger.warning("%s", e)
+        enforcer.check(df, eval_start, min_window=int(slow_w))
 
     # Apply transaction costs
     costs = _apply_transaction_costs(

@@ -22,12 +22,13 @@ PROMPT_TEMPLATE = """You are a quantitative researcher. Select optimal parameter
 
 PARAMETER GRID (you MUST select from this list only):
 {param_grid_json}
-
+{prior_results_section}
 TASK:
 1. State which regime characteristic is most relevant to parameter selection.
 2. Explain why longer vs shorter windows are appropriate given current conditions.
 3. Select the {n_proposals} best parameter sets from the grid above, ranked by expected out-of-sample performance.
 4. For each selection, assign a confidence score (0.0-1.0).
+5. If prior attempts from this run are listed above, avoid repeating parameter regions that already underperformed and explain what you are doing differently.
 
 Return a JSON array of objects, each with:
 - All parameter fields from the grid entry you selected
@@ -112,13 +113,21 @@ class ProposalGenerator:
         context: RegimeContext,
         n_proposals: int = 5,
         strategy_type: str = "momentum",
+        prior_results: Optional[List[Dict[str, Any]]] = None,
     ) -> List[Proposal]:
+        """
+        Args:
+            prior_results: Backtest results from earlier iterations *within
+                this run* (each with at least "params" and "sharpe"), so the
+                LLM can reason about which parameter regions already failed
+                instead of resampling blindly each iteration.
+        """
         proposals: List[Proposal] = []
 
         # Try LLM first
         if self.planner.is_available():
             try:
-                llm_proposals = self._llm_generate(context, strategy_type, n_proposals)
+                llm_proposals = self._llm_generate(context, strategy_type, n_proposals, prior_results)
                 proposals.extend(llm_proposals)
                 logger.info("LLM generated %d valid proposals.", len(llm_proposals))
             except Exception as e:
@@ -224,13 +233,18 @@ class ProposalGenerator:
         return {tuple(sorted(candidate.params.items())) for candidate in rejected}
 
     def _llm_generate(
-        self, context: RegimeContext, strategy_type: str, n: int
+        self,
+        context: RegimeContext,
+        strategy_type: str,
+        n: int,
+        prior_results: Optional[List[Dict[str, Any]]] = None,
     ) -> List[Proposal]:
         prompt = PROMPT_TEMPLATE.format(
             strategy_type=strategy_type,
             regime_context=context.to_prompt_string(),
             param_grid_json=self.grid.to_json(strategy_type),
             n_proposals=n,
+            prior_results_section=self._format_prior_results(prior_results),
         )
         logger.debug("LLM Prompt:\n%s", prompt)
 
@@ -241,3 +255,14 @@ class ProposalGenerator:
             if v is not None:
                 validated.append(v)
         return validated
+
+    @staticmethod
+    def _format_prior_results(prior_results: Optional[List[Dict[str, Any]]]) -> str:
+        if not prior_results:
+            return ""
+        lines = ["\nPRIOR ATTEMPTS THIS RUN (avoid repeating underperforming regions):"]
+        for r in prior_results[-10:]:
+            lines.append(
+                f"- params={r.get('params')} -> sharpe={r.get('sharpe', 0.0):.2f}"
+            )
+        return "\n".join(lines) + "\n"
