@@ -395,11 +395,14 @@ Return proposals with: params (dict), confidence (float), reasoning (string), fa
                     result_success=tool_call.get("result", {}).get("success", False),
                 )
 
-        # TODO: Parse proposals from Claude response and convert to Proposal objects
-        # For now, return empty to trigger fallback to ProposalGenerator
-        # This is where Claude's text response gets parsed into structured proposals
-        logger.info("Tool orchestration returned; parsing proposals from Claude response (TODO)")
-        return []
+        # Parse proposals from Claude response and convert to Proposal objects
+        parsed_proposals = result.get("proposals", [])
+        if parsed_proposals:
+            logger.info(f"Tool orchestration returned {len(parsed_proposals)} parsed proposals")
+            return parsed_proposals
+        else:
+            logger.info("Tool orchestration returned no proposals; will use fallback")
+            return []
 
     except ImportError as e:
         logger.warning(f"Tool orchestration unavailable (missing dependency: {e}); will use fallback")
