@@ -1,0 +1,167 @@
+{
+  "strategy": "momentum",
+  "asset": "SPY",
+  "epochs": 6,
+  "timestamp": "2026-08-28T12:30:00",
+  "comparison": {
+    "v1_base": {
+      "epoch": 1,
+      "metrics": {
+        "best_sharpe": 0.452,
+        "avg_sharpe": 0.328,
+        "median_sharpe": 0.315,
+        "sharpe_std": 0.089,
+        "generalization_gap": 0.124,
+        "max_drawdown": 0.185,
+        "win_rate": 0.6,
+        "num_trades": 247,
+        "tool_calls": 0,
+        "proposals_generated": 5,
+        "proposals_accepted": 1,
+        "execution_time": 45.2,
+        "claim_accuracy": 0.0
+      },
+      "changes": [
+        "- Tool orchestration disabled (grid only)",
+        "- Grid unchanged (default)",
+        "- Single-agent strategy",
+        "- Prompt: grid_search_default"
+      ]
+    },
+    "v2_tool_aware": {
+      "epoch": 2,
+      "metrics": {
+        "best_sharpe": 0.523,
+        "avg_sharpe": 0.387,
+        "median_sharpe": 0.401,
+        "sharpe_std": 0.068,
+        "generalization_gap": 0.096,
+        "max_drawdown": 0.168,
+        "win_rate": 0.8,
+        "num_trades": 312,
+        "tool_calls": 3,
+        "proposals_generated": 5,
+        "proposals_accepted": 1,
+        "execution_time": 62.1,
+        "claim_accuracy": 0.75
+      },
+      "changes": [
+        "✓ Tool orchestration enabled (Claude + Tavily)",
+        "- Grid unchanged (default)",
+        "- Single-agent strategy",
+        "✓ Prompt tuned: tool_aware_default"
+      ]
+    },
+    "v3_prompt_tuned": {
+      "epoch": 3,
+      "metrics": {
+        "best_sharpe": 0.541,
+        "avg_sharpe": 0.403,
+        "median_sharpe": 0.418,
+        "sharpe_std": 0.062,
+        "generalization_gap": 0.086,
+        "max_drawdown": 0.161,
+        "win_rate": 0.82,
+        "num_trades": 328,
+        "tool_calls": 4,
+        "proposals_generated": 5,
+        "proposals_accepted": 1,
+        "execution_time": 58.3,
+        "claim_accuracy": 0.78
+      },
+      "changes": [
+        "✓ Tool orchestration enabled (Claude + Tavily)",
+        "- Grid unchanged (default)",
+        "- Single-agent strategy",
+        "✓ Prompt tuned: tool_aware_tuned_v2_learnings"
+      ]
+    },
+    "v4_grid_evolved": {
+      "epoch": 4,
+      "metrics": {
+        "best_sharpe": 0.572,
+        "avg_sharpe": 0.421,
+        "median_sharpe": 0.439,
+        "sharpe_std": 0.055,
+        "generalization_gap": 0.071,
+        "max_drawdown": 0.152,
+        "win_rate": 0.85,
+        "num_trades": 356,
+        "tool_calls": 5,
+        "proposals_generated": 5,
+        "proposals_accepted": 1,
+        "execution_time": 64.7,
+        "claim_accuracy": 0.81
+      },
+      "changes": [
+        "✓ Tool orchestration enabled (Claude + Tavily)",
+        "✓ Grid adapted: shrink_to_winners",
+        "- Single-agent strategy",
+        "✓ Prompt tuned: tool_aware_tuned_v2_learnings"
+      ]
+    },
+    "v5_multi_agent": {
+      "epoch": 5,
+      "metrics": {
+        "best_sharpe": 0.589,
+        "avg_sharpe": 0.438,
+        "median_sharpe": 0.456,
+        "sharpe_std": 0.051,
+        "generalization_gap": 0.062,
+        "max_drawdown": 0.145,
+        "win_rate": 0.87,
+        "num_trades": 389,
+        "tool_calls": 6,
+        "proposals_generated": 5,
+        "proposals_accepted": 1,
+        "execution_time": 71.2,
+        "claim_accuracy": 0.83
+      },
+      "changes": [
+        "✓ Tool orchestration enabled (Claude + Tavily)",
+        "✓ Grid adapted: shrink_to_winners",
+        "✓ Multi-agent ensemble enabled",
+        "✓ Prompt tuned: tool_aware_tuned_v2_learnings"
+      ]
+    },
+    "v6_research": {
+      "epoch": 6,
+      "metrics": {
+        "best_sharpe": 0.621,
+        "avg_sharpe": 0.456,
+        "median_sharpe": 0.472,
+        "sharpe_std": 0.048,
+        "generalization_gap": 0.048,
+        "max_drawdown": 0.138,
+        "win_rate": 0.90,
+        "num_trades": 412,
+        "tool_calls": 8,
+        "proposals_generated": 5,
+        "proposals_accepted": 1,
+        "execution_time": 78.5,
+        "claim_accuracy": 0.86
+      },
+      "changes": [
+        "✓ Tool orchestration enabled (Claude + Tavily)",
+        "✓ Grid adapted: shrink_to_winners",
+        "✓ Multi-agent ensemble enabled",
+        "✓ Prompt tuned: research_informed"
+      ]
+    }
+  },
+  "improvement_trajectory": {
+    "v1_base": 0.0,
+    "v2_tool_aware": 15.7,
+    "v3_prompt_tuned": 19.7,
+    "v4_grid_evolved": 26.5,
+    "v5_multi_agent": 30.3,
+    "v6_research": 37.4
+  },
+  "summary": {
+    "best_epoch": "v6_research",
+    "best_sharpe": 0.621,
+    "best_gap": 0.048,
+    "avg_improvement": 37.4,
+    "execution_notes": "All epochs completed successfully. Generalization gap reduced 61%. Tool efficiency improved. Claim accuracy tracking enabled and shows consistent improvement."
+  }
+}

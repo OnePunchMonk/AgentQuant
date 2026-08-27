@@ -1,0 +1,47 @@
+{
+  "version": "v6_research",
+  "epoch": 6,
+  "created": "2026-08-28T12:35:00",
+  "use_tools": true,
+  "use_web_search": true,
+  "use_ensemble": true,
+  "tool_weight": 0.58,
+  "prompt_template": "research_informed",
+  "prompt_context": {
+    "research_sources": ["academic_papers", "industry_research", "strategy_blogs"],
+    "hypothesis_generation": "enabled",
+    "citation_tracking": "enabled",
+    "emphasis": ["short windows in crisis", "momentum in bull markets", "research-backed ideas"],
+    "avoid": ["extreme parameter combinations", "strategies with poor generalization"]
+  },
+  "temperature": 0.18,
+  "max_retries": 2,
+  "grid_adaptation_strategy": "shrink_to_winners",
+  "grid_focus_regions": [
+    {
+      "description": "High-Sharpe regions",
+      "samples_per_region": 5,
+      "regions": [
+        {"fast_window": 5, "slow_window": 20},
+        {"fast_window": 10, "slow_window": 50},
+        {"fast_window": 15, "slow_window": 80}
+      ]
+    },
+    {
+      "description": "Stable combinations",
+      "samples_per_region": 3,
+      "regions": [
+        {"fast_window": 20, "slow_window": 60},
+        {"fast_window": 50, "slow_window": 150}
+      ]
+    }
+  ],
+  "track_falsifiable_claims": true,
+  "claim_weighting": 0.58,
+  "min_acceptable_sharpe": 0.4,
+  "max_acceptable_drawdown": 0.15,
+  "required_win_rate": 0.85,
+  "description": "Research agent discovers ideas; tools validate via market context",
+  "reasoning": "Research agent searches literature; proposes hypotheses; validates via tools",
+  "expected_improvement": "+3-7% (novel research-backed ideas)"
+}

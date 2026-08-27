@@ -1,0 +1,24 @@
+{
+  "version": "v_de_optimal",
+  "epoch": 99,
+  "created": "2026-08-28T12:42:00",
+  "use_tools": true,
+  "use_web_search": true,
+  "use_ensemble": false,
+  "tool_weight": 0.71,
+  "prompt_template": "tool_aware_default",
+  "prompt_context": {
+    "emphasis": ["tool-based proposals", "market context"],
+    "continuous_optimization": true
+  },
+  "temperature": 0.21,
+  "max_retries": 2,
+  "grid_adaptation_strategy": null,
+  "track_falsifiable_claims": true,
+  "claim_weighting": 0.48,
+  "min_acceptable_sharpe": 0.32,
+  "max_acceptable_drawdown": 0.17,
+  "description": "DE-optimized harness (Sharpe 0.571)",
+  "reasoning": "Differential Evolution optimized continuous parameters via perturbation",
+  "expected_improvement": "+26.3% over baseline"
+}
