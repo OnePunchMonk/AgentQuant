@@ -58,9 +58,10 @@ Always be explicit about your reasoning before calling tools.
 
         Returns:
             {
-                "proposals": [...],
+                "proposals": [Proposal, ...],
                 "tool_calls": [...],
                 "reasoning": "...",
+                "stop_reason": "end_turn",
             }
         """
         try:
@@ -107,8 +108,12 @@ Use available tools to gather context, then generate proposals with falsifiable 
                     if hasattr(block, "text"):
                         final_text += block.text
                 logger.info(f"Claude completed turn {turn + 1} without tool calls")
+
+                # Parse proposals from final text
+                proposals = _parse_proposals_from_text(final_text, strategy_type)
+
                 return {
-                    "proposals": [],
+                    "proposals": proposals,
                     "tool_calls": tool_calls_made,
                     "reasoning": final_text,
                     "stop_reason": "end_turn",
@@ -160,3 +165,76 @@ Use available tools to gather context, then generate proposals with falsifiable 
             "tool_calls": tool_calls_made,
             "error": "Max tool loop turns exceeded",
         }
+
+
+# ============================================================================
+# Proposal Parsing
+# ============================================================================
+
+
+def _parse_proposals_from_text(text: str, strategy_type: str) -> List[Dict[str, Any]]:
+    """
+    Parse proposals from Claude's text response.
+
+    Claude returns JSON proposals in format:
+    [
+      {
+        "params": {...},
+        "confidence": 0.8,
+        "reasoning": "...",
+        "falsifiable_claim": "..."
+      },
+      ...
+    ]
+
+    Args:
+        text: Claude's response text
+        strategy_type: Strategy type being proposed for
+
+    Returns:
+        List of Proposal-like dicts (compatible with ProposalValidator)
+    """
+    from src.agent.proposal_generator import Proposal, ProposalValidator
+
+    proposals = []
+
+    # Extract JSON from text (Claude may wrap in markdown or other text)
+    import re
+
+    json_pattern = r"\[[\s\S]*\]"
+    json_matches = re.findall(json_pattern, text)
+
+    if not json_matches:
+        logger.warning("No JSON array found in Claude response")
+        return []
+
+    # Try each potential JSON block
+    for json_str in json_matches:
+        try:
+            raw_proposals = json.loads(json_str)
+            if not isinstance(raw_proposals, list):
+                continue
+
+            for raw in raw_proposals:
+                # Validate using existing ProposalValidator
+                proposal = ProposalValidator.validate(raw, strategy_type)
+                if proposal:
+                    # Add falsifiable claim if provided
+                    if "falsifiable_claim" in raw:
+                        proposal.reasoning = (
+                            f"{proposal.reasoning} [Claim: {raw['falsifiable_claim']}]"
+                        )
+                    proposals.append(proposal)
+                    logger.debug(f"Parsed proposal: {proposal.params}")
+
+            if proposals:
+                break  # Successfully parsed
+
+        except json.JSONDecodeError as e:
+            logger.debug(f"Failed to parse JSON block: {e}")
+            continue
+
+    if not proposals:
+        logger.warning(f"No valid proposals parsed from Claude response. Text: {text[:200]}")
+
+    return proposals
