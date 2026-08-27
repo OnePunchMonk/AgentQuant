@@ -7,18 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- **Tool Registry & Orchestration** — Composable tool system for agentic decision-making
-  - `src/agent/tools/registry.py` — Tool schema, registration, and execution
-  - `src/agent/tools/orchestrator.py` — Claude tool-use loop orchestration
-  - `src/agent/tools/evals.py` — Evaluation suite for harness quality assessment
-  - Web search integration via Tavily API (sentiment, strategy research)
-  - `run_benchmark_to_assess_quality` tool for agent-driven eval
-- Example integration showing how to refactor hypothesize_node to use tools
-- Dependencies: `anthropic>=0.30`, `tavily-python>=0.3`
+### Added — 2026-08-28
+
+#### Tool Registry & Orchestration System
+- `src/agent/tools/registry.py` — Tool schema definitions and execution engine
+  - 5 core tools: regime context, market sentiment, strategy research, parameter recommendations, quality assessment
+  - JSON schema generation for Claude API compatibility
+  - Tavily API integration for web search (market sentiment, strategy research)
+- `src/agent/tools/orchestrator.py` — Claude tool-use loop orchestrator
+  - Multi-turn tool reasoning with Claude
+  - Graceful fallback if Claude/Tavily unavailable
+  - Proposal parsing from JSON responses
+- `src/agent/tools/evals.py` — Harness quality evaluation suite
+  - `run_benchmark_to_assess_quality()` tool for self-assessment
+  - Metrics: OOS Sharpe, stability, generalization gap, tool accuracy
+  - Actionable recommendations for harness improvement
+- Tool system documentation and integration guide (`docs/TOOL_INTEGRATION_GUIDE.md`)
+- Example integrations showing gradual migration paths
+
+#### Agent Graph Enhancements
+- Enhanced `hypothesize_node` with tool orchestration
+  - Tries Claude tool-use first, falls back to ProposalGenerator
+  - No breaking changes; tools activate automatically
+  - Records tool calls in execution trace
+- Enhanced `reflect_node` with falsifiable claim scoring
+  - Tracks proposal accuracy (predicted vs. realized)
+  - Enables harness to learn which proposals work
+  - Foundation for harness self-improvement
+
+#### Proposal Parsing
+- JSON proposal parsing from Claude responses
+- Integration with existing ProposalValidator
+- Support for falsifiable claims in proposal reasoning
+- Graceful degradation if parsing fails
+
+#### Research Agent Design
+- Comprehensive design specification for autonomous research agent
+- Three-part architecture: Literature → Hypothesis → Publication
+- Research loop: Plan → Search → Hypothesize → Validate → Publish
+- Data structures for research tasks, findings, hypotheses, reports
+- Quality metrics and research rigor scoring
+- Integration points with main agent loop
+- 4-phase implementation roadmap
+
+#### API Key Security
+- Updated `.env.example` with TAVILY_API_KEY, ANTHROPIC_API_KEY placeholders
+- `.env` remains in `.gitignore`; secrets never committed to repo
+- All tools degrade gracefully if API keys missing
 
 ### Changed
-- `pyproject.toml` — Added tool-calling and web search dependencies
+- `pyproject.toml` — Added `anthropic>=0.30`, `tavily-python>=0.3` to LLM extras
+- `src/agent/agent_graph.py` — Integrated tool orchestration and claim scoring
+- `.env.example` — Added web search and Claude API key templates
+
+### Git Commits (2026-08-28)
+- `ac68642` — Proposal parsing and deep research agent design
+- `383deec` — Integrate tool orchestrator into hypothesize and reflect nodes
+- `62344e8` — Tool registry and orchestration for agentic harness evolution
 
 ## [0.2.0] — 2026-04-15
 
