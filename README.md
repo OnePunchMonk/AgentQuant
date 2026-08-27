@@ -54,6 +54,132 @@ Random Baseline (Control)        →   0.465  (+12.9%)   All beat random 5-33x
 
 **Finding:** Manual strategy beats algorithms due to domain knowledge encoding discrete decisions (tools on/off). But GA finds near-optimal solutions 16% faster.
 
+### Evolution Visualization
+
+<figure>
+  <svg viewBox="0 0 1000 450" xmlns="http://www.w3.org/2000/svg" style="max-width: 100%; height: auto; border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa;">
+    <!-- Title -->
+    <text x="500" y="30" font-size="20" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Harness Evolution: v1 → v6 (+37.4% Sharpe)</text>
+    
+    <!-- v1 Base -->
+    <g>
+      <rect x="20" y="80" width="120" height="80" rx="6" fill="#fff9c4" stroke="#fbc02d" stroke-width="2"/>
+      <text x="80" y="105" font-size="14" font-weight="bold" text-anchor="middle" fill="#1a1a1a">v1: Base</text>
+      <text x="80" y="125" font-size="12" text-anchor="middle" fill="#666">Grid Search</text>
+      <text x="80" y="145" font-size="12" font-weight="bold" text-anchor="middle" fill="#0056b3">0.452</text>
+    </g>
+
+    <!-- Arrow + label -->
+    <line x1="140" y1="120" x2="180" y2="120" stroke="#007bff" stroke-width="2" marker-end="url(#arrowblue)"/>
+    <text x="160" y="115" font-size="11" text-anchor="middle" fill="#007bff" font-weight="600">+15.7%</text>
+
+    <!-- v2 Tools -->
+    <g>
+      <rect x="180" y="80" width="120" height="80" rx="6" fill="#e1f5fe" stroke="#0288d1" stroke-width="2"/>
+      <text x="240" y="105" font-size="14" font-weight="bold" text-anchor="middle" fill="#1a1a1a">v2: Tools</text>
+      <text x="240" y="125" font-size="12" text-anchor="middle" fill="#666">+ Web Search</text>
+      <text x="240" y="145" font-size="12" font-weight="bold" text-anchor="middle" fill="#0056b3">0.523</text>
+    </g>
+
+    <!-- Arrow -->
+    <line x1="300" y1="120" x2="340" y2="120" stroke="#007bff" stroke-width="2" marker-end="url(#arrowblue)"/>
+    <text x="320" y="115" font-size="11" text-anchor="middle" fill="#007bff" font-weight="600">+4.0%</text>
+
+    <!-- v3 Prompt -->
+    <g>
+      <rect x="340" y="80" width="120" height="80" rx="6" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
+      <text x="400" y="105" font-size="14" font-weight="bold" text-anchor="middle" fill="#1a1a1a">v3: Prompt</text>
+      <text x="400" y="125" font-size="12" text-anchor="middle" fill="#666">Tuned</text>
+      <text x="400" y="145" font-size="12" font-weight="bold" text-anchor="middle" fill="#0056b3">0.541</text>
+    </g>
+
+    <!-- Arrow -->
+    <line x1="460" y1="120" x2="500" y2="120" stroke="#007bff" stroke-width="2" marker-end="url(#arrowblue)"/>
+    <text x="480" y="115" font-size="11" text-anchor="middle" fill="#007bff" font-weight="600">+6.8%</text>
+
+    <!-- v4 Grid -->
+    <g>
+      <rect x="500" y="80" width="120" height="80" rx="6" fill="#e8f5e9" stroke="#388e3c" stroke-width="2"/>
+      <text x="560" y="105" font-size="14" font-weight="bold" text-anchor="middle" fill="#1a1a1a">v4: Grid</text>
+      <text x="560" y="125" font-size="12" text-anchor="middle" fill="#666">Evolved</text>
+      <text x="560" y="145" font-size="12" font-weight="bold" text-anchor="middle" fill="#0056b3">0.572</text>
+    </g>
+
+    <!-- Arrow -->
+    <line x1="620" y1="120" x2="660" y2="120" stroke="#007bff" stroke-width="2" marker-end="url(#arrowblue)"/>
+    <text x="640" y="115" font-size="11" text-anchor="middle" fill="#007bff" font-weight="600">+3.0%</text>
+
+    <!-- v5 Ensemble -->
+    <g>
+      <rect x="660" y="80" width="120" height="80" rx="6" fill="#e0f2f1" stroke="#00897b" stroke-width="2"/>
+      <text x="720" y="105" font-size="14" font-weight="bold" text-anchor="middle" fill="#1a1a1a">v5: Ensemble</text>
+      <text x="720" y="125" font-size="12" text-anchor="middle" fill="#666">Multi-Agent</text>
+      <text x="720" y="145" font-size="12" font-weight="bold" text-anchor="middle" fill="#0056b3">0.589</text>
+    </g>
+
+    <!-- Arrow -->
+    <line x1="780" y1="120" x2="820" y2="120" stroke="#28a745" stroke-width="2" marker-end="url(#arrowgreen)"/>
+    <text x="800" y="115" font-size="11" text-anchor="middle" fill="#28a745" font-weight="600">+5.4%</text>
+
+    <!-- v6 Research (FINAL) -->
+    <g>
+      <rect x="820" y="80" width="140" height="80" rx="6" fill="#c8e6c9" stroke="#28a745" stroke-width="3"/>
+      <text x="890" y="105" font-size="14" font-weight="bold" text-anchor="middle" fill="#1a1a1a">v6: Research ⭐</text>
+      <text x="890" y="125" font-size="12" text-anchor="middle" fill="#666">Production</text>
+      <text x="890" y="145" font-size="12" font-weight="bold" text-anchor="middle" fill="#155724">0.621</text>
+    </g>
+
+    <!-- Bottom metrics -->
+    <rect x="20" y="210" width="940" height="210" rx="6" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1"/>
+    
+    <!-- Metric boxes -->
+    <g>
+      <!-- Metric 1: Sharpe improvement -->
+      <rect x="40" y="230" width="180" height="80" rx="4" fill="white" stroke="#dee2e6" stroke-width="1"/>
+      <text x="130" y="250" font-size="12" font-weight="600" text-anchor="middle" fill="#666">Sharpe Improvement</text>
+      <text x="130" y="280" font-size="24" font-weight="bold" text-anchor="middle" fill="#28a745">+37.4%</text>
+      <text x="130" y="300" font-size="11" text-anchor="middle" fill="#999">0.452 → 0.621</text>
+    </g>
+
+    <g>
+      <!-- Metric 2: Gap reduction -->
+      <rect x="250" y="230" width="180" height="80" rx="4" fill="white" stroke="#dee2e6" stroke-width="1"/>
+      <text x="340" y="250" font-size="12" font-weight="600" text-anchor="middle" fill="#666">Generalization Gap</text>
+      <text x="340" y="280" font-size="24" font-weight="bold" text-anchor="middle" fill="#007bff">-61%</text>
+      <text x="340" y="300" font-size="11" text-anchor="middle" fill="#999">0.124 → 0.048</text>
+    </g>
+
+    <g>
+      <!-- Metric 3: Algorithm comparison -->
+      <rect x="460" y="230" width="180" height="80" rx="4" fill="white" stroke="#dee2e6" stroke-width="1"/>
+      <text x="550" y="250" font-size="12" font-weight="600" text-anchor="middle" fill="#666">Best Algorithm</text>
+      <text x="550" y="280" font-size="18" font-weight="bold" text-anchor="middle" fill="#28a745">Manual: 0.621</text>
+      <text x="550" y="300" font-size="11" text-anchor="middle" fill="#999">GA: 0.594 (95.6%)</text>
+    </g>
+
+    <g>
+      <!-- Metric 4: Tool integration -->
+      <rect x="670" y="230" width="190" height="80" rx="4" fill="white" stroke="#dee2e6" stroke-width="1"/>
+      <text x="765" y="250" font-size="12" font-weight="600" text-anchor="middle" fill="#666">Tool Integration</text>
+      <text x="765" y="280" font-size="24" font-weight="bold" text-anchor="middle" fill="#0056b3">8x</text>
+      <text x="765" y="300" font-size="11" text-anchor="middle" fill="#999">Tool calls per epoch</text>
+    </g>
+
+    <!-- Arrow markers -->
+    <defs>
+      <marker id="arrowblue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#007bff" />
+      </marker>
+      <marker id="arrowgreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#28a745" />
+      </marker>
+    </defs>
+  </svg>
+  <figcaption style="text-align: center; margin-top: 15px; font-size: 13px; color: #666;">
+    6-epoch progression showing cumulative improvements through tool integration, prompt tuning, grid evolution, ensemble voting, and research-driven discovery
+  </figcaption>
+</figure>
+
 ### UI & Dashboards
 
 ![Dashboard showing backtest results](screenshots/dashboard1.png)
