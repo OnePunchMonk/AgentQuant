@@ -33,6 +33,8 @@ llm = [
     "langchain-core>=0.1",
     "langgraph>=0.0.69",
     "openai>=1.0",
+    "anthropic>=0.30",
+    "tavily-python>=0.3",
 ]
 data = [
     "fredapi>=0.5",
