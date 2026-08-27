@@ -1,0 +1,31 @@
+{
+  "version": "v_ga_optimal",
+  "epoch": 99,
+  "created": "2026-08-28T12:40:00",
+  "use_tools": true,
+  "use_web_search": true,
+  "use_ensemble": true,
+  "tool_weight": 0.62,
+  "prompt_template": "tool_aware_tuned_v2_learnings",
+  "prompt_context": {
+    "emphasis": ["tool effectiveness", "ensemble voting"],
+    "ensemble_strategies": ["tool_based_proposals", "grid_search_winners", "random_exploration"],
+    "voting_method": "sharpe_weighted"
+  },
+  "temperature": 0.19,
+  "max_retries": 2,
+  "grid_adaptation_strategy": "shrink_to_winners",
+  "grid_focus_regions": [
+    {
+      "description": "GA-discovered high-performers",
+      "samples_per_region": 6
+    }
+  ],
+  "track_falsifiable_claims": true,
+  "claim_weighting": 0.55,
+  "min_acceptable_sharpe": 0.35,
+  "max_acceptable_drawdown": 0.16,
+  "description": "GA-optimized harness (Sharpe 0.594)",
+  "reasoning": "Genetic algorithm discovered parameter configuration after 5 generations",
+  "expected_improvement": "+31.6% over baseline"
+}
