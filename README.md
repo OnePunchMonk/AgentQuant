@@ -356,28 +356,13 @@ pytest tests/
 
 ---
 
-## Getting Started for Contributors
+## Contributing
 
-### Run Tests
-```bash
-pytest tests/ -v --cov=src
-```
-
-### Make a Change
-1. Edit files in `src/`
-2. Run tests locally
-3. Open a PR — CI/CD checks:
-   - ✅ Tests pass (3 Python versions)
-   - ✅ Linting (ruff)
-   - ✅ Type checking (mypy)
-   - ✅ Harness configs present
-   - ✅ No secrets leaked
-
-### Next Experiments
-- **Multi-objective** — optimize Sharpe + Drawdown together
-- **Nested optimization** — evolve GA parameters themselves
-- **Online learning** — continuous adaptation on live market data
-- **Multi-strategy portfolio** — per-strategy harnesses
+Interested in improving AgentQuant? Check out [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Setup instructions
+- Testing & code standards
+- High-priority areas for contribution (Research Agent is next!)
+- Ideas for future work
 
 ---
 
