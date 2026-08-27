@@ -54,6 +54,17 @@ Random Baseline (Control)        →   0.465  (+12.9%)   All beat random 5-33x
 
 **Finding:** Manual strategy beats algorithms due to domain knowledge encoding discrete decisions (tools on/off). But GA finds near-optimal solutions 16% faster.
 
+### UI & Dashboards
+
+![Dashboard showing backtest results](screenshots/dashboard1.png)
+*Live backtest dashboard with strategy performance metrics*
+
+![Research workspace with memory](screenshots/research_workspace_desktop.jpg)
+*Research workspace tracking experiments and prior learnings*
+
+![Agent memory visualization](screenshots/nla_memory_desktop.jpg)
+*Cross-session memory of tested strategies and results*
+
 ---
 
 ## How It Works
