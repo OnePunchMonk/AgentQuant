@@ -56,11 +56,12 @@ Random Baseline (Control)        →   0.465  (+12.9%)   All beat random 5-33x
 
 ### Evolution Visualization
 
-<div style="text-align: center; margin: 30px 0; padding: 20px; background: #f0f8ff; border: 2px solid #0066cc; border-radius: 8px;">
-  <strong>🎬 Watch the 6-Epoch Evolution Unfold</strong><br>
-  <a href="https://claude.ai/code/artifact/a297e886-911e-4f06-bdf4-bbbb3890888b" target="_blank" style="display: inline-block; margin-top: 10px; padding: 10px 20px; background: #0066cc; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
-    ⚡ Launch Interactive Dashboard
+<div style="text-align: center; margin: 30px 0; padding: 20px; background: #0a0e27; border: 2px solid #00d9ff; border-radius: 8px;">
+  <strong style="color: #00ff88;">🎬 WATCH THE 6-EPOCH EVOLUTION UNFOLD</strong><br>
+  <a href="https://claude.ai/code/artifact/a297e886-911e-4f06-bdf4-bbbb3890888b" target="_blank" style="display: inline-block; margin-top: 10px; padding: 12px 24px; background: #00d9ff; color: #0a0e27; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px;">
+    ⚡ Launch Dark-Themed Interactive Dashboard
   </a>
+  <p style="margin-top: 10px; font-size: 12px; color: #888;">Live animated visualization with epoch progression & algorithm benchmarks</p>
 </div>
 
 The evolution journey across 6 epochs:
