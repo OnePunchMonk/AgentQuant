@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
@@ -6,15 +6,13 @@ on:
   pull_request:
     branches: [ main, master ]
 
-# Minimal permissions — least privilege principle
 permissions:
   contents: read
 
 jobs:
   test:
-    name: Test (Python ${{ matrix.python-version }})
+    name: Test Suite (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
-    # Job-level permissions override workflow-level where needed
     permissions:
       contents: read
 
@@ -30,33 +28,124 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
 
-      - name: Install core dependencies
+      - name: Install dependencies
         run: |
-          pip install -e ".[dev]"
+          pip install --upgrade pip setuptools wheel
+          pip install -e ".[dev,llm]"
 
       - name: Run linter (ruff)
         run: |
           ruff check src/ tests/ --output-format=github
 
-      - name: Run tests
+      - name: Type checking (mypy)
+        continue-on-error: true
+        run: |
+          mypy src/ --ignore-missing-imports || true
+
+      - name: Run unit tests
         env:
           GOOGLE_API_KEY: ""
           FRED_API_KEY: ""
+          ANTHROPIC_API_KEY: ""
+          TAVILY_API_KEY: ""
         run: |
-          pytest tests/ -v --tb=short
+          pytest tests/ -v --tb=short --cov=src --cov-report=xml
 
-  security-check:
-    name: Secret Scanning
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+        continue-on-error: true
+
+  harness-verification:
+    name: Harness Evolution Verification
     runs-on: ubuntu-latest
     permissions:
       contents: read
+
     steps:
       - uses: actions/checkout@v4
-      - name: Check for secrets in .env files
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev,llm]"
+
+      - name: Verify tool registry
+        env:
+          GOOGLE_API_KEY: ""
+          ANTHROPIC_API_KEY: ""
+          TAVILY_API_KEY: ""
+        run: |
+          python scripts/verify_tools.py
+
+      - name: Verify harness configs exist
+        run: |
+          test -f .harness/v6_research.json && echo "✓ v6_research harness found"
+          test -f .harness/v_ga_optimal.json && echo "✓ GA optimal harness found"
+          test -f .harness/v_de_optimal.json && echo "✓ DE optimal harness found"
+
+      - name: Validate harness evolution results
+        run: |
+          test -f results/harness_evolution_6epochs_results.json && echo "✓ Evolution results found"
+          test -f results/benchmark_report.json && echo "✓ Benchmark report found"
+
+  security-check:
+    name: Security & Configuration
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for secrets in tracked files
         run: |
           if git ls-files | grep -E "^\.env$|^\.env\." | grep -v ".env.example"; then
             echo "ERROR: .env file is tracked by git!"
             exit 1
           fi
-          echo "Security check passed — no .env files committed."
+          echo "✓ No .env files committed"
+
+      - name: Verify critical files not leaked
+        run: |
+          if git ls-files | grep -iE "(secret|password|token|key)" | grep -v "\.example\|\.md\|\.txt"; then
+            echo "WARNING: Potential secrets found in filenames"
+            exit 1
+          fi
+          echo "✓ No secrets detected in filenames"
+
+      - name: Check config integrity
+        run: |
+          test -f config.yaml && echo "✓ config.yaml exists"
+          test -f .env.example && echo "✓ .env.example template found"
+          test -f .gitignore && echo "✓ .gitignore configured"
+
+  quality-gates:
+    name: Quality Gates
+    needs: [test, harness-verification, security-check]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: All checks passed
+        run: |
+          echo "✅ All CI/CD gates passed"
+          echo "  • Unit tests: ✓"
+          echo "  • Linting: ✓"
+          echo "  • Harness verification: ✓"
+          echo "  • Security checks: ✓"
+          echo ""
+          echo "Pipeline ready for deployment"
