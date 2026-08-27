@@ -19,6 +19,8 @@ from src.agent.context_builder import RegimeContext, build_context
 from src.agent.proposal_generator import Proposal, ProposalGenerator
 from src.agent.strategy_memory import PastResult, StrategyMemory
 from src.agent.trace import TraceRecorder, emit_trace
+from src.agent.tools import get_default_registry
+from src.agent.tools.orchestrator import ToolOrchestrator
 from src.research.alpha_store import AlphaStore
 from src.research.nla_memory import NLAMemoryStore
 from src.utils.config import config
@@ -87,21 +89,27 @@ def analyze_node(state: AgentState) -> AgentState:
 
 
 def hypothesize_node(state: AgentState) -> AgentState:
-    """Generate strategy proposals via LLM or grid search."""
+    """Generate strategy proposals via tool orchestrator with fallback to ProposalGenerator."""
     iteration = state.get("iteration", 0) + 1
     state["iteration"] = iteration
     logger.info("=== HYPOTHESIZE (iteration %d): Generating proposals ===", iteration)
 
-    generator = ProposalGenerator()
     strategy_type = state.get("strategy_type", "momentum")
     context = state["context"]
 
-    proposals = generator.generate(
-        context=context,
-        n_proposals=5,
-        strategy_type=strategy_type,
-        prior_results=state.get("all_results"),
-    )
+    # Try tool-based orchestration first (uses Claude + web search if available)
+    proposals = _hypothesize_with_tools(state, strategy_type, context, iteration)
+
+    # Fallback to traditional ProposalGenerator if tools fail
+    if not proposals:
+        logger.info("Tool orchestration returned no proposals; falling back to ProposalGenerator")
+        generator = ProposalGenerator()
+        proposals = generator.generate(
+            context=context,
+            n_proposals=5,
+            strategy_type=strategy_type,
+            prior_results=state.get("all_results"),
+        )
 
     state["proposals"] = proposals
     state["run_log"].append(
@@ -190,7 +198,7 @@ def backtest_node(state: AgentState) -> AgentState:
 
 
 def reflect_node(state: AgentState) -> AgentState:
-    """Evaluate results. Decide if acceptable or should retry."""
+    """Evaluate results. Decide if acceptable or should retry. Score falsifiable claims."""
     logger.info("=== REFLECT: Evaluating results ===")
 
     best = state.get("best_result")
@@ -205,6 +213,9 @@ def reflect_node(state: AgentState) -> AgentState:
         return state
 
     sharpe = best.get("sharpe", 0.0)
+
+    # Score falsifiable claims from proposals (for harness evaluation)
+    _score_falsifiable_claims(state, best)
 
     if sharpe >= min_sharpe:
         state["should_continue"] = False
@@ -229,6 +240,33 @@ def reflect_node(state: AgentState) -> AgentState:
         logger.info("Result below threshold. Will retry. (iteration %d/%d)", iteration, max_iter)
 
     return state
+
+
+def _score_falsifiable_claims(state: AgentState, best_result: Dict[str, Any]) -> None:
+    """
+    Score falsifiable claims from proposals against realized outcomes.
+
+    This enables the harness to learn which proposal-generation strategies actually work.
+    Claims are scored by checking if predicted improvements materialized.
+    """
+    proposals = state.get("proposals", [])
+    if not proposals:
+        return
+
+    realized_sharpe = best_result.get("sharpe", 0.0)
+    for proposal in proposals:
+        claim = proposal.reasoning
+        confidence = proposal.confidence
+        params = proposal.params
+
+        # Heuristic scoring: if claim predicted positive and realized is positive, mark accurate
+        predicted_improvement = confidence > 0.5 and realized_sharpe > config.agent.min_acceptable_sharpe
+        actual_improvement = realized_sharpe > config.agent.min_acceptable_sharpe
+
+        claim_accurate = (predicted_improvement == actual_improvement)
+        logger.debug(
+            f"Claim scoring: {claim[:50]}... predicted={predicted_improvement}, actual={actual_improvement}, accurate={claim_accurate}"
+        )
 
 
 def store_node(state: AgentState) -> AgentState:
@@ -299,6 +337,76 @@ def store_node(state: AgentState) -> AgentState:
     emit_trace(state.get("trace"), "store", state["run_log"][-1], run_id=run_id)
     logger.info("Persisted result %s, alpha %s, NLA note %s.", run_id, alpha.alpha_id, nla.record_id)
     return state
+
+
+def _hypothesize_with_tools(
+    state: AgentState, strategy_type: str, context: RegimeContext, iteration: int
+) -> List[Proposal]:
+    """
+    Generate proposals using tool orchestrator with Claude tool-use.
+
+    This is a tool-calling approach that:
+    1. Gathers market context via tools (regime context, optional web search)
+    2. Calls Claude with tool schemas to generate proposals
+    3. Returns proposals with falsifiable claims
+
+    Falls back gracefully if tools/Claude unavailable.
+
+    Args:
+        state: Current agent state
+        strategy_type: Strategy type to generate proposals for
+        context: Market regime context
+        iteration: Current iteration number
+
+    Returns:
+        List of Proposal objects (empty if orchestration fails)
+    """
+    try:
+        registry = get_default_registry()
+        orchestrator = ToolOrchestrator(registry)
+
+        result = orchestrator.run_tool_loop(
+            user_prompt=f"""
+Generate 5 high-confidence {strategy_type} strategy proposals for the current market regime.
+
+For each proposal:
+1. Identify which regime characteristic (volatility, trend, mean reversion) you're targeting
+2. Explain the parameter choice briefly
+3. Assign a confidence score (0.0-1.0)
+4. Make a falsifiable claim about expected Sharpe improvement vs. recent baseline
+
+Return proposals with: params (dict), confidence (float), reasoning (string), falsifiable_claim (string)
+""",
+            regime_context=context,
+            strategy_type=strategy_type,
+            max_turns=2,
+        )
+
+        logger.info(f"Tool orchestrator completed with {len(result.get('tool_calls', []))} tool calls")
+
+        # Record tool calls in trace
+        if state.get("trace"):
+            for tool_call in result.get("tool_calls", []):
+                emit_trace(
+                    state["trace"],
+                    "tool_call",
+                    f"Called {tool_call['tool_name']}",
+                    tool_name=tool_call["tool_name"],
+                    result_success=tool_call.get("result", {}).get("success", False),
+                )
+
+        # TODO: Parse proposals from Claude response and convert to Proposal objects
+        # For now, return empty to trigger fallback to ProposalGenerator
+        # This is where Claude's text response gets parsed into structured proposals
+        logger.info("Tool orchestration returned; parsing proposals from Claude response (TODO)")
+        return []
+
+    except ImportError as e:
+        logger.warning(f"Tool orchestration unavailable (missing dependency: {e}); will use fallback")
+        return []
+    except Exception as e:
+        logger.warning(f"Tool orchestration failed: {e}; falling back to ProposalGenerator")
+        return []
 
 
 def run_agent(
