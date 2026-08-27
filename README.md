@@ -56,7 +56,12 @@ Random Baseline (Control)        →   0.465  (+12.9%)   All beat random 5-33x
 
 ### Evolution Visualization
 
-> **View the interactive animated visualization** → [Live Demo: Harness Evolution Dashboard](https://claude.ai/code/artifact/a297e886-911e-4f06-bdf4-bbbb3890888b)
+<div style="text-align: center; margin: 30px 0; padding: 20px; background: #f0f8ff; border: 2px solid #0066cc; border-radius: 8px;">
+  <strong>🎬 Watch the 6-Epoch Evolution Unfold</strong><br>
+  <a href="https://claude.ai/code/artifact/a297e886-911e-4f06-bdf4-bbbb3890888b" target="_blank" style="display: inline-block; margin-top: 10px; padding: 10px 20px; background: #0066cc; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
+    ⚡ Launch Interactive Dashboard
+  </a>
+</div>
 
 The evolution journey across 6 epochs:
 
