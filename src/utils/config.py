@@ -46,6 +46,12 @@ class AgentConfig(BaseModel):
     run_interval: str = "daily"
     mode: str = "suggest_only"
     risk: RiskConfig = RiskConfig()
+    # Fraction of trailing history reserved as a single held-out evaluation
+    # window. The hypothesize/backtest/reflect retry loop only ever sees
+    # data before this window, so repeated iterations cannot leak
+    # information about the period the final accept/reject decision is
+    # graded on. Set to 0 to disable (restores old in-sample-only behavior).
+    holdout_fraction: float = 0.2
 
 
 class BacktestConfig(BaseModel):
