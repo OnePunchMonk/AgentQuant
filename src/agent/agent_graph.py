@@ -31,6 +31,8 @@ logger = logging.getLogger(__name__)
 class AgentState(TypedDict, total=False):
     """State flowing through the agent graph."""
     ohlcv_data: Dict[str, pd.DataFrame]
+    full_ohlcv_data: Dict[str, pd.DataFrame]
+    holdout_start: Optional[pd.Timestamp]
     features_df: pd.DataFrame
     context: Optional[RegimeContext]
     proposals: List[Proposal]
@@ -45,6 +47,51 @@ class AgentState(TypedDict, total=False):
     memory_context: str
     run_log: List[str]
     trace: Optional[TraceRecorder]
+
+
+def _split_search_and_holdout(
+    ohlcv_data: Dict[str, pd.DataFrame],
+    primary_asset: str,
+    holdout_fraction: float,
+) -> tuple:
+    """
+    Split OHLCV history into a search window (visible to the
+    hypothesize/backtest/reflect retry loop) and a trailing holdout window
+    the loop never sees.
+
+    Returns (search_ohlcv_data, holdout_start). If the split can't be
+    computed (bad fraction, missing/short data), returns the original data
+    unchanged and holdout_start=None — the loop then behaves exactly as
+    before (in-sample only), rather than failing the run.
+    """
+    if not (0.0 < holdout_fraction < 1.0):
+        return ohlcv_data, None
+
+    primary_df = ohlcv_data.get(primary_asset)
+    if primary_df is None or primary_df.empty:
+        return ohlcv_data, None
+
+    idx = primary_df.index.sort_values()
+    split_pos = int(len(idx) * (1 - holdout_fraction))
+    if split_pos <= 0 or split_pos >= len(idx):
+        return ohlcv_data, None
+
+    # Too little history to carve out a meaningful search window (e.g. below
+    # typical warmup requirements) -- fall back to in-sample-only behavior
+    # rather than crippling the run.
+    min_search_bars = 30
+    if split_pos < min_search_bars:
+        return ohlcv_data, None
+
+    holdout_start = idx[split_pos]
+    search_data = {
+        ticker: df.loc[df.index < holdout_start]
+        for ticker, df in ohlcv_data.items()
+    }
+    if search_data[primary_asset].empty:
+        return ohlcv_data, None
+
+    return search_data, holdout_start
 
 
 def analyze_node(state: AgentState) -> AgentState:
@@ -269,6 +316,66 @@ def _score_falsifiable_claims(state: AgentState, best_result: Dict[str, Any]) ->
         )
 
 
+def holdout_eval_node(state: AgentState) -> AgentState:
+    """
+    Score the winning proposal exactly once against a trailing window the
+    search loop never touched.
+
+    The hypothesize/backtest/reflect loop is free to iterate against the
+    search window as many times as it likes -- that's an in-sample search,
+    not evidence. This node is the one point where the run is graded
+    against data it hasn't seen, so it only runs once per agent run
+    regardless of how many search iterations happened.
+    """
+    best = state.get("best_result")
+    holdout_start = state.get("holdout_start")
+    full_ohlcv = state.get("full_ohlcv_data")
+
+    if best is None or holdout_start is None or not full_ohlcv:
+        return state
+
+    from src.backtest.runner import run_backtest
+
+    asset = state.get("asset", config.reference_asset)
+    strategy_type = state.get("strategy_type", "momentum")
+
+    try:
+        bt_result = run_backtest(
+            full_ohlcv, [asset], strategy_type, best["params"], eval_start=holdout_start
+        )
+    except Exception as e:
+        logger.warning("Holdout evaluation failed: %s", e)
+        state["run_log"].append(f"Holdout: evaluation failed ({e}); reporting in-sample result only.")
+        return state
+
+    if not bt_result or "metrics" not in bt_result:
+        state["run_log"].append("Holdout: no valid backtest result on held-out window.")
+        return state
+
+    holdout_sharpe = bt_result["metrics"].get("sharpe_ratio", 0.0)
+    best["holdout_sharpe"] = holdout_sharpe
+    best["holdout_total_return"] = bt_result["metrics"].get("total_return", 0.0)
+    best["iterations_used"] = state.get("iteration", 1)
+
+    gap = best.get("sharpe", 0.0) - holdout_sharpe
+    state["run_log"].append(
+        f"Holdout: Sharpe={holdout_sharpe:.2f} on unseen window "
+        f"(in-sample was {best.get('sharpe', 0.0):.2f}, gap={gap:.2f})."
+    )
+    emit_trace(
+        state.get("trace"),
+        "holdout_eval",
+        state["run_log"][-1],
+        holdout_sharpe=holdout_sharpe,
+        in_sample_sharpe=best.get("sharpe", 0.0),
+    )
+    logger.info(
+        "Holdout Sharpe: %.2f (in-sample: %.2f, gap: %.2f)",
+        holdout_sharpe, best.get("sharpe", 0.0), gap,
+    )
+    return state
+
+
 def store_node(state: AgentState) -> AgentState:
     """Persist best result to strategy memory."""
     logger.info("=== STORE: Persisting results ===")
@@ -293,6 +400,8 @@ def store_node(state: AgentState) -> AgentState:
         confidence=best.get("confidence", 0.0),
         generation_method=best.get("generation_method", ""),
         reasoning=best.get("reasoning", ""),
+        holdout_sharpe=best.get("holdout_sharpe"),
+        iterations_used=best.get("iterations_used", state.get("iteration", 0)),
     )
     run_id = memory.store(result)
     alpha = AlphaStore().store_backtest_result(
@@ -425,8 +534,15 @@ def run_agent(
     This is a pure-Python implementation of the agent graph.
     If langgraph is available, it could be swapped for a StateGraph.
     """
+    resolved_asset = asset or config.reference_asset
+    search_ohlcv, holdout_start = _split_search_and_holdout(
+        ohlcv_data, resolved_asset, config.agent.holdout_fraction
+    )
+
     state: AgentState = {
-        "ohlcv_data": ohlcv_data,
+        "ohlcv_data": search_ohlcv,
+        "full_ohlcv_data": ohlcv_data,
+        "holdout_start": holdout_start,
         "features_df": pd.DataFrame(),
         "context": None,
         "proposals": [],
@@ -435,23 +551,31 @@ def run_agent(
         "iteration": 0,
         "max_iterations": max_iterations or config.agent.max_iterations,
         "strategy_type": strategy_type,
-        "asset": asset or config.reference_asset,
+        "asset": resolved_asset,
         "should_continue": True,
         "memory_context": "",
         "run_log": [],
         "trace": trace,
     }
+    if holdout_start is not None:
+        state["run_log"].append(
+            f"Holdout: reserving data from {holdout_start.date()} onward; "
+            f"search loop only sees data before it."
+        )
 
-    # Step 1: Analyze (once)
+    # Step 1: Analyze (once, on the search window only)
     state = analyze_node(state)
 
-    # Step 2-4: Hypothesize → Backtest → Reflect (loop)
+    # Step 2-4: Hypothesize → Backtest → Reflect (loop, in-sample search)
     while state["should_continue"] and state["iteration"] < state["max_iterations"]:
         state = hypothesize_node(state)
         state = backtest_node(state)
         state = reflect_node(state)
 
-    # Step 5: Store
+    # Step 5: Grade the winner once against data the loop never saw
+    state = holdout_eval_node(state)
+
+    # Step 6: Store
     state = store_node(state)
 
     return state
