@@ -106,7 +106,7 @@ python scripts/harness_evolution_poc.py --output my_results.json
 
 ### Short-term
 1. Implement walk-forward validation (train/val/held-out split)
-2. Track falsifiable claim accuracy across epochs
+2. Implement structured falsifiable-claim evaluation across epochs
 3. Extend evolution strategy (parameter grid adaptation)
 
 ### Medium-term

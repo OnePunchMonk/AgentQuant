@@ -291,10 +291,10 @@ def reflect_node(state: AgentState) -> AgentState:
 
 def _score_falsifiable_claims(state: AgentState, best_result: Dict[str, Any]) -> None:
     """
-    Score falsifiable claims from proposals against realized outcomes.
+    Log a provisional confidence/outcome diagnostic for proposal claims.
 
-    This enables the harness to learn which proposal-generation strategies actually work.
-    Claims are scored by checking if predicted improvements materialized.
+    Proposals currently store free-form claim text rather than a structured
+    numerical Sharpe forecast, so this is not a prediction-accuracy score.
     """
     proposals = state.get("proposals", [])
     if not proposals:
@@ -306,7 +306,8 @@ def _score_falsifiable_claims(state: AgentState, best_result: Dict[str, Any]) ->
         confidence = proposal.confidence
         params = proposal.params
 
-        # Heuristic scoring: if claim predicted positive and realized is positive, mark accurate
+        # Diagnostic only: structured forecasts are required before accuracy can
+        # be computed against realized Sharpe.
         predicted_improvement = confidence > 0.5 and realized_sharpe > config.agent.min_acceptable_sharpe
         actual_improvement = realized_sharpe > config.agent.min_acceptable_sharpe
 
