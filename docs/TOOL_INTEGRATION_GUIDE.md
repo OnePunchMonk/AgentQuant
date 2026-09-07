@@ -104,11 +104,11 @@ result = orchestrator.run_tool_loop(
 When a proposal is generated with a claim (e.g., "This window length will improve Sharpe by 15%"):
 
 1. **Proposal generation** — claim is recorded in `Proposal.reasoning`
-2. **Reflect node** — `_score_falsifiable_claims()` compares predicted vs. actual
-3. **Memory storage** — claim accuracy tracked in `StrategyMemory`
-4. **Harness eval** — eval suite scores "% of claims materialized"
+2. **Reflect node** — `_score_falsifiable_claims()` currently records a confidence/outcome heuristic
+3. **Memory storage** — proposal and backtest context can be retained for future evaluation
+4. **Harness eval** — structured numerical forecasts and measured accuracy remain future work
 
-This creates a feedback loop where the harness learns which proposal strategies work.
+This provides inputs for a future feedback loop; it does not yet establish prediction accuracy.
 
 ## Extending the Tool System
 
