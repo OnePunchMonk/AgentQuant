@@ -281,7 +281,9 @@ class MultiIterationHarnessEvolution:
             proposals_generated=len(proposals),
             proposals_accepted=1,
             execution_time=elapsed,
-            claim_accuracy=0.8,  # Placeholder
+            # Numerical claim accuracy is not available until proposals carry
+            # structured forecasts that can be evaluated against outcomes.
+            claim_accuracy=0.0,
         )
 
     def _describe_harness_changes(self, harness_spec: Dict[str, Any]) -> List[str]:

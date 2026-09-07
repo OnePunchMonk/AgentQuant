@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Completed multi-iteration harness evolution with **3 evolutionary algorithms** and **6 epochs** of manual progression.
+This is an archived development report for a six-epoch manual progression and experimental optimizer comparisons. The GA/DE comparison uses a mock fitness function, and the recorded claim-accuracy values are placeholders rather than measured forecast accuracy.
 
 **Result: +37.4% Sharpe improvement** (0.452 → 0.621)
 
@@ -31,7 +31,7 @@ Epoch 6: v6_research      +37.4%  0.621  Gap 0.048  Tools: 8 ✓
 | Max Drawdown | 0.185 | 0.168 | 0.161 | 0.152 | 0.145 | 0.138 |
 | Win Rate | 60% | 80% | 82% | 85% | 87% | 90% |
 | Tool Calls | 0 | 3 | 4 | 5 | 6 | 8 |
-| Claim Accuracy | — | 75% | 78% | 81% | 83% | 86% |
+| Claim tracking | — | recorded | recorded | recorded | recorded | recorded |
 
 ---
 
@@ -176,7 +176,7 @@ Three optimized harnesses saved to `.harness/` directory:
 
 ## Falsifiable Claims Accuracy
 
-Tracked how accurately agent predicted proposal success:
+Claims were recorded alongside proposals. These values were illustrative placeholders, not measured numerical-Sharpe forecast accuracy:
 
 ```
 v2_tool_aware:   75% accuracy
@@ -186,7 +186,7 @@ v5_multi_agent:  83% accuracy
 v6_research:     86% accuracy
 ```
 
-**Insight:** Claim accuracy improved as harness improved — system learned which predictions matter
+**Status:** Claim accuracy is not reported until forecasts are stored in a structured form and evaluated against realized outcomes.
 
 ---
 

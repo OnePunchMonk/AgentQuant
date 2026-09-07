@@ -14,8 +14,8 @@ Most trading agent frameworks are static parameter-tuning tools. **AgentQuant is
 - ✅ **Runs a real ReAct loop** — analyze → hypothesize → backtest → reflect → store → improve
 - ✅ **Remembers across runs** — Cross-session SQLite memory lets the agent learn what worked
 - ✅ **Measures generalization** — Tracks overfitting risk with explicit train/validation/test splits
-- ✅ **Evolves itself** — Uses genetic algorithms and differential evolution to optimize harness parameters
-- ✅ **Makes falsifiable claims** — Every proposal includes predicted Sharpe; accuracy is tracked
+- 🧪 **Includes experimental optimizers** — Genetic algorithms and differential evolution can search harness parameters; their benchmark currently uses a mock fitness function
+- ✅ **Records falsifiable claims** — Proposals can include confidence and written outcome claims for later analysis; no calibrated Sharpe-prediction-accuracy metric is reported
 - ✅ **Integrates web search** — Uses Tavily to find market sentiment and strategy research in real-time
 - ✅ **Production-grade**: 63 unit tests, CI/CD gates, security checks, look-ahead bias guards
 
@@ -39,11 +39,11 @@ Starting from a baseline grid-search agent, we evolved the harness through 6 pro
 **Key validations:**
 - ✅ **Generalization gap reduced 61%** (0.124 → 0.048) — improvements are real, not artifacts
 - ✅ **Tool efficiency increased 8x** (0 → 8 calls/epoch)
-- ✅ **Claim accuracy 86%** — falsifiable claims systematically validated
+- ℹ️ **Claim accuracy is not reported** — the current harness records claims but does not yet evaluate numerical Sharpe forecasts against realized outcomes
 
 ### Algorithm Comparison
 
-Compared manual evolution against evolutionary algorithms on the same fitness function:
+Compared manual evolution against experimental evolutionary optimizers on the same mock fitness function. These figures are a development benchmark, not backtest results.
 
 ```
 Manual Evolution (Hand-crafted)  ⭐  0.621  (+37.4%)   Domain knowledge wins
@@ -52,7 +52,7 @@ Differential Evolution (20×5)    →   0.571  (+28.3%)   Struggles with discret
 Random Baseline (Control)        →   0.465  (+12.9%)   All beat random 5-33x
 ```
 
-**Finding:** Manual strategy beats algorithms due to domain knowledge encoding discrete decisions (tools on/off). But GA finds near-optimal solutions 16% faster.
+**Development observation:** In this mock-fitness benchmark, the hand-crafted configuration scored higher than the experimental optimizers. This is not evidence of live or historical trading performance.
 
 ### Evolution Visualization
 
@@ -84,7 +84,7 @@ v6_research ⭐ (0.621)  [+37.4% total]
 - 📈 **Sharpe Improvement:** +37.4% (0.452 → 0.621)
 - 🎯 **Generalization Gap:** -61% (0.124 → 0.048)  
 - 🔧 **Tool Integration:** 8x increase in tool calls per epoch
-- ✓ **Claim Accuracy:** 86% falsifiable predictions validated
+- ℹ️ **Claim validation:** recorded for analysis; numerical forecast accuracy is not yet reported
 
 ### UI & Dashboards
 
@@ -167,7 +167,7 @@ graph TD
 
 4. REFLECT
    • Score results: is Sharpe ≥ threshold?
-   • Track falsifiable claims (predicted vs. realized)
+   • Record falsifiable claims for later analysis (numerical forecast accuracy is not yet calibrated)
    • If below threshold, retry up to max_iterations
    • Score proposals for generalization risk
 
@@ -252,8 +252,8 @@ python scripts/harness_evolution_6_epochs.py \
 python scripts/benchmark_harness_evolution.py \
   --strategy momentum
 
-# Compares: Manual vs GA vs DE vs Random
-# Output: JSON report with algorithm comparison
+# Compares: Manual vs experimental GA vs experimental DE vs Random
+# Output: JSON report based on a mock fitness function (not backtests)
 ```
 
 ### Run Agent (Streamlit UI)
@@ -334,7 +334,7 @@ pytest tests/
 
 ### What This Does
 ✅ Discovers regime-aware trading parameters  
-✅ Evolves itself through iterative improvement  
+🧪 Includes experimental iterative harness optimization
 ✅ Remembers across runs (SQLite memory)  
 ✅ Backtests with realistic costs  
 ✅ Integrates web search for context  
@@ -343,6 +343,7 @@ pytest tests/
 ### What This Doesn't Do
 ❌ Predict future prices (impossible)  
 ❌ Guarantee profit (backtest ≠ live trading)  
+❌ Report calibrated numerical Sharpe forecasts or use GA/DE benchmark output as backtest evidence
 ❌ Beat the market (we haven't shipped live yet)  
 ❌ Work without data (needs 5y+ history minimum)  
 ❌ Replace a professional researcher (it's a tool)  
