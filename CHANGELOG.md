@@ -7,6 +7,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Agentic Research Loop — 2026-09-12
+
+This release documents the current agentic design and the features added while
+iterating from a parameter-tuning backtester toward a self-improving research
+agent.
+
+#### Agentic design
+
+AgentQuant runs a bounded, evidence-producing loop:
+
+```text
+ANALYZE → HYPOTHESIZE → BACKTEST → REFLECT → STORE
+              ↑                         │
+              └──── retry on failure ──┘
+```
+
+- **Analyze** computes market features and classifies the current regime from
+  volatility, momentum, trend, and drawdown signals.
+- **Hypothesize** combines LLM reasoning, stored alpha memory, regime-aware
+  grid search, and random fallback proposals.
+- **Backtest** evaluates proposals with warmup enforcement, transaction costs,
+  and performance metrics.
+- **Reflect** applies quality gates, records falsifiable proposal claims, and
+  decides whether another bounded iteration is justified.
+- **Store** persists accepted evidence and reusable negative evidence for later
+  runs.
+
+The loop is intentionally bounded: every proposal has parameters, a generation
+method, reasoning, confidence, and measurable outcomes. This keeps agentic
+behavior comparable to deterministic baselines instead of treating free-form
+LLM output as evidence by itself.
+
+#### Iteration history
+
+The implementation has evolved through these agentic stages:
+
+1. **Core research platform** — multi-strategy OHLCV ingestion, feature
+   engineering, realistic-cost backtesting, metrics, and dashboard views.
+2. **Bounded agent loop** — explicit analyze/hypothesize/backtest/reflect/store
+   nodes with retry limits and a single proposal-generation entrypoint.
+3. **Regime-aware proposals** — VIX percentile and momentum regimes feed the
+   prompt and parameter-grid priors.
+4. **Persistent learning** — `StrategyMemory`, `AlphaStore`, and NLA memory
+   retain cross-run context and successful candidates.
+5. **Tool-using orchestration** — Claude-compatible tool schemas, optional
+   Tavily research/sentiment search, proposal parsing, and graceful fallback to
+   local generation.
+6. **Harness evaluation** — falsifiable claim recording, benchmark tooling,
+   generalization-gap measurements, and experimental harness evolution.
+7. **Failure-aware self-improvement** — structured failure records now capture
+   regime, strategy, parameters, failure mode, metric gap, and a
+   counterfactual hypothesis; matched failures are injected as proposal
+   constraints.
+8. **Robustness evaluation** — anchored walk-forward utilities report median
+   and worst-window metrics; counterfactual stress tests perturb regimes,
+   volatility, outlier days, and trends.
+9. **Agent observability and extension points** — trace diagnostics expose node
+   counts, proposal methods, improvements, and acceptances; regime transitions
+   are detectable; generated strategy source is AST-validated before registry
+   registration.
+
+#### Added
+
+- `failure_records` SQLite table and `FailureRecord` dataclass in
+  `src/research/alpha_store.py`.
+- Automatic failure persistence from `reflect_node`.
+- Structured failure-memory prompt context in
+  `src/agent/proposal_generator.py`.
+- `TraceRecorder.diagnostics()` and `.diagnostics_json()` for harness reports.
+- `src/backtest/walk_forward.py` for anchored walk-forward evaluation.
+- `src/backtest/stress_test.py` for counterfactual strategy stress tests.
+- `RegimeChangeDetector` for recording regime-label transitions.
+- `src/strategies/codegen.py` for AST validation and controlled strategy
+  registration.
+- `stress_test_strategy` in the agent tool registry.
+
+#### Validation
+
+- 70 repository tests pass after integrating the latest `main` changes.
+- Unsafe generated imports are rejected before registration.
+- No force-push or destructive history rewrite was used for this release.
+
 ### Added — 2026-08-28
 
 #### Tool Registry & Orchestration System
