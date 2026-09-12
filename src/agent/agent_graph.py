@@ -21,7 +21,7 @@ from src.agent.strategy_memory import PastResult, StrategyMemory
 from src.agent.trace import TraceRecorder, emit_trace
 from src.agent.tools import get_default_registry
 from src.agent.tools.orchestrator import ToolOrchestrator
-from src.research.alpha_store import AlphaStore
+from src.research.alpha_store import AlphaStore, FailureRecord
 from src.research.nla_memory import NLAMemoryStore
 from src.utils.config import config
 
@@ -205,6 +205,24 @@ def reflect_node(state: AgentState) -> AgentState:
     iteration = state.get("iteration", 1)
     max_iter = state.get("max_iterations", config.agent.max_iterations)
     min_sharpe = config.agent.min_acceptable_sharpe
+
+    # Persist structured negative evidence so later iterations and runs can
+    # avoid repeating the same regime/strategy mistake.
+    alpha_store = AlphaStore()
+    regime = state.get("context").regime_label if state.get("context") else "Unknown"
+    for result in state.get("results", []):
+        result_sharpe = float(result.get("sharpe", 0.0))
+        if result_sharpe < min_sharpe:
+            gap = result_sharpe - min_sharpe
+            mode = "negative_sharpe" if result_sharpe < 0 else "below_sharpe_threshold"
+            alpha_store.store_failure(FailureRecord(
+                regime=regime, strategy_type=state.get("strategy_type", ""),
+                params=result.get("params", {}), failure_mode=mode, metric_gap=gap,
+                counterfactual_hypothesis=(
+                    "Try shorter horizons or a different strategy family; this configuration "
+                    "did not clear the out-of-sample Sharpe gate in this regime."
+                ),
+            ))
 
     if best is None:
         state["should_continue"] = iteration < max_iter

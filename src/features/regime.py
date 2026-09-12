@@ -40,6 +40,24 @@ class RegimeSignals:
     regime_confidence: float = 0.5
 
 
+class RegimeChangeDetector:
+    """Small stateful detector that records label transitions."""
+    def __init__(self):
+        self.previous_label: Optional[str] = None
+        self.transitions = []
+
+    def update(self, label: str, timestamp=None) -> Optional[dict]:
+        if self.previous_label is None:
+            self.previous_label = label
+            return None
+        if label == self.previous_label:
+            return None
+        event = {"from": self.previous_label, "to": label, "timestamp": str(timestamp) if timestamp is not None else None}
+        self.transitions.append(event)
+        self.previous_label = label
+        return event
+
+
 def detect_regime(features_df: pd.DataFrame) -> str:
     """
     Detects the current market regime label.

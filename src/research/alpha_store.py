@@ -59,6 +59,24 @@ class AlphaCandidate:
         }
 
 
+@dataclass
+class FailureRecord:
+    """Reusable explanation of a failed proposal."""
+    failure_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    regime: str = "Unknown"
+    strategy_type: str = ""
+    params: Dict[str, Any] = field(default_factory=dict)
+    failure_mode: str = "below_threshold"
+    metric_gap: float = 0.0
+    counterfactual_hypothesis: str = ""
+
+    def as_prompt_line(self) -> str:
+        return (f"- {self.regime}/{self.strategy_type} params={json.dumps(self.params, sort_keys=True)}; "
+                f"failure={self.failure_mode}; metric_gap={self.metric_gap:.3f}; "
+                f"hypothesis={self.counterfactual_hypothesis}")
+
+
 class AlphaStore:
     """Persistence and retrieval layer for alpha candidates."""
 
@@ -93,6 +111,41 @@ class AlphaStore:
                 CREATE INDEX IF NOT EXISTS idx_alpha_lookup
                 ON alpha_candidates (regime, strategy_type, status, alpha_score)
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS failure_records (
+                    failure_id TEXT PRIMARY KEY, timestamp TEXT NOT NULL,
+                    regime TEXT NOT NULL, strategy_type TEXT NOT NULL,
+                    params_json TEXT NOT NULL, failure_mode TEXT NOT NULL,
+                    metric_gap REAL DEFAULT 0.0, counterfactual_hypothesis TEXT DEFAULT ''
+                )
+            """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_failure_lookup ON failure_records(regime, strategy_type, timestamp)")
+
+    def store_failure(self, failure: FailureRecord) -> str:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""INSERT OR REPLACE INTO failure_records
+                (failure_id,timestamp,regime,strategy_type,params_json,failure_mode,metric_gap,counterfactual_hypothesis)
+                VALUES (?,?,?,?,?,?,?,?)""", (failure.failure_id, failure.timestamp, failure.regime,
+                failure.strategy_type, json.dumps(failure.params, sort_keys=True), failure.failure_mode,
+                failure.metric_gap, failure.counterfactual_hypothesis))
+        return failure.failure_id
+
+    def recall_failures(self, *, regime: str = "", strategy_type: str = "", n: int = 5) -> List[FailureRecord]:
+        query = "SELECT * FROM failure_records WHERE 1=1"; params: List[Any] = []
+        if regime: query += " AND regime = ?"; params.append(regime)
+        if strategy_type: query += " AND strategy_type = ?"; params.append(strategy_type)
+        query += " ORDER BY ABS(metric_gap) DESC, timestamp DESC LIMIT ?"; params.append(n)
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(query, params).fetchall()
+        return [FailureRecord(failure_id=r["failure_id"], timestamp=r["timestamp"], regime=r["regime"],
+            strategy_type=r["strategy_type"], params=json.loads(r["params_json"]), failure_mode=r["failure_mode"],
+            metric_gap=r["metric_gap"], counterfactual_hypothesis=r["counterfactual_hypothesis"]) for r in rows]
+
+    def failures_to_prompt_context(self, regime: str, strategy_type: str, n: int = 5) -> str:
+        failures = self.recall_failures(regime=regime, strategy_type=strategy_type, n=n)
+        if not failures: return "No structured failure modes recorded for this regime and strategy."
+        return "DO NOT REPEAT THESE PRIOR FAILURE MODES:\n" + "\n".join(f.as_prompt_line() for f in failures)
 
     def store(self, candidate: AlphaCandidate) -> str:
         """Insert or replace an alpha candidate."""

@@ -23,6 +23,7 @@ PROMPT_TEMPLATE = """You are a quantitative researcher. Select optimal parameter
 PARAMETER GRID (you MUST select from this list only):
 {param_grid_json}
 {prior_results_section}
+{failure_memory_section}
 TASK:
 1. State which regime characteristic is most relevant to parameter selection.
 2. Explain why longer vs shorter windows are appropriate given current conditions.
@@ -107,6 +108,7 @@ class ProposalGenerator:
         self.validator = ProposalValidator()
         self.alpha_store = alpha_store or AlphaStore()
         self.use_alpha_memory = use_alpha_memory
+        self.failure_store = self.alpha_store
 
     def generate(
         self,
@@ -245,6 +247,9 @@ class ProposalGenerator:
             param_grid_json=self.grid.to_json(strategy_type),
             n_proposals=n,
             prior_results_section=self._format_prior_results(prior_results),
+            failure_memory_section=self.failure_store.failures_to_prompt_context(
+                context.regime_label, strategy_type, n=5
+            ),
         )
         logger.debug("LLM Prompt:\n%s", prompt)
 

@@ -216,6 +216,11 @@ def _run_benchmark_tool(strategy_type: str = "", regime: str = "") -> Dict[str, 
     return run_benchmark_to_assess_quality_tool(strategy_type=strategy_type, regime=regime)
 
 
+def _stress_test_tool(ohlcv_data, assets, strategy_name, params):
+    from src.backtest.stress_test import stress_test
+    return stress_test(ohlcv_data, assets, strategy_name, params)
+
+
 # ============================================================================
 # Default Registry Setup
 # ============================================================================
@@ -318,5 +323,13 @@ def get_default_registry() -> ToolRegistry:
             category="evaluation",
         )
     )
+
+    registry.register(Tool(
+        name="stress_test_strategy",
+        description="Run counterfactual regime, volatility, outlier-removal, and trend-reversal stress tests.",
+        input_schema={"properties": {"ohlcv_data": {"type": "object"}, "assets": {"type": "array"},
+                                      "strategy_name": {"type": "string"}, "params": {"type": "object"}},
+                       "required": ["ohlcv_data", "assets", "strategy_name", "params"]},
+        callable_fn=_stress_test_tool, category="evaluation"))
 
     return registry

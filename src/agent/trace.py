@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from collections import Counter
 
 
 @dataclass
@@ -45,6 +46,32 @@ class TraceRecorder:
             "swarm": "green",
         }.get(event.stage, "white")
         console.print(f"[dim]{event.timestamp}[/dim] [{color}]{event.stage.upper()}[/{color}] {event.message}")
+
+    def diagnostics(self) -> Dict[str, Any]:
+        """Return JSON-serialisable harness diagnostics for one run."""
+        proposals = [e for e in self.events if e.stage == "hypothesize"]
+        backs = [e for e in self.events if e.stage == "backtest"]
+        methods = Counter(m for e in proposals for m in e.payload.get("methods", []))
+        accepted = sum(bool(e.payload.get("accepted")) for e in self.events if e.stage == "reflect")
+        improved = 0
+        previous = None
+        for e in backs:
+            best = (e.payload.get("best") or {}).get("sharpe")
+            if best is not None and (previous is None or best > previous): improved += 1
+            if best is not None: previous = best
+        return {
+            "event_count": len(self.events),
+            "node_counts": dict(Counter(e.stage for e in self.events)),
+            "proposal_method_counts": dict(methods),
+            "backtest_rounds": len(backs),
+            "improving_backtest_rounds": improved,
+            "accepted_reflections": accepted,
+            "validator_rejections": sum(e.payload.get("validator_rejections", 0) for e in self.events),
+        }
+
+    def diagnostics_json(self) -> str:
+        import json
+        return json.dumps(self.diagnostics(), sort_keys=True)
 
 
 def emit_trace(trace: Optional[TraceRecorder], stage: str, message: str, **payload: Any) -> None:
