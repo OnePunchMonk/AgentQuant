@@ -35,6 +35,21 @@ For the complete human explanation of the project’s evolution, see
 [LEARNINGS.md](LEARNINGS.md). For a full worked narrative of one run, see
 [docs/SELF_IMPROVING_SEARCH.md](docs/SELF_IMPROVING_SEARCH.md).
 
+## Read, run, and extend
+
+| Start here | Link |
+|---|---|
+| Human learnings from the full project history | [LEARNINGS.md](LEARNINGS.md) |
+| Worked explanation of the self-improving search loop | [SELF_IMPROVING_SEARCH.md](docs/SELF_IMPROVING_SEARCH.md) |
+| Technical architecture | [DESIGN.md](DESIGN.md) |
+| Feature and release history | [CHANGELOG.md](CHANGELOG.md) |
+| Zero-key local demo | [`run_app.py`](run_app.py) |
+| Reproducible search benchmark | [`scripts/reproducible_benchmark.py`](scripts/reproducible_benchmark.py) |
+| Harnesskit replay contract | [`harnesskit_spec/`](harnesskit_spec/) |
+| Peek leakage audit | [`scripts/peek_audit_benchmark.py`](scripts/peek_audit_benchmark.py) |
+| Agent harness evaluation toolkit | [OnePunchMonk/harnesskit](https://github.com/OnePunchMonk/harnesskit) |
+| Time-series leakage auditor | [OnePunchMonk/peek](https://github.com/OnePunchMonk/peek) |
+
 ## Harnesskit integration
 
 AgentQuant can export its execution trace to
