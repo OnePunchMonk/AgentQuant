@@ -35,6 +35,36 @@ For the complete human explanation of the project’s evolution, see
 [LEARNINGS.md](LEARNINGS.md). For a full worked narrative of one run, see
 [docs/SELF_IMPROVING_SEARCH.md](docs/SELF_IMPROVING_SEARCH.md).
 
+## Harnesskit integration
+
+AgentQuant can export its execution trace to
+[harnesskit](https://github.com/OnePunchMonk/harnesskit), which supplies a
+framework-neutral trajectory schema and offline replay/evaluation contracts.
+This keeps market-specific research in AgentQuant while moving harness
+diagnostics and regression checks into a reusable evaluation layer.
+
+```bash
+pip install -e ../harnesskit
+python scripts/export_harnesskit_trace.py
+harness replay harnesskit_spec --baseline results/demo_run.trajectory.json
+```
+
+The bridge is optional; AgentQuant still runs without harnesskit. The exported
+trajectory records proposal-generation steps, agent-loop stages, termination,
+and payloads in a format that can be replayed without another model call.
+
+Before interpreting benchmark results, audit the deterministic fixture with
+[Peek](https://github.com/OnePunchMonk/peek):
+
+```bash
+git clone https://github.com/OnePunchMonk/peek ../peek
+PYTHONPATH=../peek .venv/bin/python scripts/peek_audit_benchmark.py
+```
+
+The command writes `results/peek_audit.json` and exits non-zero if Peek finds a
+leak. Leakage detection is therefore a prerequisite for interpreting harness
+comparisons.
+
 ## What Makes This Different
 
 Most trading agent frameworks are static parameter-tuning tools. **AgentQuant is different:**

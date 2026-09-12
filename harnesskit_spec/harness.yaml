@@ -1,0 +1,36 @@
+schema_version: 1
+metadata:
+  name: agentquant-research-loop
+  version: 0.1.0
+  description: Offline contract checks for the AgentQuant bounded research loop
+
+model:
+  provider: local
+  model_id: agentquant-fallback
+  temperature: 0.0
+  requires_tool_use: false
+
+loop:
+  type: custom
+  custom_ref: custom:src/integrations/harnesskit_bridge.py:to_trajectory
+  max_turns: 3
+
+memory:
+  session: persistent
+  persistent_backend: src/research/alpha_store.py
+
+termination:
+  - type: max_turns
+    value: 3
+
+eval:
+  cases:
+    - id: bounded-agent-loop
+      input: synthetic market research run
+      expected_tools: [analyze, backtest, reflect]
+      max_turns: 3
+      scoring_mode: trajectory_in_order
+
+scaffold:
+  system_prompt: system_prompt.md
+  system_prompt_is_file: true

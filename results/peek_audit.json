@@ -1,0 +1,37 @@
+{
+  "verdict": "CLEAN",
+  "has_leak": false,
+  "checks_run": [
+    "target_leak",
+    "causality",
+    "split"
+  ],
+  "findings": {
+    "verdict": "CLEAN",
+    "checks_run": [
+      "target_leak",
+      "causality",
+      "split"
+    ],
+    "findings": [
+      {
+        "check": "target_leak",
+        "severity": "PASS",
+        "message": "no numeric feature is a near-exact copy of the (shifted) target",
+        "detail": ""
+      },
+      {
+        "check": "causality",
+        "severity": "PASS",
+        "message": "feature_fn is causal at all 8 probed timestamps (truncating the series does not change past values)",
+        "detail": ""
+      },
+      {
+        "check": "split",
+        "severity": "PASS",
+        "message": "no train/test temporal overlap found across the provided splits",
+        "detail": ""
+      }
+    ]
+  }
+}

@@ -1,0 +1,224 @@
+{
+  "bounded-agent-loop": {
+    "harness_name": "agentquant",
+    "harness_version": "0.1.0",
+    "model_id": "fallback",
+    "adapter": "agentquant",
+    "input": "market research run",
+    "steps": [
+      {
+        "step_type": "tool_call",
+        "input": null,
+        "output": null,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "duration_ms": 0,
+        "tool_name": "analyze",
+        "tool_args": {
+          "regime": "MidVol-Bull",
+          "confidence": 0.43772553927272306
+        },
+        "tool_result": "Regime MidVol-Bull detected at 44% confidence.",
+        "note": null
+      },
+      {
+        "step_type": "llm_call",
+        "input": "Iteration 1: generated 5 candidate strategies.",
+        "output": "{\"iteration\": 1, \"methods\": [\"alpha_memory\", \"alpha_memory\", \"grid_search\", \"grid_search\", \"random\"], \"proposals\": [{\"fast_window\": 50, \"slow_window\": 150}, {\"fast_window\": 20, \"slow_window\": 100}, {\"fast_window\": 17, \"slow_window\": 91}, {\"fast_window\": 15, \"slow_window\": 80}, {\"fast_window\": 10, \"slow_window\": 50}]}",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "duration_ms": 0,
+        "tool_name": null,
+        "tool_args": null,
+        "tool_result": null,
+        "note": "proposal generation"
+      },
+      {
+        "step_type": "tool_call",
+        "input": null,
+        "output": null,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "duration_ms": 0,
+        "tool_name": "backtest",
+        "tool_args": {
+          "best": {
+            "proposal_idx": 0,
+            "strategy_type": "momentum",
+            "params": {
+              "fast_window": 50,
+              "slow_window": 150
+            },
+            "sharpe": 0.9955556303198242,
+            "calmar": 0.7519202385086216,
+            "sortino": 1.5362650407967902,
+            "bootstrap_sharpe_p5": -0.004166302207367095,
+            "total_return": 0.3783987660077468,
+            "max_drawdown": 0.15809397993405327,
+            "num_trades": 3,
+            "generation_method": "alpha_memory",
+            "confidence": 0.55,
+            "reasoning": "Retrieved from alpha DB: Retrieved from alpha DB: Retrieved from alpha DB: Grid search selection based on regime prior.",
+            "equity_curve": "2023-04-03    100000.000000\n2023-04-04    100000.000000\n2023-04-05    100000.000000\n2023-04-06    100000.000000\n2023-04-07    100000.000000\n                  ...      \n2025-12-29    140617.067405\n2025-12-30    138549.273210\n2025-12-31    139064.366833\n2026-01-01    138194.822086\n2026-01-02    137839.876601\nFreq: B, Length: 720, dtype: float64",
+            "holdout_sharpe": -0.71446841129981,
+            "holdout_total_return": -0.07437348975239988,
+            "iterations_used": 1
+          },
+          "results": [
+            {
+              "proposal_idx": 0,
+              "strategy_type": "momentum",
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "sharpe": 0.9955556303198242,
+              "calmar": 0.7519202385086216,
+              "sortino": 1.5362650407967902,
+              "bootstrap_sharpe_p5": -0.004166302207367095,
+              "total_return": 0.3783987660077468,
+              "max_drawdown": 0.15809397993405327,
+              "num_trades": 3,
+              "generation_method": "alpha_memory",
+              "confidence": 0.55,
+              "reasoning": "Retrieved from alpha DB: Retrieved from alpha DB: Retrieved from alpha DB: Grid search selection based on regime prior.",
+              "equity_curve": "2023-04-03    100000.000000\n2023-04-04    100000.000000\n2023-04-05    100000.000000\n2023-04-06    100000.000000\n2023-04-07    100000.000000\n                  ...      \n2025-12-29    140617.067405\n2025-12-30    138549.273210\n2025-12-31    139064.366833\n2026-01-01    138194.822086\n2026-01-02    137839.876601\nFreq: B, Length: 720, dtype: float64",
+              "holdout_sharpe": -0.71446841129981,
+              "holdout_total_return": -0.07437348975239988,
+              "iterations_used": 1
+            },
+            {
+              "proposal_idx": 1,
+              "strategy_type": "momentum",
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "sharpe": 0.8563639589965913,
+              "calmar": 0.6090216153863907,
+              "sortino": 1.3698544494477622,
+              "bootstrap_sharpe_p5": -0.15077235578485929,
+              "total_return": 0.32736946663352406,
+              "max_drawdown": 0.17109156738032028,
+              "num_trades": 5,
+              "generation_method": "alpha_memory",
+              "confidence": 0.55,
+              "reasoning": "Retrieved from alpha DB: Retrieved from alpha DB: Grid search selection based on regime prior.",
+              "equity_curve": "2023-04-03    100000.000000\n2023-04-04    100000.000000\n2023-04-05    100000.000000\n2023-04-06    100000.000000\n2023-04-07    100000.000000\n                  ...      \n2025-12-29    135411.323896\n2025-12-30    133420.080907\n2025-12-31    133916.105400\n2026-01-01    133078.751816\n2026-01-02    132736.946663\nFreq: B, Length: 720, dtype: float64"
+            },
+            {
+              "proposal_idx": 2,
+              "strategy_type": "momentum",
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "sharpe": 0.8514320747417436,
+              "calmar": 0.5318146144264478,
+              "sortino": 1.3854907987893692,
+              "bootstrap_sharpe_p5": -0.1575708091054923,
+              "total_return": 0.3285845398049765,
+              "max_drawdown": 0.19659507018745337,
+              "num_trades": 5,
+              "generation_method": "grid_search",
+              "confidence": 0.3,
+              "reasoning": "Grid search selection based on regime prior.",
+              "equity_curve": "2023-04-03    100000.000000\n2023-04-04    100000.000000\n2023-04-05    100000.000000\n2023-04-06    100000.000000\n2023-04-07    100000.000000\n                  ...      \n2025-12-29    135535.279336\n2025-12-30    133542.213565\n2025-12-31    134038.692118\n2026-01-01    133200.572021\n2026-01-02    132858.453980\nFreq: B, Length: 720, dtype: float64"
+            },
+            {
+              "proposal_idx": 4,
+              "strategy_type": "momentum",
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "sharpe": 0.44890880540293915,
+              "calmar": 0.27394257030479413,
+              "sortino": 0.7153409532216491,
+              "bootstrap_sharpe_p5": -0.4423049387541046,
+              "total_return": 0.15244752723861232,
+              "max_drawdown": 0.18585849174994873,
+              "num_trades": 15,
+              "generation_method": "random",
+              "confidence": 0.1,
+              "reasoning": "Random grid selection.",
+              "equity_curve": "2023-04-03    100000.000000\n2023-04-04    100000.000000\n2023-04-05    100000.000000\n2023-04-06    100000.000000\n2023-04-07    100000.000000\n                  ...      \n2025-12-29    117566.698125\n2025-12-30    115837.862924\n2025-12-31    116268.520864\n2026-01-01    115541.514486\n2026-01-02    115244.752724\nFreq: B, Length: 720, dtype: float64"
+            },
+            {
+              "proposal_idx": 3,
+              "strategy_type": "momentum",
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "sharpe": 0.40870900733635035,
+              "calmar": 0.20354781593078608,
+              "sortino": 0.6692611078321999,
+              "bootstrap_sharpe_p5": -0.746840874991837,
+              "total_return": 0.1334460856558226,
+              "max_drawdown": 0.2201800876633394,
+              "num_trades": 13,
+              "generation_method": "grid_search",
+              "confidence": 0.3,
+              "reasoning": "Grid search selection based on regime prior.",
+              "equity_curve": "2023-04-03    100000.000000\n2023-04-04    100000.000000\n2023-04-05    100000.000000\n2023-04-06    100000.000000\n2023-04-07    100000.000000\n                  ...      \n2025-12-29    115628.269959\n2025-12-30    113927.939623\n2025-12-31    114351.496917\n2026-01-01    113636.477349\n2026-01-02    113344.608566\nFreq: B, Length: 720, dtype: float64"
+            }
+          ]
+        },
+        "tool_result": "Best candidate Sharpe=1.00, Calmar=0.75, p5=-0.00.",
+        "note": null
+      },
+      {
+        "step_type": "tool_call",
+        "input": null,
+        "output": null,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "duration_ms": 0,
+        "tool_name": "reflect",
+        "tool_args": {
+          "accepted": true
+        },
+        "tool_result": "Reflect: Sharpe 1.00 >= threshold 0.30. ACCEPTING.",
+        "note": null
+      },
+      {
+        "step_type": "tool_call",
+        "input": null,
+        "output": null,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "duration_ms": 0,
+        "tool_name": "holdout_eval",
+        "tool_args": {
+          "holdout_sharpe": -0.71446841129981,
+          "in_sample_sharpe": 0.9955556303198242
+        },
+        "tool_result": "Holdout: Sharpe=-0.71 on unseen window (in-sample was 1.00, gap=1.71).",
+        "note": null
+      },
+      {
+        "step_type": "tool_call",
+        "input": null,
+        "output": null,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "duration_ms": 0,
+        "tool_name": "store",
+        "tool_args": {
+          "run_id": "3b9cc5bc"
+        },
+        "tool_result": "Store: Persisted result 3b9cc5bc, alpha c70e3204, NLA note d21908e5.",
+        "note": null
+      }
+    ],
+    "final_output": "Store: Persisted result 3b9cc5bc, alpha c70e3204, NLA note d21908e5.",
+    "stopped_reason": "agent_loop_complete"
+  }
+}
