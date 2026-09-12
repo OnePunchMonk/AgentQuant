@@ -4,6 +4,7 @@ Entry point for running the AgentQuant Streamlit application.
 import os
 import subprocess
 import sys
+import argparse
 from pathlib import Path
 
 def ensure_directories():
@@ -46,4 +47,11 @@ def run_streamlit():
         print(f"Error running Streamlit app: {e}")
 
 if __name__ == "__main__":
-    run_streamlit()
+    parser = argparse.ArgumentParser(description="AgentQuant demo or Streamlit app")
+    parser.add_argument("--app", action="store_true", help="Launch the Streamlit dashboard")
+    args = parser.parse_args()
+    if args.app:
+        run_streamlit()
+    else:
+        from scripts.demo_run import main
+        raise SystemExit(main())

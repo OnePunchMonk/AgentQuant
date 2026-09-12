@@ -1,0 +1,31 @@
+{
+  "protocol": "deterministic synthetic fixtures; grid/random fallback; no API keys",
+  "cases": [
+    {
+      "seed": 7,
+      "drift": 0.00025,
+      "one_iteration_sharpe": 0.9057493358550174,
+      "three_iteration_sharpe": 0.9057493358550174,
+      "one_iterations": 1,
+      "three_iterations": 1
+    },
+    {
+      "seed": 11,
+      "drift": -0.00015,
+      "one_iteration_sharpe": -0.194867102484953,
+      "three_iteration_sharpe": -0.3442646131152292,
+      "one_iterations": 1,
+      "three_iterations": 3
+    },
+    {
+      "seed": 19,
+      "drift": 5e-05,
+      "one_iteration_sharpe": 0.01734832660976059,
+      "three_iteration_sharpe": 0.01734832660976059,
+      "one_iterations": 1,
+      "three_iterations": 3
+    }
+  ],
+  "mean_one_iteration_sharpe": 0.242743519993275,
+  "mean_three_iteration_sharpe": 0.1929443497831829
+}

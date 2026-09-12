@@ -1,11 +1,39 @@
-# AgentQuant: Self-Improving AI Agent for Quantitative Research
+# AgentQuant: An Agent That Evolves How It Searches
 
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-passing-brightgreen)](https://github.com/OnePunchMonk/AgentQuant/actions)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-63%20passed-brightgreen)
-![Last Updated](https://img.shields.io/badge/last%20updated-2026--08--28-blue)
+![Tests](https://img.shields.io/badge/tests-70%20passed-brightgreen)
+![Last Updated](https://img.shields.io/badge/last%20updated-2026--09--12-blue)
 
-> **A fully autonomous AI agent that discovers, tests, and evolves trading strategies through iterative self-improvement.**
+> **AgentQuant does not just search for trading strategies; it evolves how it searches for them.**
+
+Trading is the domain. Self-improving search is the point: the agent proposes,
+tests, reflects, remembers failures, and evolves its research harness under
+explicit evaluation gates.
+
+## See it run in under 30 seconds
+
+No API keys are required for the local demo. It uses deterministic synthetic
+market data and the grid/random fallback path, then writes a JSON report and an
+equity-curve artifact to `results/`:
+
+```bash
+python run_app.py
+```
+
+To launch the interactive Streamlit app instead:
+
+```bash
+python run_app.py --app
+```
+
+Add `ANTHROPIC_API_KEY` and `TAVILY_API_KEY` later to unlock optional
+LLM-guided proposals and web research; the core loop remains runnable without
+them.
+
+For the complete human explanation of the project’s evolution, see
+[LEARNINGS.md](LEARNINGS.md). For a full worked narrative of one run, see
+[docs/SELF_IMPROVING_SEARCH.md](docs/SELF_IMPROVING_SEARCH.md).
 
 ## What Makes This Different
 

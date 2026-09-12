@@ -207,6 +207,7 @@ def backtest_node(state: AgentState) -> AgentState:
                     "generation_method": proposal.generation_method,
                     "confidence": proposal.confidence,
                     "reasoning": proposal.reasoning,
+                    "equity_curve": bt_result.get("equity_curve"),
                 })
         except Exception as e:
             logger.warning("Backtest failed for proposal %d: %s", i, e)

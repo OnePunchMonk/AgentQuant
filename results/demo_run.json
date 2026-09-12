@@ -1,0 +1,54 @@
+{
+  "mode": "zero_config_demo",
+  "asset": "DEMO",
+  "iterations": 1,
+  "best": {
+    "proposal_idx": 2,
+    "strategy_type": "momentum",
+    "params": {
+      "fast_window": 50,
+      "slow_window": 150
+    },
+    "sharpe": 0.9955556303198242,
+    "calmar": 0.7519202385086216,
+    "sortino": 1.5362650407967902,
+    "bootstrap_sharpe_p5": -0.1519639548664275,
+    "total_return": 0.3783987660077468,
+    "max_drawdown": 0.15809397993405327,
+    "num_trades": 3,
+    "generation_method": "grid_search",
+    "confidence": 0.3,
+    "reasoning": "Grid search selection based on regime prior.",
+    "equity_curve": "2023-04-03    100000.000000\n2023-04-04    100000.000000\n2023-04-05    100000.000000\n2023-04-06    100000.000000\n2023-04-07    100000.000000\n                  ...      \n2025-12-29    140617.067405\n2025-12-30    138549.273210\n2025-12-31    139064.366833\n2026-01-01    138194.822086\n2026-01-02    137839.876601\nFreq: B, Length: 720, dtype: float64",
+    "holdout_sharpe": -0.71446841129981,
+    "holdout_total_return": -0.07437348975239988,
+    "iterations_used": 1
+  },
+  "trace_diagnostics": {
+    "event_count": 6,
+    "node_counts": {
+      "analyze": 1,
+      "hypothesize": 1,
+      "backtest": 1,
+      "reflect": 1,
+      "holdout_eval": 1,
+      "store": 1
+    },
+    "proposal_method_counts": {
+      "grid_search": 5
+    },
+    "backtest_rounds": 1,
+    "improving_backtest_rounds": 1,
+    "accepted_reflections": 1,
+    "validator_rejections": 0
+  },
+  "run_log": [
+    "Holdout: reserving data from 2026-01-05 onward; search loop only sees data before it.",
+    "Regime: MidVol-Bull (confidence: 44%)",
+    "Iteration 1: Generated 5 proposals (methods: ['grid_search', 'grid_search', 'grid_search', 'grid_search', 'grid_search'])",
+    "Best: Sharpe=1.00, Return=37.8%, Params={'fast_window': 50, 'slow_window': 150}",
+    "Reflect: Sharpe 1.00 >= threshold 0.30. ACCEPTING.",
+    "Holdout: Sharpe=-0.71 on unseen window (in-sample was 1.00, gap=1.71).",
+    "Store: Persisted result b58ad1ed, alpha 3dd15553, NLA note 49fd63b8."
+  ]
+}
