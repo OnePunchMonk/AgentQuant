@@ -297,6 +297,55 @@ python scripts/benchmark_harness_evolution.py \
 # Output: JSON report based on a mock fitness function (not backtests)
 ```
 
+### Fair Search Benchmark (P1) and Bounded Self-Improvement (P2)
+
+```bash
+# P1: compare arms (fixed / random_search / grid_search / frozen_agent /
+# frozen_agent_memory) on identical chronological dev/holdout episode
+# splits, with a uniform transaction-cost model and >=3 seeds per arm.
+python scripts/fair_search_benchmark.py --episodes 3 --seeds 7 11 19 \
+  --output results/fair_search_benchmark.json
+
+# P2: outer-loop policy mutation (mutates prompt_template/prompt_context)
+# evaluated on dev episodes, selected on a validation episode, promoted
+# only if it clears a fixed Sharpe-improvement threshold without regressing
+# on a protected episode, then frozen-graded once on final holdout episodes.
+# Also runs a random-mutation baseline and memory-disabled/shuffled-memory
+# ablations under the identical budget.
+python scripts/bounded_self_improvement.py --episodes 6 --seeds 7 11 19 \
+  --n-mutations 3 --output results/bounded_self_improvement.json
+```
+
+Both scripts run offline on deterministic synthetic OHLCV data by default
+(no API keys needed) and are development benchmarks, not claims about live
+or historical trading performance.
+
+- **Arms** (`src/agent/search_arms.py`): `fixed` is buy-and-hold; `random_search`
+  and `grid_search` are non-agent baselines over the momentum parameter grid;
+  `frozen_agent` runs the existing propose→backtest→reflect loop
+  (`src/agent/agent_graph.py`) once per episode with a fresh, empty memory
+  snapshot each time; `frozen_agent_memory` gives that same loop read access
+  to memory written by strictly earlier episodes only (never future ones —
+  see `filter_visible_memory`).
+- **Episode splits** (`src/agent/episode_splits.py`): chronological
+  (dev-window, sealed-holdout-window) pairs generated once and persisted to
+  JSON so every arm is graded on identical windows. A fixed bps-per-trade
+  transaction cost (`apply_transaction_costs`) is applied uniformly.
+- **Reported per arm/episode**: held-out net return after costs, max
+  drawdown, turnover, search efficiency (return per attempted candidate),
+  cross-seed mean/std, and full candidate logs (including failed attempts,
+  which count in the denominator of the success rate). Missing/failed
+  outcomes are reported as `"missing"`, never coerced to 0.
+- **Promotion criterion** (`src/agent/policy_mutation.py`): a candidate
+  policy is only promoted over the incumbent if its mean validation-episode
+  holdout Sharpe beats the incumbent's by more than `PROMOTION_EPSILON`
+  (0.10) AND it doesn't regress by more than `MAX_PROTECTED_REGRESSION`
+  (0.25) on a reserved protected episode. Ties, losses, and inconclusive
+  deltas keep the incumbent — persisting a new config is never itself
+  treated as improvement. The final holdout episodes can only be used for
+  one frozen grading pass per run (`FinalHoldoutGuard` errors loudly on
+  reuse).
+
 ### Run Agent (Streamlit UI)
 
 ```bash
