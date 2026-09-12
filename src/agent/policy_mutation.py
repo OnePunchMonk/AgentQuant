@@ -299,4 +299,17 @@ def run_bounded_self_improvement(
         "final_holdout_scores": final_scores,
         "final_holdout_mean": _mean(final_scores) if final_scores else None,
         "used_random_baseline": use_random_baseline,
+        # Additive (P3 research-workspace consumers): full config dicts and
+        # hashes for every policy touched in this episode, so a caller can
+        # build a config diff / narrative without re-deriving policy_id
+        # itself. Does not change any promotion/selection logic above.
+        "policy_configs": {
+            _policy_id(incumbent): incumbent.to_dict(),
+            **{_policy_id(c): c.to_dict() for c in candidates},
+        },
+        "incumbent_policy_id": _policy_id(incumbent),
+        "policy_id_by_version": {
+            incumbent.version: _policy_id(incumbent),
+            **{c.version: _policy_id(c) for c in candidates},
+        },
     }

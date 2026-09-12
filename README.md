@@ -346,6 +346,55 @@ or historical trading performance.
   one frozen grading pass per run (`FinalHoldoutGuard` errors loudly on
   reuse).
 
+### Research Workspace: Episode Narrative, Candidate Inspection, Policy Diff (P3)
+
+```bash
+# Runs one P2 bounded-self-improvement episode fresh (offline, synthetic
+# data) and exports a self-contained research memo from the real
+# persisted/returned artifacts.
+python scripts/export_research_memo.py --episodes 6 --seeds 7 11 19 \
+  --n-mutations 3 --output results/research_memo
+# writes results/research_memo.md and results/research_memo.json
+```
+
+`scripts/export_research_memo.py` currently supports **"run fresh"** only
+(it runs one episode end-to-end and exports the memo from the result); a
+**"replay from an existing run manifest"** mode is deferred until the
+episode result is persisted as its own artifact (today it's only returned
+in-process and partially mirrored into the run manifest) — see the
+module docstring for details.
+
+The memo (`src/agent/research_memo.py`, built on
+`src/agent/episode_report.py`) tells one complete episode's story in
+order: **hypothesis** (the proposed mutation, its diagnosis, and expected
+benefit) → **evidence available at the time** (memory visible at decision
+time, reusing `filter_visible_memory` from P1 to prove no future-dated
+leakage) → **experiment** (dev/validation/protected-episode scores,
+linked to a `RunManifest` and config hash so it's rerunnable) →
+**rejection/acceptance** (the `evaluate_promotion` decision with the
+actual epsilon/delta numbers, not just a verdict) → **policy change** (old
+policy hash → new policy hash if promoted, or an explicit "incumbent
+retained" statement) → **fresh result**, labeled by evidentiary tier using
+the same fixture/demo, measured-historical-experiment, unverified-legacy
+vocabulary as the Evidence Table above, and explicitly stating when an
+episode was *not* graded on final holdout data. Any field the generator
+can't find in the supplied inputs is rendered as an explicit "unavailable"
+note rather than being invented or silently dropped.
+
+Unsuccessful candidates are not discarded: `src/agent/episode_report.py`'s
+`list_candidates` / `candidates_report` list every attempted mutation for
+an episode (win or lose) with a one-line rejection reason — "not
+selected as best-on-dev" vs. "best-on-dev but failed promotion check" are
+distinguished — and `compare_policies` produces a structured diff (changed
+vs. unchanged config fields, plus a metrics diff where both sides carry
+metrics) between any two `HarnessConfig` dicts, e.g. incumbent vs.
+candidate.
+
+Out of scope here (per issue #28's own stated ordering): prospective/live
+paper-trading research. That's deferred until this experiment contract —
+episode narrative, candidate inspection, policy diff, memo export — is
+stable.
+
 ### Run Agent (Streamlit UI)
 
 ```bash

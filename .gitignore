@@ -32,3 +32,4 @@ Thumbs.db
 # Legacy config (standardized to config.yaml)
 config.json
 new_env.ini
+experiments/run_manifests/
