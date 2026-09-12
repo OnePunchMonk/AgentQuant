@@ -34,6 +34,12 @@ class PastResult:
     confidence: float = 0.0
     generation_method: str = ""
     reasoning: str = ""
+    # Sharpe measured once on a trailing window the search loop never saw,
+    # vs. `sharpe` above which is the in-sample tournament winner. A large
+    # gap between the two is the signature of the loop overfitting to
+    # repeated looks at the same history rather than finding real edge.
+    holdout_sharpe: Optional[float] = None
+    iterations_used: int = 0
 
 
 class StrategyMemory:
@@ -58,9 +64,19 @@ class StrategyMemory:
                     max_drawdown REAL DEFAULT 0.0,
                     confidence REAL DEFAULT 0.0,
                     generation_method TEXT DEFAULT '',
-                    reasoning TEXT DEFAULT ''
+                    reasoning TEXT DEFAULT '',
+                    holdout_sharpe REAL DEFAULT NULL,
+                    iterations_used INTEGER DEFAULT 0
                 )
             """)
+            # Migrate older DBs created before these columns existed.
+            existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(strategy_runs)")}
+            for col, ddl in (
+                ("holdout_sharpe", "ALTER TABLE strategy_runs ADD COLUMN holdout_sharpe REAL DEFAULT NULL"),
+                ("iterations_used", "ALTER TABLE strategy_runs ADD COLUMN iterations_used INTEGER DEFAULT 0"),
+            ):
+                if col not in existing_cols:
+                    conn.execute(ddl)
 
     def store(self, result: PastResult) -> str:
         """Store a strategy result. Returns the run_id."""
@@ -74,13 +90,14 @@ class StrategyMemory:
                 """INSERT OR REPLACE INTO strategy_runs
                    (run_id, timestamp, regime, strategy_type, params,
                     sharpe, total_return, max_drawdown, confidence,
-                    generation_method, reasoning)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    generation_method, reasoning, holdout_sharpe, iterations_used)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     result.run_id, result.timestamp, result.regime,
                     result.strategy_type, result.params, result.sharpe,
                     result.total_return, result.max_drawdown, result.confidence,
                     result.generation_method, result.reasoning,
+                    result.holdout_sharpe, result.iterations_used,
                 ),
             )
         logger.debug("Stored result %s (regime=%s, sharpe=%.2f)", result.run_id, result.regime, result.sharpe)
@@ -240,9 +257,10 @@ class StrategyMemory:
 
         lines = ["PRIOR RESULTS IN THIS REGIME:"]
         for r in results:
+            holdout = f", Holdout Sharpe={r.holdout_sharpe:.2f}" if r.holdout_sharpe is not None else ""
             lines.append(
                 f"  - {r.strategy_type} {r.params}: "
-                f"Sharpe={r.sharpe:.2f}, Return={r.total_return:.1%}, "
+                f"In-sample Sharpe={r.sharpe:.2f}{holdout}, Return={r.total_return:.1%}, "
                 f"Method={r.generation_method}"
             )
         return "\n".join(lines)

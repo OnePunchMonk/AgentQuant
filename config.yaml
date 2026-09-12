@@ -36,6 +36,8 @@ agent:
   min_acceptable_sharpe: 0.3  # below this, agent retries
   run_interval: "daily"
   mode: "suggest_only"
+  holdout_fraction: 0.2       # trailing slice of history the search loop never sees;
+                               # final accept/reject is graded on this once, not re-asked
   risk:
     max_drawdown: 0.20
     max_position_size: 0.50
