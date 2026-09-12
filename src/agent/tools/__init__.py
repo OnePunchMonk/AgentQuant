@@ -7,8 +7,8 @@ Each tool has a JSON schema, callable implementation, and falsifiable claims.
 """
 
 from src.agent.tools.registry import (
-    ToolRegistry,
     ToolCall,
+    ToolRegistry,
     ToolResult,
     get_default_registry,
 )

@@ -25,7 +25,7 @@ to add that only once the experiment contract here is stable.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 UNAVAILABLE = "unavailable: not present in supplied episode/manifest data"

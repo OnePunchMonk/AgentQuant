@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -156,8 +156,16 @@ def apply_transaction_costs(
     `signal` is the position series (e.g. 0/1); turnover is the absolute
     change in position each bar. Cost is charged as cost_bps/10000 per unit
     of turnover, and subtracted from returns on the bar the trade occurs.
+
+    The very first bar has no prior position to diff against; it is treated
+    as entering from flat (position 0), so an initial entry (e.g. a
+    buy-and-hold position held from bar one) is charged like any other
+    trade instead of silently costing nothing.
     """
-    turnover = signal.diff().abs().fillna(0.0)
+    turnover = signal.diff()
+    if len(turnover) > 0:
+        turnover.iloc[0] = signal.iloc[0] - 0.0
+    turnover = turnover.abs().fillna(0.0)
     cost_per_bar = turnover * (cost_bps / 10000.0)
     net_returns = strategy_returns - cost_per_bar
     return {

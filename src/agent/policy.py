@@ -1,5 +1,6 @@
-import pandas as pd
 import logging
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ def select_best_proposal(results_df: pd.DataFrame, risk_config: dict):
         return None
 
     max_drawdown_limit = risk_config.get('max_drawdown', 0.20)
-    
+
     logger.info(f"Applying risk policy: Max Drawdown < {max_drawdown_limit:.2%}")
 
     # The 'Max Drawdown [%]' from vectorbt is positive, so we use a direct comparison.
@@ -36,15 +37,15 @@ def select_best_proposal(results_df: pd.DataFrame, risk_config: dict):
     if risk_compliant_proposals.empty:
         logger.warning("No proposals met the risk criteria. The baseline may have been too risky or all proposals were poor.")
         return None
-    
+
     # From the compliant proposals, select the one with the highest Sharpe Ratio
     sharpe_col = next((col for col in results_df.columns if 'sharpe' in col.lower()), None)
     if not sharpe_col:
         logger.error("Could not find a Sharpe Ratio column in the results DataFrame.")
         return None
-        
+
     best_proposal = risk_compliant_proposals.loc[risk_compliant_proposals[sharpe_col].idxmax()]
-    
+
     logger.info(f"Selected best proposal '{best_proposal.name}' with Sharpe Ratio: {best_proposal[sharpe_col]:.2f}")
-    
+
     return best_proposal

@@ -2,13 +2,16 @@
 memory, and missing-outcome handling."""
 
 import pandas as pd
-import pytest
 
 from src.agent.episode_splits import (
-    apply_transaction_costs, build_episodes, slice_dev, slice_holdout, synthetic_ohlcv,
+    apply_transaction_costs,
+    build_episodes,
+    slice_dev,
+    slice_holdout,
+    synthetic_ohlcv,
 )
 from src.agent.search_arms import (
-    Candidate, MISSING, _evaluate_params, run_grid_search_arm, run_random_search_arm,
+    Candidate,
 )
 
 
@@ -112,6 +115,38 @@ def test_success_rate_denominator_counts_failures():
     assert summary["n_episode_seed_runs"] == 2
     assert summary["success_rate"] == 0.5
     assert summary["n_missing"] == 1
+
+
+def test_buy_and_hold_charges_entry_trade_cost():
+    """The fixed/buy-and-hold arm's initial position entry must be treated
+    as a trade and charged transaction cost: turnover must be nonzero (at
+    least the one entry trade), and changing cost_bps must change net
+    return -- previously the entry trade was never charged because the
+    first bar's position diff was filled with 0 instead of treated as
+    entering from flat."""
+    idx = pd.bdate_range("2020-01-01", periods=30)
+    signal = pd.Series(1.0, index=idx)  # always in market, no further trades
+    returns = pd.Series(0.001, index=idx)
+
+    zero_cost = apply_transaction_costs(returns, signal, cost_bps=0.0)
+    high_cost = apply_transaction_costs(returns, signal, cost_bps=100.0)
+
+    assert zero_cost["turnover"] > 0
+    assert high_cost["net_returns"].sum() < zero_cost["net_returns"].sum()
+
+
+def test_fixed_arm_turnover_is_nonzero_and_cost_sensitive():
+    from src.agent.search_arms import run_fixed_arm
+
+    ohlcv = synthetic_ohlcv(seed=2, n_days=400, asset="SIM")
+    episodes = build_episodes(ohlcv, "SIM", n_episodes=1, dev_days=200, holdout_days=60)
+    ep = episodes[0]
+
+    low = run_fixed_arm(ohlcv, ep, seed=1, cost_bps=0.0)
+    high = run_fixed_arm(ohlcv, ep, seed=1, cost_bps=200.0)
+
+    assert low.holdout_turnover > 0
+    assert low.holdout_net_return != high.holdout_net_return
 
 
 def test_transaction_cost_reduces_returns_when_trading():

@@ -2,7 +2,6 @@
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from src.features.regime import detect_regime, detect_regime_full
 

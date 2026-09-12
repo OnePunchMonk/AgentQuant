@@ -11,10 +11,9 @@ Techniques:
 """
 
 import logging
-from dataclasses import dataclass, asdict, field
-from typing import Dict, Any, List, Tuple, Optional, Callable
 import random
-import math
+from dataclasses import asdict, dataclass
+from typing import Callable, List, Optional, Tuple
 
 from src.agent.harness_config import HarnessConfig
 

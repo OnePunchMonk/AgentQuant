@@ -5,12 +5,12 @@ Stores and evolves harness parameters across iterations.
 Each epoch can propose modifications to these surfaces.
 """
 
-from dataclasses import dataclass, asdict, field
-from typing import Dict, Any, List, Optional
-from pathlib import Path
 import hashlib
 import json
 import logging
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

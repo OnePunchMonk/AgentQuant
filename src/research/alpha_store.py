@@ -131,10 +131,16 @@ class AlphaStore:
         return failure.failure_id
 
     def recall_failures(self, *, regime: str = "", strategy_type: str = "", n: int = 5) -> List[FailureRecord]:
-        query = "SELECT * FROM failure_records WHERE 1=1"; params: List[Any] = []
-        if regime: query += " AND regime = ?"; params.append(regime)
-        if strategy_type: query += " AND strategy_type = ?"; params.append(strategy_type)
-        query += " ORDER BY ABS(metric_gap) DESC, timestamp DESC LIMIT ?"; params.append(n)
+        query = "SELECT * FROM failure_records WHERE 1=1"
+        params: List[Any] = []
+        if regime:
+            query += " AND regime = ?"
+            params.append(regime)
+        if strategy_type:
+            query += " AND strategy_type = ?"
+            params.append(strategy_type)
+        query += " ORDER BY ABS(metric_gap) DESC, timestamp DESC LIMIT ?"
+        params.append(n)
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(query, params).fetchall()
@@ -144,7 +150,8 @@ class AlphaStore:
 
     def failures_to_prompt_context(self, regime: str, strategy_type: str, n: int = 5) -> str:
         failures = self.recall_failures(regime=regime, strategy_type=strategy_type, n=n)
-        if not failures: return "No structured failure modes recorded for this regime and strategy."
+        if not failures:
+            return "No structured failure modes recorded for this regime and strategy."
         return "DO NOT REPEAT THESE PRIOR FAILURE MODES:\n" + "\n".join(f.as_prompt_line() for f in failures)
 
     def store(self, candidate: AlphaCandidate) -> str:

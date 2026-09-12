@@ -1,6 +1,5 @@
 """Tests for proposal generator fallback chain."""
 
-import pytest
 
 from src.agent.context_builder import RegimeContext
 from src.agent.proposal_generator import Proposal, ProposalGenerator

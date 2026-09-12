@@ -6,7 +6,6 @@ Proper tool-calling interface so the LLM can introspect the strategy
 registry and execute backtests.
 """
 
-import json
 import logging
 from typing import Any, Dict, List
 

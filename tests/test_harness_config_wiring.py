@@ -16,7 +16,7 @@ import pandas as pd
 import pytest
 
 from src.agent import agent_graph
-from src.agent.agent_graph import run_agent, STATUS_BUDGET_EXHAUSTED, STATUS_PASSED_QUALITY_GATE
+from src.agent.agent_graph import STATUS_BUDGET_EXHAUSTED, STATUS_PASSED_QUALITY_GATE, run_agent
 from src.agent.harness_config import (
     HarnessConfig,
     UnsupportedHarnessKnobError,
@@ -90,9 +90,9 @@ def test_prompt_template_changes_submitted_prompt(monkeypatch):
     monkeypatch.setattr(ProposalGenerator, "_llm_generate", spy)
 
     def _fake_init(self, planner=None, alpha_store=None, use_alpha_memory=True):
-        from src.research.alpha_store import AlphaStore
         from src.agent.parameter_grid import ParameterGrid
         from src.agent.proposal_generator import ProposalValidator
+        from src.research.alpha_store import AlphaStore
 
         class _StubPlanner:
             def is_available(self):

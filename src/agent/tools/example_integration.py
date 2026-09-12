@@ -11,11 +11,9 @@ To use in production:
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict
 
 from src.agent.agent_graph import AgentState
-from src.agent.context_builder import RegimeContext
-from src.agent.proposal_generator import Proposal
 from src.agent.tools import get_default_registry
 from src.agent.tools.orchestrator import ToolOrchestrator
 

@@ -35,31 +35,12 @@ sys.path.insert(0, str(ROOT))
 
 from src.agent.episode_splits import get_or_build_episodes, synthetic_ohlcv  # noqa: E402
 from src.agent.harness_config import harness_v1_base  # noqa: E402
+from src.agent.policy_eval import make_p2_eval_fn  # noqa: E402
 from src.agent.policy_mutation import FinalHoldoutGuard, run_bounded_self_improvement  # noqa: E402
 from src.agent.research_memo import build_research_memo  # noqa: E402
 from src.agent.run_manifest import RunManifest  # noqa: E402
-from src.agent.search_arms import _run_agent_offline, slice_dev  # noqa: E402
 
 ASSET = "SIM"
-
-
-def make_eval_fn(ohlcv, cost_bps: float, max_iterations: int):
-    import tempfile
-
-    shared_dirs: dict = {}
-
-    def eval_fn(policy, episode, seed):
-        dev_ohlcv = slice_dev(ohlcv, episode)
-        if seed not in shared_dirs:
-            shared_dirs[seed] = tempfile.mkdtemp()
-        state = _run_agent_offline(
-            dev_ohlcv, episode.asset, seed, str(Path(shared_dirs[seed]) / "memory.db"),
-            max_iterations=max_iterations,
-        )
-        best = state.get("best_result") or {}
-        return best.get("sharpe")
-
-    return eval_fn
 
 
 def main() -> None:
@@ -93,7 +74,11 @@ def main() -> None:
     protected_episode = episodes[max(0, n // 2 - 1)]
     final_episodes = episodes[n // 2 + 1:] or [episodes[-1]]
 
-    eval_fn = make_eval_fn(ohlcv, args.cost_bps, args.max_iterations)
+    eval_fn = make_p2_eval_fn(
+        ohlcv, episodes, memory_mode="normal", cost_bps=args.cost_bps,
+        max_iterations=args.max_iterations, canonical_seed=args.seeds[0],
+        canonical_policy=harness_v1_base(),
+    )
     guard = FinalHoldoutGuard(path=Path(args.holdout_guard_path))
 
     incumbent = harness_v1_base()

@@ -24,7 +24,7 @@ import logging
 import random
 import tempfile
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -267,12 +267,27 @@ def run_grid_search_arm(
 
 
 def _run_agent_offline(dev_ohlcv: Dict[str, pd.DataFrame], asset: str, seed: int,
-                        memory_db_path: str, max_iterations: int = 2) -> Dict[str, Any]:
+                        memory_db_path: str, max_iterations: int = 2,
+                        harness_config: Optional[Any] = None,
+                        cost_bps: Optional[float] = None) -> Dict[str, Any]:
     """Invoke the existing propose->backtest->reflect inner loop
     (src.agent.agent_graph.run_agent) once, offline (no LLM/network calls),
     pointed at an explicit memory db path. Does not change agent_graph's
     core semantics -- just calls it per-episode with a controlled memory
-    snapshot."""
+    snapshot.
+
+    `harness_config` (a HarnessConfig or EffectiveHarnessConfig) is forwarded
+    straight into run_agent so the policy actually being evaluated (e.g. its
+    prompt_template/prompt_context) can change agent behavior during
+    evaluation -- passing None here silently reverts every candidate to
+    default behavior, which defeats policy comparison.
+
+    `cost_bps`, if given, temporarily overrides the global backtest
+    market-impact cost (src.utils.config.config.backtest.market_impact_bps)
+    for the duration of this call, so a caller comparing transaction-cost
+    sensitivity actually changes the cost applied inside the agent's
+    backtests (the global config is otherwise the only source of cost for
+    this inner loop)."""
     import os
 
     from src.agent.agent_graph import run_agent
@@ -283,16 +298,20 @@ def _run_agent_offline(dev_ohlcv: Dict[str, pd.DataFrame], asset: str, seed: int
     os.environ["AGENTQUANT_OFFLINE"] = "1"
 
     original_db_path = app_config.results_db_path
+    original_market_impact_bps = app_config.backtest.market_impact_bps
     app_config.results_db_path = memory_db_path
+    if cost_bps is not None:
+        app_config.backtest.market_impact_bps = cost_bps
     np.random.seed(seed)
     random.seed(seed)
     try:
         state = run_agent(
             dev_ohlcv, strategy_type="momentum", asset=asset,
-            max_iterations=max_iterations, harness_config=None,
+            max_iterations=max_iterations, harness_config=harness_config,
         )
     finally:
         app_config.results_db_path = original_db_path
+        app_config.backtest.market_impact_bps = original_market_impact_bps
     return state
 
 

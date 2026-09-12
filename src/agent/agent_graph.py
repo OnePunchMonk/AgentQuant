@@ -19,9 +19,9 @@ from src.agent.context_builder import RegimeContext, build_context
 from src.agent.harness_config import EffectiveHarnessConfig
 from src.agent.proposal_generator import Proposal, ProposalGenerator
 from src.agent.strategy_memory import PastResult, StrategyMemory
-from src.agent.trace import TraceRecorder, emit_trace
 from src.agent.tools import get_default_registry
 from src.agent.tools.orchestrator import ToolOrchestrator
+from src.agent.trace import TraceRecorder, emit_trace
 from src.research.alpha_store import AlphaStore, FailureRecord
 from src.research.nla_memory import NLAMemoryStore
 from src.utils.config import config
@@ -369,7 +369,6 @@ def _score_falsifiable_claims(state: AgentState, best_result: Dict[str, Any]) ->
     for proposal in proposals:
         claim = proposal.reasoning
         confidence = proposal.confidence
-        params = proposal.params
 
         # Diagnostic only: structured forecasts are required before accuracy can
         # be computed against realized Sharpe.

@@ -29,14 +29,15 @@ Author: AgentQuant Development Team
 License: MIT
 """
 import os
-from typing import Dict, List, Any, Optional
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from matplotlib.figure import Figure
-import seaborn as sns
 from datetime import datetime
+from typing import Any, Dict, Optional
+
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+from matplotlib.figure import Figure
 
 # Configure plotting style for consistent professional appearance
 plt.style.use('seaborn-v0_8-darkgrid')
@@ -46,13 +47,13 @@ sns.set_palette("Set2")
 def get_timestamp_folder() -> str:
     """
     Generate a timestamp-based folder name for organizing saved figures.
-    
+
     Creates a hierarchical folder structure based on current date and time
     to organize generated charts and reports systematically.
-    
+
     Returns:
         str: Formatted timestamp string suitable for folder names (YYYY-MM-DD_HH-MM-SS)
-        
+
     Example:
         >>> get_timestamp_folder()
         '2024-08-13_14-30-25'
@@ -71,13 +72,13 @@ def plot_portfolio_performance(
 ) -> Figure:
     """
     Plot the portfolio equity curve against a benchmark.
-    
+
     Args:
         equity_curve: Series with portfolio values over time
         benchmark: Optional benchmark performance
         title: Plot title
         save_path: Optional path to save the figure
-        
+
     Returns:
         Matplotlib Figure object
     """
@@ -85,7 +86,7 @@ def plot_portfolio_performance(
 
     # Convert equity_curve to pandas Series if it's not already
     original_type = type(equity_curve)
-    
+
     if isinstance(equity_curve, pd.DataFrame):
         if equity_curve.shape[1] >= 1:
             equity_curve = equity_curve.iloc[:, 0]
@@ -108,7 +109,7 @@ def plot_portfolio_performance(
             equity_curve = pd.Series(equity_curve)
         except Exception:
             equity_curve = pd.Series(dtype=float)
-    
+
     # Final check: ensure we have a pandas Series before proceeding
     if not isinstance(equity_curve, pd.Series):
         ax.text(0.5, 0.5, f"Invalid data type: {original_type.__name__}", ha='center', va='center', transform=ax.transAxes)
@@ -116,7 +117,7 @@ def plot_portfolio_performance(
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
         return fig
-    
+
     # Ensure equity_curve is numeric and handle empty case
     if len(equity_curve) == 0:
         ax.text(0.5, 0.5, "No equity curve data available", ha='center', va='center', transform=ax.transAxes)
@@ -124,12 +125,12 @@ def plot_portfolio_performance(
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
         return fig
-    
+
     try:
         equity_curve = pd.to_numeric(equity_curve, errors='coerce').dropna()
     except Exception:
         pass
-        
+
     # Handle empty equity curve case after numeric conversion
     if len(equity_curve) == 0:
         ax.text(0.5, 0.5, "No data to plot", ha='center', va='center', transform=ax.transAxes)
@@ -137,16 +138,16 @@ def plot_portfolio_performance(
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
         return fig
-        
+
     # Plot portfolio performance
     equity_curve.plot(ax=ax, linewidth=2, label="Strategy")
-    
+
     # Plot benchmark if provided
     if benchmark is not None:
         # Align benchmark to same starting value
         norm_benchmark = benchmark * (equity_curve.iloc[0] / benchmark.iloc[0])
         norm_benchmark.plot(ax=ax, linewidth=1.5, linestyle='--', label="Benchmark")
-    
+
     # Format the plot
     ax.set_title(title, fontsize=16, pad=20)
 
@@ -163,7 +164,7 @@ def plot_portfolio_performance(
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
     plt.xticks(rotation=45)
-    
+
     # Add performance metrics
     if len(equity_curve) > 1:
         try:
@@ -181,13 +182,13 @@ def plot_portfolio_performance(
             xy=(0.02, 0.95), xycoords='axes fraction',
             fontsize=12, bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8)
         )
-    
+
     plt.tight_layout()
-    
+
     # Save if requested
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    
+
     return fig
 
 
@@ -198,7 +199,7 @@ def plot_portfolio_composition(
 ) -> Figure:
     """
     Plot the portfolio allocation weights over time.
-    
+
     Parameters
     ----------
     weights_df : pd.DataFrame
@@ -207,7 +208,7 @@ def plot_portfolio_composition(
         Plot title, by default "Portfolio Composition Over Time"
     save_path : str, optional
         Optional path to save the figure, by default None
-    
+
     Returns
     -------
     Figure
@@ -215,12 +216,12 @@ def plot_portfolio_composition(
         weights_df: DataFrame with asset weights over time
         title: Plot title
         save_path: Optional path to save the figure
-        
+
     Returns:
         Matplotlib Figure object
     """
     fig, ax = plt.subplots(figsize=(12, 6))
-    
+
     # Accept dict-like weights and convert to DataFrame if needed
     if isinstance(weights_df, dict):
         try:
@@ -233,7 +234,7 @@ def plot_portfolio_composition(
         ax.text(0.5, 0.5, "No allocation data", ha='center', va='center')
     else:
         weights_df.plot.area(ax=ax, stacked=True, alpha=0.7)
-    
+
     # Format the plot
     ax.set_title(title, fontsize=16, pad=20)
 
@@ -243,16 +244,16 @@ def plot_portfolio_composition(
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
     plt.xticks(rotation=45)
-    
+
     # Add a horizontal line at 100%
     ax.axhline(y=1.0, color='black', linestyle='-', alpha=0.3)
-    
+
     plt.tight_layout()
-    
+
     # Save if requested
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    
+
     return fig
 
 
@@ -265,19 +266,19 @@ def create_combined_plot(
 ) -> Figure:
     """
     Create a combined plot with portfolio performance and composition.
-    
+
     Args:
         equity_curve: Series with portfolio values over time
         weights_df: DataFrame with asset weights over time
         benchmark: Optional benchmark performance
         title: Plot title
         save_path: Optional path to save the figure
-        
+
     Returns:
         Matplotlib Figure object
     """
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), height_ratios=[3, 2])
-    
+
     # Top plot: Portfolio performance
     # Ensure equity_curve is a Series (same conversion logic as plot_portfolio_performance)
     if isinstance(equity_curve, dict):
@@ -295,18 +296,18 @@ def create_combined_plot(
             equity_curve = pd.Series(equity_curve)
         except Exception:
             equity_curve = pd.Series(dtype=float)
-    
+
     # Check if we have valid data to plot
     if len(equity_curve) == 0:
         ax1.text(0.5, 0.5, "No equity curve data available", ha='center', va='center', transform=ax1.transAxes)
     else:
         equity_curve.plot(ax=ax1, linewidth=2, label="Strategy")
-    
+
     if benchmark is not None:
         # Align benchmark to same starting value
         norm_benchmark = benchmark * (equity_curve.iloc[0] / benchmark.iloc[0])
         norm_benchmark.plot(ax=ax1, linewidth=1.5, linestyle='--', label="Benchmark")
-    
+
     # Format top plot
     ax1.set_title(title, fontsize=16, pad=20)
     ax1.set_xlabel("")  # Remove x-label from top plot
@@ -314,7 +315,7 @@ def create_combined_plot(
     ax1.legend(fontsize=10)
     ax1.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
     ax1.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
-    
+
     # Add performance metrics
     if len(equity_curve) > 1:
         try:
@@ -324,13 +325,13 @@ def create_combined_plot(
             label = f"Total Return: {total_return:.2f}%"
         except Exception:
             label = "Total Return: N/A"
-        ax1.annotate(label, 
-                   xy=(0.02, 0.95), xycoords='axes fraction', 
+        ax1.annotate(label,
+                   xy=(0.02, 0.95), xycoords='axes fraction',
                    fontsize=12, bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8))
-    
+
     # Bottom plot: Portfolio composition
     weights_df.plot.area(ax=ax2, stacked=True, alpha=0.7)
-    
+
     # Format bottom plot
     ax2.set_xlabel("Date", fontsize=12)
     ax2.set_ylabel("Allocation Weight", fontsize=12)
@@ -338,16 +339,16 @@ def create_combined_plot(
     ax2.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
     ax2.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
     plt.xticks(rotation=45)
-    
+
     # Add a horizontal line at 100%
     ax2.axhline(y=1.0, color='black', linestyle='-', alpha=0.3)
-    
+
     plt.tight_layout()
-    
+
     # Save if requested
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    
+
     return fig
 
 
@@ -357,23 +358,23 @@ def plot_strategy_formula(
 ) -> Figure:
     """
     Create a visual representation of a strategy's mathematical formula.
-    
+
     Args:
         strategy_info: Dictionary with strategy information
         save_path: Optional path to save the figure
-        
+
     Returns:
         Matplotlib Figure object
     """
     fig, ax = plt.subplots(figsize=(10, 6))
-    
+
     # Hide axes
     ax.axis('off')
-    
+
     # Create a text representation of the strategy
     strategy_type = strategy_info.get("strategy_type", "Unknown")
     params = strategy_info.get("params", {})
-    
+
     # Format the formula based on strategy type
     if strategy_type.lower() == "momentum":
         formula_text = (
@@ -402,7 +403,7 @@ def plot_strategy_formula(
         )
     else:
         formula_text = f"{strategy_type} Strategy\n\nParameters: {params}"
-    
+
     # Add the allocation weights if available
     allocation_weights = strategy_info.get("allocation_weights")
     if allocation_weights:
@@ -410,20 +411,20 @@ def plot_strategy_formula(
         for asset, weight in allocation_weights.items():
             weights_text += f"  {asset}: {weight:.2f}\n"
         formula_text += weights_text
-    
+
     # Add the text to the plot
     ax.text(0.5, 0.5, formula_text, ha='center', va='center', fontsize=14,
            bbox=dict(boxstyle="round,pad=1", fc="white", ec="black", lw=2))
-    
+
     # Add title
     plt.suptitle(f"{strategy_type} Strategy Formula", fontsize=16)
-    
+
     plt.tight_layout()
-    
+
     # Save if requested
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    
+
     return fig
 
 
@@ -436,38 +437,38 @@ def create_strategy_dashboard(
 ) -> Dict[str, Figure]:
     """
     Create a complete dashboard for a strategy.
-    
+
     Args:
         equity_curve: Series with portfolio values over time
         weights_df: DataFrame with asset weights over time OR dict with static weights
         strategy_info: Dictionary with strategy information
         benchmark: Optional benchmark performance
         save_path: Optional path to save the figures
-        
+
     Returns:
         Dictionary with all created figures
     """
     figures = {}
-    
+
     # Create folder for saving if requested
     folder = None
     if save_path:
         folder = os.path.join(save_path, f"{strategy_info['strategy_type']}")
         os.makedirs(folder, exist_ok=True)
-    
+
     # Handle weights_df being a dict (static allocation) rather than time-series DataFrame
     if isinstance(weights_df, dict):
         # Convert static weights to DataFrame for plotting (if we have equity_curve index)
         if isinstance(equity_curve, pd.Series) and len(equity_curve) > 0:
             # Create a constant weights DataFrame over the equity curve's timespan
             weights_df = pd.DataFrame(
-                [weights_df] * len(equity_curve), 
+                [weights_df] * len(equity_curve),
                 index=equity_curve.index
             )
         else:
             # No equity curve data, so no time-series weights possible
             weights_df = None
-    
+
     # Handle equity_curve being a dict (should not happen but let's be defensive)
     if isinstance(equity_curve, dict):
         if 'equity_curve' in equity_curve:
@@ -484,22 +485,22 @@ def create_strategy_dashboard(
             equity_curve = pd.Series(equity_curve) if equity_curve is not None else pd.Series(dtype=float)
         except Exception:
             equity_curve = pd.Series(dtype=float)
-    
+
     # Create individual plots
     figures["performance"] = plot_portfolio_performance(
-        equity_curve, 
-        benchmark, 
+        equity_curve,
+        benchmark,
         title=f"{strategy_info['strategy_type']} Strategy Performance",
         save_path=os.path.join(folder, "performance.png") if folder else None
     )
-    
+
     if weights_df is not None and not (isinstance(weights_df, pd.DataFrame) and weights_df.empty):
         figures["composition"] = plot_portfolio_composition(
             weights_df,
             title=f"{strategy_info['strategy_type']} Strategy Asset Allocation",
             save_path=os.path.join(folder, "composition.png") if folder else None
         )
-        
+
         figures["combined"] = create_combined_plot(
             equity_curve,
             weights_df,
@@ -507,10 +508,10 @@ def create_strategy_dashboard(
             title=f"{strategy_info['strategy_type']} Strategy Dashboard",
             save_path=os.path.join(folder, "dashboard.png") if folder else None
         )
-    
+
     figures["formula"] = plot_strategy_formula(
         strategy_info,
         save_path=os.path.join(folder, "formula.png") if folder else None
     )
-    
+
     return figures

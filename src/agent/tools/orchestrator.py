@@ -8,7 +8,7 @@ Handles tool choice, execution, and feedback loops.
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -194,7 +194,7 @@ def _parse_proposals_from_text(text: str, strategy_type: str) -> List[Dict[str, 
     Returns:
         List of Proposal-like dicts (compatible with ProposalValidator)
     """
-    from src.agent.proposal_generator import Proposal, ProposalValidator
+    from src.agent.proposal_generator import ProposalValidator
 
     proposals = []
 

@@ -6,10 +6,11 @@ Pydantic v2 Settings-based configuration with validation.
 Loads from config.yaml and exposes a typed config object.
 """
 
-import yaml
 import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+import yaml
 from pydantic import BaseModel, Field, field_validator
 
 logger = logging.getLogger(__name__)

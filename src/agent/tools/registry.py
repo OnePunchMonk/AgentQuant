@@ -10,9 +10,8 @@ Each tool is defined by:
 - falsifiable_claim: predicted impact (for harness evaluation)
 """
 
-import json
 import logging
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -206,7 +205,7 @@ def _extract_parameter_recommendations(
     from src.agent.parameter_grid import ParameterGrid
 
     grid = ParameterGrid()
-    strategy_params = grid.get_strategy(strategy_type)
+    strategy_params = grid.get_grid(strategy_type)
 
     return {
         "regime": regime,

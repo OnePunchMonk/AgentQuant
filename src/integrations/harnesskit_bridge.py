@@ -9,7 +9,6 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
-
 # Unknown usage must be distinguishable from *measured* zero usage. AgentQuant
 # does not currently track token/cost accounting per step, so every step
 # reports usage as unknown (None) rather than 0 -- 0 would falsely claim "we

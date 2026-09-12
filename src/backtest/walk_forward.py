@@ -1,14 +1,19 @@
 """Anchored walk-forward evaluation utilities."""
 from typing import Any, Dict, List
+
 import pandas as pd
+
 from src.backtest.runner import run_backtest
+
 
 def anchored_walk_forward(ohlcv_data, assets: List[str], strategy_name: str,
                           params: Dict[str, Any], train_fraction: float = .6,
                           test_window: int = 63) -> Dict[str, Any]:
     """Evaluate fixed parameters over expanding train / rolling test windows."""
     sample = ohlcv_data if isinstance(ohlcv_data, pd.DataFrame) else ohlcv_data[assets[0]]
-    n = len(sample); start = max(1, int(n * train_fraction)); windows = []
+    n = len(sample)
+    start = max(1, int(n * train_fraction))
+    windows = []
     while start < n:
         end = min(n, start + test_window)
         sliced = {a: (ohlcv_data[a] if not isinstance(ohlcv_data, pd.DataFrame) else ohlcv_data).iloc[:end] for a in assets}

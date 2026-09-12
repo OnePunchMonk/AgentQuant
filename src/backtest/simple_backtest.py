@@ -1,7 +1,9 @@
 # src/backtest/simple_backtest.py
-from typing import Dict, Any
+from typing import Any, Dict
+
 import numpy as np
 import pandas as pd
+
 
 def max_drawdown_from_equity(equity: pd.Series) -> float:
     equity = equity.dropna()
@@ -68,7 +70,7 @@ def basic_momentum_backtest(ohlcv_df: pd.DataFrame, params: Dict[str, Any]) -> D
         equity = (1 + daily_returns).cumprod()
 
     total_return = float(equity.iloc[-1] - 1.0)
-    
+
     # Use the robust Sharpe calculation
     sharpe = calculate_sharpe(strat_returns)
 

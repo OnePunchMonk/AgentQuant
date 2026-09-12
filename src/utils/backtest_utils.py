@@ -1,8 +1,7 @@
 # src/utils/backtest_utils.py
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
-import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)

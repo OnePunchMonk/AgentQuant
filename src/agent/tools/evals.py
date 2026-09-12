@@ -10,7 +10,7 @@ Exposes an eval tool that agents can call to assess:
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +69,8 @@ class HarnessEvalSuite:
                 "recommendation": str,
             }
         """
-        from src.utils.config import config
         from src.research.alpha_store import AlphaStore
+        from src.utils.config import config
 
         logger.info(f"Running quality assessment benchmark for {strategy_type} in {regime}")
 

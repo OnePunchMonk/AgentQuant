@@ -18,51 +18,18 @@ from __future__ import annotations
 
 import argparse
 import json
-import random
 import sys
-import tempfile
 from pathlib import Path
-from typing import Optional
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.agent.episode_splits import get_or_build_episodes, synthetic_ohlcv  # noqa: E402
 from src.agent.harness_config import harness_v1_base  # noqa: E402
+from src.agent.policy_eval import make_p2_eval_fn  # noqa: E402
 from src.agent.policy_mutation import FinalHoldoutGuard, run_bounded_self_improvement  # noqa: E402
-from src.agent.search_arms import _run_agent_offline, slice_dev  # noqa: E402
 
 ASSET = "SIM"
-
-
-def make_eval_fn(ohlcv, memory_mode: str, cost_bps: float, max_iterations: int):
-    """memory_mode: 'normal' | 'disabled' | 'shuffled'.
-
-    'disabled' gives every episode a fresh empty memory db (ablation: no
-    cross-episode evidence at all). 'shuffled' reuses one memory db but
-    episodes are evaluated in a shuffled (non-chronological) order so any
-    stored rows are misattributed to the wrong episode context -- isolating
-    whether real (correctly-timed) evidence, vs. just "more context", drives
-    any measured gain.
-    """
-    shared_dirs: dict = {}
-
-    def eval_fn(policy, episode, seed) -> Optional[float]:
-        dev_ohlcv = slice_dev(ohlcv, episode)
-        if memory_mode == "disabled":
-            with tempfile.TemporaryDirectory() as tmp:
-                state = _run_agent_offline(dev_ohlcv, episode.asset, seed,
-                                            str(Path(tmp) / "memory.db"), max_iterations=max_iterations)
-        else:
-            key = seed if memory_mode == "normal" else f"shuffled-{seed}"
-            if key not in shared_dirs:
-                shared_dirs[key] = tempfile.mkdtemp()
-            state = _run_agent_offline(dev_ohlcv, episode.asset, seed,
-                                        str(Path(shared_dirs[key]) / "memory.db"), max_iterations=max_iterations)
-        best = state.get("best_result") or {}
-        return best.get("sharpe")
-
-    return eval_fn
 
 
 def run_condition(label: str, ohlcv, episodes, args, use_random_baseline: bool, memory_mode: str) -> dict:
@@ -76,7 +43,11 @@ def run_condition(label: str, ohlcv, episodes, args, use_random_baseline: bool, 
     if not final_episodes:
         final_episodes = [episodes[-1]]
 
-    eval_fn = make_eval_fn(ohlcv, memory_mode, args.cost_bps, args.max_iterations)
+    eval_fn = make_p2_eval_fn(
+        ohlcv, episodes, memory_mode=memory_mode, cost_bps=args.cost_bps,
+        max_iterations=args.max_iterations, canonical_seed=args.seeds[0],
+        canonical_policy=harness_v1_base(), shuffle_rng_seed=hash(label) % (2 ** 31),
+    )
     guard = FinalHoldoutGuard(path=Path(args.results_dir) / f"final_holdout_used_{label}.json")
 
     result = run_bounded_self_improvement(

@@ -153,28 +153,52 @@ def evaluate_promotion(
     candidate_protected_score: Optional[float],
     epsilon: float = PROMOTION_EPSILON,
     max_protected_regression: float = MAX_PROTECTED_REGRESSION,
+    coverage_mismatch: bool = False,
 ) -> PromotionDecision:
     """Only promote a candidate policy over the incumbent if it clears a
     fixed, predeclared improvement threshold on validation episodes AND does
     not regress badly on the protected episode. Ties/inconclusive results
-    keep the incumbent."""
+    keep the incumbent.
+
+    Fails closed (never promotes) if:
+      - `coverage_mismatch` is True -- the caller determined the incumbent
+        and candidate were not evaluated on the same set of episodes/seeds,
+        so comparing their (independently-filtered) score lists would not
+        be a valid apples-to-apples comparison.
+      - either protected-episode score is missing -- the regression check
+        cannot be verified, so promotion must not proceed as if it passed.
+    """
+    if coverage_mismatch:
+        return PromotionDecision(
+            False,
+            "incumbent and candidate were evaluated on mismatched validation "
+            "episode/seed coverage; comparison is invalid, keeping incumbent",
+            None, None, None,
+        )
+
     if not incumbent_val_scores or not candidate_val_scores:
         return PromotionDecision(False, "missing validation scores; keeping incumbent", None, None, None)
+
+    if incumbent_protected_score is None or candidate_protected_score is None:
+        return PromotionDecision(
+            False,
+            "protected-episode evaluation unavailable for incumbent and/or candidate; "
+            "failing closed (cannot verify no regression), keeping incumbent",
+            None, None, None,
+        )
 
     inc_mean = sum(incumbent_val_scores) / len(incumbent_val_scores)
     cand_mean = sum(candidate_val_scores) / len(candidate_val_scores)
     delta = cand_mean - inc_mean
 
-    protected_delta = None
-    if incumbent_protected_score is not None and candidate_protected_score is not None:
-        protected_delta = candidate_protected_score - incumbent_protected_score
-        if protected_delta < -abs(max_protected_regression):
-            return PromotionDecision(
-                False,
-                f"protected-episode regression {protected_delta:.3f} exceeds "
-                f"-{max_protected_regression}; keeping incumbent",
-                cand_mean, inc_mean, protected_delta,
-            )
+    protected_delta = candidate_protected_score - incumbent_protected_score
+    if protected_delta < -abs(max_protected_regression):
+        return PromotionDecision(
+            False,
+            f"protected-episode regression {protected_delta:.3f} exceeds "
+            f"-{max_protected_regression}; keeping incumbent",
+            cand_mean, inc_mean, protected_delta,
+        )
 
     if delta > epsilon:
         return PromotionDecision(
@@ -259,16 +283,33 @@ def run_bounded_self_improvement(
 
     best_candidate = max(candidates, key=lambda c: _mean(dev_scores[c.version]))
 
-    # Selection happens on a SEPARATE validation episode slice.
-    incumbent_val = [eval_fn(incumbent, ep, seed) for ep in val_episodes for seed in seeds]
-    candidate_val = [eval_fn(best_candidate, ep, seed) for ep in val_episodes for seed in seeds]
-    incumbent_val = [s for s in incumbent_val if s is not None]
-    candidate_val = [s for s in candidate_val if s is not None]
+    # Selection happens on a SEPARATE validation episode slice. Keyed by
+    # (episode_id, seed) so incumbent/candidate coverage can be compared
+    # before any independent None-filtering -- filtering each side
+    # separately (dropping missing results independently) can silently
+    # compare unequal sample sets, which is not a valid comparison.
+    val_keys = [(ep.episode_id, seed) for ep in val_episodes for seed in seeds]
+    incumbent_val_raw = {}
+    candidate_val_raw = {}
+    for ep in val_episodes:
+        for seed in seeds:
+            key = (ep.episode_id, seed)
+            incumbent_val_raw[key] = eval_fn(incumbent, ep, seed)
+            candidate_val_raw[key] = eval_fn(best_candidate, ep, seed)
+
+    coverage_mismatch = any(
+        (incumbent_val_raw[k] is None) != (candidate_val_raw[k] is None) for k in val_keys
+    )
+    matched_keys = [k for k in val_keys
+                    if incumbent_val_raw[k] is not None and candidate_val_raw[k] is not None]
+    incumbent_val = [incumbent_val_raw[k] for k in matched_keys]
+    candidate_val = [candidate_val_raw[k] for k in matched_keys]
 
     incumbent_protected = eval_fn(incumbent, protected_episode, seeds[0])
     candidate_protected = eval_fn(best_candidate, protected_episode, seeds[0])
 
-    decision = evaluate_promotion(incumbent_val, candidate_val, incumbent_protected, candidate_protected)
+    decision = evaluate_promotion(incumbent_val, candidate_val, incumbent_protected, candidate_protected,
+                                   coverage_mismatch=coverage_mismatch)
     selected_policy = best_candidate if decision.promote else incumbent
 
     # ONE final frozen evaluation of the SELECTED policy on held-out final

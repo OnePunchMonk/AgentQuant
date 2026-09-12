@@ -4,15 +4,17 @@ running under an identical budget, the final-holdout reuse guard, and the
 future-dated-memory filter."""
 
 import random
-from pathlib import Path
 
 import pytest
 
 from src.agent.episode_splits import Episode
 from src.agent.harness_config import harness_v1_base
 from src.agent.policy_mutation import (
-    FinalHoldoutGuard, PROMOTION_EPSILON, evaluate_promotion,
-    propose_mutation, propose_random_mutation, run_bounded_self_improvement,
+    PROMOTION_EPSILON,
+    FinalHoldoutGuard,
+    evaluate_promotion,
+    propose_mutation,
+    run_bounded_self_improvement,
 )
 from src.agent.search_arms import filter_visible_memory
 
@@ -77,6 +79,70 @@ def test_promotion_blocked_by_protected_regression_even_if_epsilon_cleared():
     )
     assert decision.promote is False
     assert "protected" in decision.reason
+
+
+def test_promotion_rejected_when_both_protected_scores_missing():
+    """Promotion must fail closed (never promote) when protected-episode
+    evaluation is unavailable, even if the candidate clears epsilon on
+    validation -- previously the regression check was silently skipped and
+    promotion proceeded as if it had passed."""
+    decision = evaluate_promotion(
+        incumbent_val_scores=[0.2, 0.2],
+        candidate_val_scores=[0.2 + PROMOTION_EPSILON + 0.2] * 2,
+        incumbent_protected_score=None,
+        candidate_protected_score=None,
+    )
+    assert decision.promote is False
+    assert "protected" in decision.reason
+
+
+def test_promotion_rejected_when_one_protected_score_missing():
+    decision = evaluate_promotion(
+        incumbent_val_scores=[0.2, 0.2],
+        candidate_val_scores=[0.2 + PROMOTION_EPSILON + 0.2] * 2,
+        incumbent_protected_score=0.5,
+        candidate_protected_score=None,
+    )
+    assert decision.promote is False
+
+
+def test_promotion_rejected_on_mismatched_validation_coverage():
+    """When the caller signals mismatched episode/seed coverage between
+    incumbent and candidate, the comparison must be refused outright rather
+    than silently comparing whatever scores happen to remain after each
+    side independently drops its own missing results."""
+    decision = evaluate_promotion(
+        incumbent_val_scores=[0.2, 0.2, 0.2],
+        candidate_val_scores=[0.9],  # candidate is missing 2 of the 3 episodes' scores
+        incumbent_protected_score=0.5,
+        candidate_protected_score=0.5,
+        coverage_mismatch=True,
+    )
+    assert decision.promote is False
+    assert "mismatch" in decision.reason or "invalid" in decision.reason
+
+
+def test_run_bounded_self_improvement_blocks_promotion_on_mismatched_coverage(tmp_path):
+    """End-to-end: if eval_fn returns None for the candidate on an episode
+    where the incumbent succeeds (mismatched coverage), the outer loop must
+    not promote, and must report an explicit insufficient/mismatched-evidence
+    reason rather than silently comparing the intersection."""
+    incumbent = harness_v1_base()
+    episodes = [_episode(i) for i in range(4)]
+    dev, val, final, protected = episodes[:2], [episodes[2]], [episodes[3]], episodes[1]
+
+    def eval_fn(policy, episode, seed):
+        if policy.version != incumbent.version and episode.episode_id == val[0].episode_id and seed == 2:
+            return None  # candidate missing exactly one validation cell
+        return 0.9 if policy.version != incumbent.version else 0.3
+
+    result = run_bounded_self_improvement(
+        incumbent, dev, val, final, protected, eval_fn, seeds=[1, 2],
+        n_mutations=3, holdout_guard=FinalHoldoutGuard(tmp_path / "guard.json"),
+        use_random_baseline=False, rng_seed=3,
+    )
+    assert result["promotion_decision"]["promote"] is False
+    assert result["selected_policy_version"] == incumbent.version
 
 
 def test_persisting_config_alone_is_not_promotion():

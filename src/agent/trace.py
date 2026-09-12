@@ -1,9 +1,9 @@
 """Live trace events for the AgentQuant ReAct loop."""
 
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from collections import Counter
 
 
 @dataclass
@@ -57,8 +57,10 @@ class TraceRecorder:
         previous = None
         for e in backs:
             best = (e.payload.get("best") or {}).get("sharpe")
-            if best is not None and (previous is None or best > previous): improved += 1
-            if best is not None: previous = best
+            if best is not None and (previous is None or best > previous):
+                improved += 1
+            if best is not None:
+                previous = best
         return {
             "event_count": len(self.events),
             "node_counts": dict(Counter(e.stage for e in self.events)),
