@@ -2,7 +2,7 @@
 
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-passing-brightgreen)](https://github.com/OnePunchMonk/AgentQuant/actions)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-70%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-111%20passed-brightgreen)
 ![Last Updated](https://img.shields.io/badge/last%20updated-2026--09--12-blue)
 
 > **AgentQuant does not just search for trading strategies; it evolves how it searches for them.**
@@ -297,103 +297,87 @@ python scripts/benchmark_harness_evolution.py \
 # Output: JSON report based on a mock fitness function (not backtests)
 ```
 
-### Fair Search Benchmark (P1) and Bounded Self-Improvement (P2)
+### Research Experiment Suite (fair benchmark, self-improvement, research memo)
+
+These three scripts form one pipeline: compare search strategies fairly →
+let the agent try to improve its own policy under that fair comparison →
+export the story of one such attempt as a reviewable memo. All three run
+offline on deterministic synthetic OHLCV data by default (no API keys
+needed) and are development benchmarks, not claims about live or
+historical trading performance.
 
 ```bash
-# P1: compare arms (fixed / random_search / grid_search / frozen_agent /
-# frozen_agent_memory) on identical chronological dev/holdout episode
-# splits, with a uniform transaction-cost model and >=3 seeds per arm.
+# 1. Fair search benchmark: compare arms (fixed / random_search /
+#    grid_search / frozen_agent / frozen_agent_memory) on identical
+#    chronological dev/holdout episode splits, >=3 seeds per arm.
 python scripts/fair_search_benchmark.py --episodes 3 --seeds 7 11 19 \
   --output results/fair_search_benchmark.json
 
-# P2: outer-loop policy mutation (mutates prompt_template/prompt_context)
-# evaluated on dev episodes, selected on a validation episode, promoted
-# only if it clears a fixed Sharpe-improvement threshold without regressing
-# on a protected episode, then frozen-graded once on final holdout episodes.
-# Also runs a random-mutation baseline and memory-disabled/shuffled-memory
-# ablations under the identical budget.
+# 2. Bounded self-improvement: an outer loop mutates the agent's own
+#    prompt/policy, selects on a validation episode, promotes only if it
+#    clears a fixed threshold without regressing a protected episode,
+#    then grades once on sealed final-holdout episodes. Also runs a
+#    random-mutation baseline and memory ablations under the same budget.
 python scripts/bounded_self_improvement.py --episodes 6 --seeds 7 11 19 \
   --n-mutations 3 --output results/bounded_self_improvement.json
-```
 
-Both scripts run offline on deterministic synthetic OHLCV data by default
-(no API keys needed) and are development benchmarks, not claims about live
-or historical trading performance.
-
-- **Arms** (`src/agent/search_arms.py`): `fixed` is buy-and-hold; `random_search`
-  and `grid_search` are non-agent baselines over the momentum parameter grid;
-  `frozen_agent` runs the existing propose→backtest→reflect loop
-  (`src/agent/agent_graph.py`) once per episode with a fresh, empty memory
-  snapshot each time; `frozen_agent_memory` gives that same loop read access
-  to memory written by strictly earlier episodes only (never future ones —
-  see `filter_visible_memory`).
-- **Episode splits** (`src/agent/episode_splits.py`): chronological
-  (dev-window, sealed-holdout-window) pairs generated once and persisted to
-  JSON so every arm is graded on identical windows. A fixed bps-per-trade
-  transaction cost (`apply_transaction_costs`) is applied uniformly.
-- **Reported per arm/episode**: held-out net return after costs, max
-  drawdown, turnover, search efficiency (return per attempted candidate),
-  cross-seed mean/std, and full candidate logs (including failed attempts,
-  which count in the denominator of the success rate). Missing/failed
-  outcomes are reported as `"missing"`, never coerced to 0.
-- **Promotion criterion** (`src/agent/policy_mutation.py`): a candidate
-  policy is only promoted over the incumbent if its mean validation-episode
-  holdout Sharpe beats the incumbent's by more than `PROMOTION_EPSILON`
-  (0.10) AND it doesn't regress by more than `MAX_PROTECTED_REGRESSION`
-  (0.25) on a reserved protected episode. Ties, losses, and inconclusive
-  deltas keep the incumbent — persisting a new config is never itself
-  treated as improvement. The final holdout episodes can only be used for
-  one frozen grading pass per run (`FinalHoldoutGuard` errors loudly on
-  reuse).
-
-### Research Workspace: Episode Narrative, Candidate Inspection, Policy Diff (P3)
-
-```bash
-# Runs one P2 bounded-self-improvement episode fresh (offline, synthetic
-# data) and exports a self-contained research memo from the real
-# persisted/returned artifacts.
+# 3. Research memo: runs one self-improvement episode and exports its
+#    full story (hypothesis -> evidence -> experiment -> decision ->
+#    policy change -> result) as a reviewable Markdown + JSON memo.
 python scripts/export_research_memo.py --episodes 6 --seeds 7 11 19 \
   --n-mutations 3 --output results/research_memo
-# writes results/research_memo.md and results/research_memo.json
 ```
 
-`scripts/export_research_memo.py` currently supports **"run fresh"** only
-(it runs one episode end-to-end and exports the memo from the result); a
-**"replay from an existing run manifest"** mode is deferred until the
-episode result is persisted as its own artifact (today it's only returned
-in-process and partially mirrored into the run manifest) — see the
-module docstring for details.
+**Fair search benchmark** (`src/agent/search_arms.py`,
+`src/agent/episode_splits.py`) — `fixed` is buy-and-hold; `random_search`
+and `grid_search` are non-agent baselines over the momentum parameter
+grid; `frozen_agent` runs the existing propose→backtest→reflect loop
+(`src/agent/agent_graph.py`) once per episode with a fresh, empty memory
+snapshot; `frozen_agent_memory` gives that loop read access to memory
+from strictly earlier episodes only, never future ones
+(`filter_visible_memory`). Episode splits are chronological
+(dev-window, sealed-holdout-window) pairs generated once and persisted to
+JSON so every arm is graded on identical windows, with a uniform
+bps-per-trade transaction cost. Each arm reports held-out net return
+after costs, max drawdown, turnover, search efficiency (return per
+attempted candidate), cross-seed mean/std, and full candidate logs
+(failed attempts included, and counted in the denominator of the success
+rate). Missing/failed outcomes are reported as `"missing"`, never
+coerced to 0.
 
-The memo (`src/agent/research_memo.py`, built on
-`src/agent/episode_report.py`) tells one complete episode's story in
-order: **hypothesis** (the proposed mutation, its diagnosis, and expected
-benefit) → **evidence available at the time** (memory visible at decision
-time, reusing `filter_visible_memory` from P1 to prove no future-dated
-leakage) → **experiment** (dev/validation/protected-episode scores,
-linked to a `RunManifest` and config hash so it's rerunnable) →
-**rejection/acceptance** (the `evaluate_promotion` decision with the
-actual epsilon/delta numbers, not just a verdict) → **policy change** (old
-policy hash → new policy hash if promoted, or an explicit "incumbent
-retained" statement) → **fresh result**, labeled by evidentiary tier using
-the same fixture/demo, measured-historical-experiment, unverified-legacy
-vocabulary as the Evidence Table above, and explicitly stating when an
-episode was *not* graded on final holdout data. Any field the generator
-can't find in the supplied inputs is rendered as an explicit "unavailable"
-note rather than being invented or silently dropped.
+**Bounded self-improvement** (`src/agent/policy_mutation.py`) — a
+candidate policy is only promoted over the incumbent if its mean
+validation-episode holdout Sharpe beats the incumbent's by more than
+`PROMOTION_EPSILON` (0.10) *and* it doesn't regress by more than
+`MAX_PROTECTED_REGRESSION` (0.25) on a reserved protected episode. Ties,
+losses, and inconclusive deltas keep the incumbent — persisting a new
+config is never itself treated as improvement. Final-holdout episodes
+allow only one frozen grading pass per run (`FinalHoldoutGuard` errors
+loudly on reuse).
 
-Unsuccessful candidates are not discarded: `src/agent/episode_report.py`'s
-`list_candidates` / `candidates_report` list every attempted mutation for
-an episode (win or lose) with a one-line rejection reason — "not
-selected as best-on-dev" vs. "best-on-dev but failed promotion check" are
-distinguished — and `compare_policies` produces a structured diff (changed
-vs. unchanged config fields, plus a metrics diff where both sides carry
-metrics) between any two `HarnessConfig` dicts, e.g. incumbent vs.
-candidate.
+**Research memo** (`src/agent/research_memo.py`, built on
+`src/agent/episode_report.py`) — tells one episode's story in order:
+hypothesis (mutation, diagnosis, expected benefit) → evidence available
+at the time (memory visible at decision time, reusing
+`filter_visible_memory` to prove no future-dated leakage) → experiment
+(dev/validation/protected-episode scores, linked to a `RunManifest` and
+config hash so it's rerunnable) → rejection/acceptance (the actual
+`evaluate_promotion` epsilon/delta numbers, not just a verdict) → policy
+change (old → new policy hash, or an explicit "incumbent retained") →
+fresh result, labeled by evidentiary tier using the same vocabulary as
+the Evidence Table above, and explicit about whether final-holdout
+grading happened. Any field the generator can't find is rendered as an
+explicit "unavailable" note, never invented. Unsuccessful candidates are
+never discarded — `list_candidates`/`candidates_report` list every
+attempted mutation with a one-line rejection reason, and
+`compare_policies` diffs any two `HarnessConfig`s (changed fields plus a
+metrics diff where available). The script currently supports **"run
+fresh"** only; "replay from an existing run manifest" is deferred until
+episode results are persisted as their own artifact (see the module
+docstring).
 
-Out of scope here (per issue #28's own stated ordering): prospective/live
-paper-trading research. That's deferred until this experiment contract —
-episode narrative, candidate inspection, policy diff, memo export — is
-stable.
+Prospective/live paper-trading research is intentionally out of scope
+until this experiment contract is stable, per issue #28's own ordering.
 
 ### Run Agent (Streamlit UI)
 
@@ -461,7 +445,7 @@ file before citing a number from here.
 ### Tests
 ```bash
 pytest tests/
-# 82 tests covering (count as of this branch; re-run `pytest tests/ -q` to reconfirm):
+# 111 tests covering (count as of this branch; re-run `pytest tests/ -q` to reconfirm):
 # - Agent loop correctness
 # - Backtest metrics (hand-verified against numpy)
 # - Regime detection
