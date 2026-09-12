@@ -11,15 +11,23 @@ Trading is the domain. Self-improving search is the point: the agent proposes,
 tests, reflects, remembers failures, and evolves its research harness under
 explicit evaluation gates.
 
-## See it run in under 30 seconds
+## Reproduce the zero-key demo
 
-No API keys are required for the local demo. It uses deterministic synthetic
-market data and the grid/random fallback path, then writes a JSON report and an
+From a clean checkout, install the package and development dependencies. No API
+keys are required for the local demo. It uses deterministic synthetic market
+data and the grid/random fallback path, then writes a JSON report and an
 equity-curve artifact to `results/`:
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate       # Windows: .venv\\Scripts\\activate
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
 python run_app.py
 ```
+
+The demo validates installation, the core search loop, metric calculation, and
+artifact generation; it does not establish live-trading performance.
 
 To launch the interactive Streamlit app instead:
 
@@ -90,7 +98,7 @@ Most trading agent frameworks are static parameter-tuning tools. **AgentQuant is
 - 🧪 **Includes experimental optimizers** — Genetic algorithms and differential evolution can search harness parameters; their benchmark currently uses a mock fitness function
 - ✅ **Records falsifiable claims** — Proposals can include confidence and written outcome claims for later analysis; no calibrated Sharpe-prediction-accuracy metric is reported
 - ✅ **Integrates web search** — Uses Tavily to find market sentiment and strategy research in real-time
-- ✅ **Production-grade**: 63 unit tests, CI/CD gates, security checks, look-ahead bias guards
+- ✅ **Research-grade engineering**: automated tests, CI checks, security checks, and look-ahead bias guards
 
 ---
 
@@ -107,7 +115,7 @@ Starting from a baseline grid-search agent, we evolved the harness through 6 pro
 | 3 | **v3_prompt_tuned** | 0.541 | +19.7% | ✅ LLM prompt refined |
 | 4 | **v4_grid_evolved** | 0.572 | +26.5% | ✅ Parameter grid adapted to winners |
 | 5 | **v5_multi_agent** | 0.589 | +30.3% | ✅ Ensemble voting added |
-| 6 | **v6_research** ⭐ | 0.621 | **+37.4%** | ✅ Research agent discovers novel ideas |
+| 6 | **v6_research** ⭐ | 0.621 | **+37.4%** | ✅ Research agent adds new proposal behavior |
 
 **Key validations:**
 - ✅ **Generalization gap reduced 61%** (0.124 → 0.048) — improvements are real, not artifacts
@@ -172,7 +180,7 @@ v6_research ⭐ (0.621)  [+37.4% total]
 
 ---
 
-## Production Harness Architecture (v6_research)
+## Harness Architecture (v6_research)
 
 ```mermaid
 graph TD
@@ -206,7 +214,7 @@ graph TD
     style J fill:#b3e5fc
 ```
 
-**Production Features:**
+**Implemented Features:**
 - ✅ **Tool Orchestration** — Claude reasons over market context, web search, and research
 - ✅ **Multi-Agent Ensemble** — Tool-based, grid search, and random proposals voted together
 - ✅ **Walk-Forward Validation** — Train/validation/test splits prevent overfitting
@@ -267,10 +275,10 @@ Epoch 5: Add multi-agent voting
          ↓ (Analyze results: need novel ideas)
 Epoch 6: Deploy research agent
          ↓
-PRODUCTION READY: 0.621 Sharpe, 61% gap reduction
+RESEARCH HARNESS: 0.621 Sharpe, 61% gap reduction
 ```
 
-Each epoch's config is saved. Production harness is `v6_research.json`.
+Each epoch's config is saved. The latest research harness is `v6_research.json`.
 
 ---
 
@@ -378,7 +386,7 @@ Interactively run the agent on chosen date ranges and assets.
 - `HARNESS_EVOLUTION_RESULTS.md` — Full analysis + findings
 
 ### Evolved Harnesses
-- `.harness/v6_research.json` — **Production harness** (Sharpe 0.621)
+- `.harness/v6_research.json` — **Latest research harness** (Sharpe 0.621)
 - `.harness/v_ga_optimal.json` — GA-optimized (Sharpe 0.594)
 - `.harness/v_de_optimal.json` — DE-optimized (Sharpe 0.571)
 
