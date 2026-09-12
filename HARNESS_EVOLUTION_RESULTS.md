@@ -1,10 +1,22 @@
-# Harness Evolution Results (2026-08-28)
+# Harness Evolution Results (2026-08-28) — UNVERIFIED LEGACY, see README Evidence Table
+
+> **This document predates the generalization-gap fix and harness-config-threading work
+> on `fix/harness-p0-issue-28`.** The "Gap" column below was computed as
+> `max(avg_sharpe - best_sharpe, 0)` across in-sample search results only — it never
+> compared to held-out/out-of-sample performance, so it is not a real generalization
+> gap and should not be cited as one. It also predates the epoch harness configs
+> actually being threaded through `run_agent` at all (Epochs 4-6's "grid_adaptation"
+> and "ensemble" settings had no effect on execution when this report was produced).
+> Treat every number in this file as **unverified legacy** per the README's Evidence
+> Table, not as measured historical results. To regenerate a trustworthy version of
+> this report, run `python3 scripts/harness_evolution_6_epochs.py` on the current
+> branch and cite the resulting `results.json` + `experiments/run_manifests/*.json`.
 
 ## Executive Summary
 
 This is an archived development report for a six-epoch manual progression and experimental optimizer comparisons. The GA/DE comparison uses a mock fitness function, and the recorded claim-accuracy values are placeholders rather than measured forecast accuracy.
 
-**Result: +37.4% Sharpe improvement** (0.452 → 0.621)
+**Result: +37.4% Sharpe improvement** (0.452 → 0.621) — in-sample search Sharpe only; no holdout comparison was performed for this report.
 
 ---
 

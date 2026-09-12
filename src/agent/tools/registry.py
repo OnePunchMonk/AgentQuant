@@ -85,6 +85,13 @@ class ToolRegistry:
         """List all registered tool names."""
         return list(self.tools.keys())
 
+    def without_tool(self, name: str) -> "ToolRegistry":
+        """Return a copy of this registry with one tool removed (e.g. to
+        enforce a harness config that disables web search)."""
+        clone = ToolRegistry()
+        clone.tools = {k: v for k, v in self.tools.items() if k != name}
+        return clone
+
     def to_claude_tools(self) -> List[Dict[str, Any]]:
         """Convert all tools to Claude API format."""
         return [tool.to_claude_tool() for tool in self.tools.values()]

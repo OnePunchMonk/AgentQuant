@@ -8,10 +8,15 @@ Each epoch can propose modifications to these surfaces.
 from dataclasses import dataclass, asdict, field
 from typing import Dict, Any, List, Optional
 from pathlib import Path
+import hashlib
 import json
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class UnsupportedHarnessKnobError(ValueError):
+    """Raised when a harness config sets a knob the runtime does not (yet) wire through."""
 
 
 @dataclass
@@ -221,6 +226,94 @@ def harness_v6_research() -> HarnessConfig:
     config.reasoning = "Research agent searches literature; validates via tools"
     config.expected_improvement = "+3-7% (novel research-backed ideas)"
     return config
+
+
+@dataclass
+class EffectiveHarnessConfig:
+    """
+    The runtime configuration actually applied to an agent run, derived from
+    a requested HarnessConfig.
+
+    This is what proposal generation, tool admission, prompts, and the
+    stopping policy read from -- not the raw HarnessConfig -- so "requested"
+    and "effective" settings can be reported side by side and any knob the
+    runtime does not actually wire through is caught at resolve time instead
+    of being silently ignored.
+    """
+
+    use_tools: bool
+    use_web_search: bool
+    prompt_template: str
+    prompt_context: Dict[str, Any]
+    min_acceptable_sharpe: float
+    max_acceptable_drawdown: float
+    max_iterations: Optional[int]
+    config_hash: str
+    requested: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "use_tools": self.use_tools,
+            "use_web_search": self.use_web_search,
+            "prompt_template": self.prompt_template,
+            "prompt_context": self.prompt_context,
+            "min_acceptable_sharpe": self.min_acceptable_sharpe,
+            "max_acceptable_drawdown": self.max_acceptable_drawdown,
+            "max_iterations": self.max_iterations,
+            "config_hash": self.config_hash,
+            "requested": self.requested,
+        }
+
+
+# Knobs on HarnessConfig that the runtime currently has no wiring for at all.
+# If a caller sets one of these away from its dataclass default, resolution
+# must fail loudly rather than pretend the knob had an effect.
+_UNSUPPORTED_IF_NON_DEFAULT = {
+    "use_ensemble": False,
+    "grid_adaptation_strategy": None,
+    "grid_focus_regions": [],
+    "claim_weighting": 0.5,
+    "tool_weight": 0.5,
+    "required_win_rate": 0.0,
+}
+
+
+def resolve_effective_config(
+    harness_spec: "HarnessConfig",
+    *,
+    max_iterations_override: Optional[int] = None,
+) -> EffectiveHarnessConfig:
+    """
+    Turn a requested HarnessConfig into the EffectiveHarnessConfig the agent
+    graph actually reads. Raises UnsupportedHarnessKnobError for any knob the
+    runtime doesn't implement rather than silently dropping it.
+    """
+    for field_name, default in _UNSUPPORTED_IF_NON_DEFAULT.items():
+        value = getattr(harness_spec, field_name, default)
+        if value != default:
+            raise UnsupportedHarnessKnobError(
+                f"harness_config.{field_name}={value!r} has no effect in this runtime "
+                f"(supported knobs: use_tools, use_web_search, prompt_template, "
+                f"prompt_context, min_acceptable_sharpe, max_acceptable_drawdown, "
+                f"max_retries-as-max_iterations). Refusing to silently ignore it."
+            )
+
+    requested = harness_spec.to_dict()
+    config_hash = hashlib.sha256(
+        json.dumps(requested, sort_keys=True, default=str).encode("utf-8")
+    ).hexdigest()[:16]
+
+    return EffectiveHarnessConfig(
+        use_tools=harness_spec.use_tools,
+        use_web_search=harness_spec.use_web_search,
+        prompt_template=harness_spec.prompt_template,
+        prompt_context=dict(harness_spec.prompt_context or {}),
+        min_acceptable_sharpe=harness_spec.min_acceptable_sharpe,
+        max_acceptable_drawdown=harness_spec.max_acceptable_drawdown,
+        max_iterations=max_iterations_override,
+        config_hash=config_hash,
+        requested=requested,
+    )
 
 
 def get_harness_sequence() -> List[HarnessConfig]:

@@ -109,6 +109,7 @@ class ProposalGenerator:
         self.alpha_store = alpha_store or AlphaStore()
         self.use_alpha_memory = use_alpha_memory
         self.failure_store = self.alpha_store
+        self.last_prompt: str = ""
 
     def generate(
         self,
@@ -116,6 +117,7 @@ class ProposalGenerator:
         n_proposals: int = 5,
         strategy_type: str = "momentum",
         prior_results: Optional[List[Dict[str, Any]]] = None,
+        prompt_prefix: str = "",
     ) -> List[Proposal]:
         """
         Args:
@@ -123,13 +125,19 @@ class ProposalGenerator:
                 this run* (each with at least "params" and "sharpe"), so the
                 LLM can reason about which parameter regions already failed
                 instead of resampling blindly each iteration.
+            prompt_prefix: Text prepended to the LLM prompt, derived from the
+                resolved harness config's prompt_template/prompt_context. This
+                is what makes "changing a prompt changes the actually
+                submitted prompt" demonstrable/testable.
         """
         proposals: List[Proposal] = []
 
         # Try LLM first
         if self.planner.is_available():
             try:
-                llm_proposals = self._llm_generate(context, strategy_type, n_proposals, prior_results)
+                llm_proposals = self._llm_generate(
+                    context, strategy_type, n_proposals, prior_results, prompt_prefix
+                )
                 proposals.extend(llm_proposals)
                 logger.info("LLM generated %d valid proposals.", len(llm_proposals))
             except Exception as e:
@@ -240,8 +248,9 @@ class ProposalGenerator:
         strategy_type: str,
         n: int,
         prior_results: Optional[List[Dict[str, Any]]] = None,
+        prompt_prefix: str = "",
     ) -> List[Proposal]:
-        prompt = PROMPT_TEMPLATE.format(
+        prompt = prompt_prefix + PROMPT_TEMPLATE.format(
             strategy_type=strategy_type,
             regime_context=context.to_prompt_string(),
             param_grid_json=self.grid.to_json(strategy_type),
@@ -251,6 +260,7 @@ class ProposalGenerator:
                 context.regime_label, strategy_type, n=5
             ),
         )
+        self.last_prompt = prompt  # exposed for tests asserting prompt changes
         logger.debug("LLM Prompt:\n%s", prompt)
 
         raw_proposals = self.planner.generate_proposals(prompt, n)

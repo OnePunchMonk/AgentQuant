@@ -28,8 +28,9 @@ from typing import Dict, Any, List, Optional
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.agent.agent_graph import run_agent
+from src.agent.harness_config import HarnessConfig, resolve_effective_config
 from src.agent.trace import TraceRecorder
-from src.data.ingest import load_ohlcv_data
+from src.data.ingest import fetch_ohlcv_data as load_ohlcv_data
 from src.utils.config import config
 
 logging.basicConfig(
@@ -46,7 +47,10 @@ class EpochMetrics:
     avg_sharpe: float
     median_sharpe: float
     sharpe_std: float
-    generalization_gap: float
+    search_sharpe: float
+    holdout_sharpe: Optional[float]
+    generalization_gap: Optional[float]
+    generalization_gap_status: str
     max_drawdown: float
     win_rate: float
     num_trades: int
@@ -73,6 +77,10 @@ class EpochCheckpoint:
     harness_changes: List[str] = field(default_factory=list)
     next_evolution: str = ""
     results: List[Dict[str, Any]] = field(default_factory=list)
+    run_status: str = "unknown"
+    requested_config: Dict[str, Any] = field(default_factory=dict)
+    effective_config: Dict[str, Any] = field(default_factory=dict)
+    config_error: Optional[str] = None
 
 
 class HarnessEvolutionStrategy:
@@ -211,6 +219,37 @@ class MultiIterationHarnessEvolution:
 
         start_time = time.time()
 
+        # Build a HarnessConfig from this epoch's spec and resolve it into
+        # the EffectiveHarnessConfig the agent graph actually reads. If the
+        # spec sets a knob the runtime doesn't wire through (e.g. "ensemble"
+        # or "grid_adaptation" for epochs 4-6), resolution raises rather than
+        # silently ignoring it -- surface that clearly instead of crashing
+        # the whole 6-epoch run or pretending the knob had an effect.
+        harness_cfg = HarnessConfig(
+            version=harness_spec["name"],
+            epoch=epoch_num,
+            created=datetime.now().isoformat(),
+            use_tools=harness_spec["use_tools"],
+            prompt_template=harness_spec["prompt_template"],
+            grid_adaptation_strategy=harness_spec.get("grid_adaptation"),
+            use_ensemble=harness_spec.get("ensemble", False),
+            description=harness_spec["description"],
+            reasoning=harness_spec["reasoning"],
+        )
+
+        config_error = None
+        try:
+            effective = resolve_effective_config(harness_cfg)
+        except Exception as exc:  # UnsupportedHarnessKnobError et al.
+            config_error = str(exc)
+            logger.error("Epoch %d harness config rejected: %s", epoch_num, config_error)
+            effective = resolve_effective_config(HarnessConfig(
+                version=harness_spec["name"], epoch=epoch_num,
+                created=datetime.now().isoformat(),
+                use_tools=harness_spec["use_tools"],
+                prompt_template=harness_spec["prompt_template"],
+            ))
+
         # Run agent with current harness
         trace = TraceRecorder()
         state = run_agent(
@@ -218,6 +257,7 @@ class MultiIterationHarnessEvolution:
             strategy_type=self.strategy,
             asset=self.asset,
             trace=trace,
+            harness_config=effective,
         )
 
         elapsed = time.time() - start_time
@@ -238,15 +278,34 @@ class MultiIterationHarnessEvolution:
             harness_changes=changes,
             next_evolution=next_evolution,
             results=state.get("all_results", []),
+            run_status=state.get("run_status", "unknown"),
+            requested_config=harness_cfg.to_dict(),
+            effective_config=effective.to_dict(),
+            config_error=config_error,
         )
 
         self.checkpoints.append(checkpoint)
         self._log_epoch_summary(checkpoint)
+        if config_error:
+            logger.warning(
+                "Epoch %d ran with a DEGRADED config (unsupported knobs dropped after "
+                "raising): %s", epoch_num, config_error,
+            )
 
     def _compute_metrics(self, state: Dict[str, Any], elapsed: float) -> EpochMetrics:
-        """Compute comprehensive metrics from agent state."""
+        """Compute comprehensive metrics from agent state.
+
+        The generalization gap is defined as (search Sharpe - holdout Sharpe)
+        for the SAME winning proposal, evaluated on the trailing window the
+        search loop never saw (state["best_result"]["holdout_sharpe"], set by
+        agent_graph.holdout_eval_node). This is a real out-of-sample
+        comparison, not a spread statistic over in-sample search results.
+        If the holdout evaluation didn't run (e.g. holdout disabled, or no
+        valid candidate), the gap is reported as unavailable (None) rather
+        than silently defaulting to 0.0.
+        """
         results = state.get("all_results", [])
-        best_result = state.get("best_result", {})
+        best_result = state.get("best_result") or {}
 
         sharpes = [r.get("sharpe", 0.0) for r in results]
         drawdowns = [r.get("max_drawdown", 1.0) for r in results]
@@ -259,27 +318,39 @@ class MultiIterationHarnessEvolution:
             sum((s - avg_sharpe)**2 for s in sharpes) / len(sharpes)
         )**0.5 if sharpes else 0.0
 
-        gap = max(avg_sharpe - best_sharpe, 0.0)
+        search_sharpe = best_sharpe
+        holdout_sharpe = best_result.get("holdout_sharpe")
+        if holdout_sharpe is None:
+            gap = None
+            gap_status = "unavailable_no_holdout_result"
+        else:
+            gap = search_sharpe - holdout_sharpe
+            gap_status = "measured"
+
         avg_drawdown = sum(drawdowns) / len(drawdowns) if drawdowns else 1.0
         win_rate = len([s for s in sharpes if s > 0.2]) / len(sharpes) if sharpes else 0.0
         avg_trades = sum(num_trades_list) / len(num_trades_list) if num_trades_list else 0
 
         proposals = state.get("proposals", [])
-        tool_calls = len([e for e in state.get("trace", {}).get("events", [])
-                         if e.get("type") == "tool_call"]) if state.get("trace") else 0
+        trace_obj = state.get("trace")
+        tool_calls = len([e for e in getattr(trace_obj, "events", [])
+                         if e.stage == "tool_call"]) if trace_obj else 0
 
         return EpochMetrics(
             best_sharpe=best_sharpe,
             avg_sharpe=avg_sharpe,
             median_sharpe=median_sharpe,
             sharpe_std=sharpe_std,
+            search_sharpe=search_sharpe,
+            holdout_sharpe=holdout_sharpe,
             generalization_gap=gap,
+            generalization_gap_status=gap_status,
             max_drawdown=avg_drawdown,
             win_rate=win_rate,
             num_trades=int(avg_trades),
             tool_calls=tool_calls,
             proposals_generated=len(proposals),
-            proposals_accepted=1,
+            proposals_accepted=1 if state.get("run_status") == "passed_quality_gate" else 0,
             execution_time=elapsed,
             # Numerical claim accuracy is not available until proposals carry
             # structured forecasts that can be evaluated against outcomes.
@@ -316,7 +387,8 @@ class MultiIterationHarnessEvolution:
             return "Terminal (final epoch)"
 
         # Simple heuristic
-        if metrics.best_sharpe > 0.5 and metrics.generalization_gap < 0.1:
+        gap = metrics.generalization_gap
+        if metrics.best_sharpe > 0.5 and gap is not None and gap < 0.1:
             return "v6_research (strong performance; try research agent)"
         elif metrics.best_sharpe > 0.4 and metrics.tool_calls > 2:
             return "v4_grid_evolved (tools working; adapt grid)"
@@ -331,7 +403,11 @@ class MultiIterationHarnessEvolution:
         logger.info(f"  Best Sharpe:         {cp.metrics.best_sharpe:>8.3f}")
         logger.info(f"  Avg Sharpe:          {cp.metrics.avg_sharpe:>8.3f}")
         logger.info(f"  Std Dev:             {cp.metrics.sharpe_std:>8.3f}")
-        logger.info(f"  Gen Gap:             {cp.metrics.generalization_gap:>8.3f}")
+        gap_display = (
+            f"{cp.metrics.generalization_gap:>8.3f}" if cp.metrics.generalization_gap is not None
+            else "unavailable"
+        )
+        logger.info(f"  Gen Gap:             {gap_display} ({cp.metrics.generalization_gap_status})")
         logger.info(f"  Max Drawdown:        {cp.metrics.max_drawdown:>8.1%}")
         logger.info(f"  Win Rate:            {cp.metrics.win_rate:>8.1%}")
         logger.info(f"  Tool Calls:          {cp.metrics.tool_calls:>8d}")
@@ -349,10 +425,13 @@ class MultiIterationHarnessEvolution:
             if current.metrics.best_sharpe > 0.3:
                 improvements.append("Tools effective (Sharpe > 0.3); continue using")
 
-        # Analyze generalization
-        if current.metrics.generalization_gap < 0.1:
+        # Analyze generalization (holdout-based; may be unavailable)
+        gap = current.metrics.generalization_gap
+        if gap is None:
+            improvements.append("Generalization gap unavailable (no holdout result this epoch)")
+        elif gap < 0.1:
             improvements.append("Good generalization (gap < 0.1); can evolve grid")
-        elif current.metrics.generalization_gap > 0.15:
+        elif gap > 0.15:
             improvements.append("Overfitting detected (gap > 0.15); need regularization")
 
         # Analyze consistency
@@ -396,12 +475,13 @@ class MultiIterationHarnessEvolution:
 
         # Summary stats
         sharpes = [cp.metrics.best_sharpe for cp in self.checkpoints]
-        gaps = [cp.metrics.generalization_gap for cp in self.checkpoints]
+        gaps = [cp.metrics.generalization_gap for cp in self.checkpoints if cp.metrics.generalization_gap is not None]
 
         data["summary"] = {
             "best_epoch": self.checkpoints[sharpes.index(max(sharpes))].version,
             "best_sharpe": max(sharpes),
-            "best_gap": min(gaps),
+            "best_gap": min(gaps) if gaps else None,
+            "gap_status": "measured" if gaps else "unavailable_no_holdout_results",
             "avg_improvement": (max(sharpes) - min(sharpes)) / max(min(sharpes), 0.01) * 100,
         }
 

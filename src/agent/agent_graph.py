@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, TypedDict
 import pandas as pd
 
 from src.agent.context_builder import RegimeContext, build_context
+from src.agent.harness_config import EffectiveHarnessConfig
 from src.agent.proposal_generator import Proposal, ProposalGenerator
 from src.agent.strategy_memory import PastResult, StrategyMemory
 from src.agent.trace import TraceRecorder, emit_trace
@@ -26,6 +27,14 @@ from src.research.nla_memory import NLAMemoryStore
 from src.utils.config import config
 
 logger = logging.getLogger(__name__)
+
+# Distinct, mutually exclusive run outcomes. "accepted" no longer conflates
+# "cleared the quality bar" with "we ran out of budget and kept the best we
+# had" -- those are different claims about how trustworthy the result is.
+STATUS_PASSED_QUALITY_GATE = "passed_quality_gate"
+STATUS_BUDGET_EXHAUSTED = "budget_exhausted"
+STATUS_NO_VALID_CANDIDATE = "no_valid_candidate"
+STATUS_EXECUTION_FAILED = "execution_failed"
 
 
 class AgentState(TypedDict, total=False):
@@ -47,6 +56,8 @@ class AgentState(TypedDict, total=False):
     memory_context: str
     run_log: List[str]
     trace: Optional[TraceRecorder]
+    harness_config: Optional[EffectiveHarnessConfig]
+    run_status: Optional[str]
 
 
 def _split_search_and_holdout(
@@ -135,6 +146,21 @@ def analyze_node(state: AgentState) -> AgentState:
     return state
 
 
+def _prompt_prefix_for(harness: Optional[EffectiveHarnessConfig]) -> str:
+    """
+    Render the harness's prompt_template/prompt_context into a text block
+    prepended to the proposal-generation prompt, so changing
+    harness.prompt_template provably changes the actually-submitted prompt
+    (not just cosmetic metadata).
+    """
+    if harness is None or harness.prompt_template in ("", "default", "grid_search_default"):
+        return ""
+    lines = [f"[harness prompt profile: {harness.prompt_template}]"]
+    for key, value in (harness.prompt_context or {}).items():
+        lines.append(f"- {key}: {value}")
+    return "\n".join(lines) + "\n"
+
+
 def hypothesize_node(state: AgentState) -> AgentState:
     """Generate strategy proposals via tool orchestrator with fallback to ProposalGenerator."""
     iteration = state.get("iteration", 0) + 1
@@ -143,19 +169,29 @@ def hypothesize_node(state: AgentState) -> AgentState:
 
     strategy_type = state.get("strategy_type", "momentum")
     context = state["context"]
+    harness: Optional[EffectiveHarnessConfig] = state.get("harness_config")
+    tools_enabled = harness.use_tools if harness is not None else True
 
-    # Try tool-based orchestration first (uses Claude + web search if available)
-    proposals = _hypothesize_with_tools(state, strategy_type, context, iteration)
+    # Try tool-based orchestration first (uses Claude + web search if available),
+    # but only when the resolved harness config actually enables tools. This is
+    # the enforcement point for "disabling tools => zero external tool calls".
+    proposals: List[Proposal] = []
+    if tools_enabled:
+        proposals = _hypothesize_with_tools(state, strategy_type, context, iteration, harness)
+    else:
+        logger.info("Tools disabled by harness config; skipping tool orchestration")
 
-    # Fallback to traditional ProposalGenerator if tools fail
+    # Fallback to traditional ProposalGenerator if tools fail or are disabled
     if not proposals:
-        logger.info("Tool orchestration returned no proposals; falling back to ProposalGenerator")
+        logger.info("Using ProposalGenerator (tools disabled or returned no proposals)")
         generator = ProposalGenerator()
+        prompt_prefix = _prompt_prefix_for(harness)
         proposals = generator.generate(
             context=context,
             n_proposals=5,
             strategy_type=strategy_type,
             prior_results=state.get("all_results"),
+            prompt_prefix=prompt_prefix,
         )
 
     state["proposals"] = proposals
@@ -252,7 +288,8 @@ def reflect_node(state: AgentState) -> AgentState:
     best = state.get("best_result")
     iteration = state.get("iteration", 1)
     max_iter = state.get("max_iterations", config.agent.max_iterations)
-    min_sharpe = config.agent.min_acceptable_sharpe
+    harness: Optional[EffectiveHarnessConfig] = state.get("harness_config")
+    min_sharpe = harness.min_acceptable_sharpe if harness is not None else config.agent.min_acceptable_sharpe
 
     # Persist structured negative evidence so later iterations and runs can
     # avoid repeating the same regime/strategy mistake.
@@ -274,8 +311,14 @@ def reflect_node(state: AgentState) -> AgentState:
 
     if best is None:
         state["should_continue"] = iteration < max_iter
-        state["run_log"].append(f"Reflect: No results. {'Retrying...' if state['should_continue'] else 'Stopping.'}")
-        emit_trace(state.get("trace"), "reflect", state["run_log"][-1])
+        if state["should_continue"]:
+            state["run_log"].append("Reflect: No results. Retrying...")
+        else:
+            state["run_status"] = STATUS_NO_VALID_CANDIDATE
+            state["run_log"].append(
+                "Reflect: No valid candidate produced any backtest result. Stopping (no_valid_candidate)."
+            )
+        emit_trace(state.get("trace"), "reflect", state["run_log"][-1], accepted=False)
         return state
 
     sharpe = best.get("sharpe", 0.0)
@@ -285,18 +328,21 @@ def reflect_node(state: AgentState) -> AgentState:
 
     if sharpe >= min_sharpe:
         state["should_continue"] = False
+        state["run_status"] = STATUS_PASSED_QUALITY_GATE
         state["run_log"].append(
-            f"Reflect: Sharpe {sharpe:.2f} >= threshold {min_sharpe:.2f}. ACCEPTING."
+            f"Reflect: Sharpe {sharpe:.2f} >= threshold {min_sharpe:.2f}. ACCEPTING (passed_quality_gate)."
         )
-        emit_trace(state.get("trace"), "reflect", state["run_log"][-1], accepted=True)
+        emit_trace(state.get("trace"), "reflect", state["run_log"][-1], accepted=True, status=state["run_status"])
         logger.info("Result accepted: Sharpe %.2f >= %.2f", sharpe, min_sharpe)
     elif iteration >= max_iter:
         state["should_continue"] = False
+        state["run_status"] = STATUS_BUDGET_EXHAUSTED
         state["run_log"].append(
-            f"Reflect: Sharpe {sharpe:.2f} < {min_sharpe:.2f} but max iterations reached. Accepting best available."
+            f"Reflect: Sharpe {sharpe:.2f} < {min_sharpe:.2f} and max iterations reached. "
+            f"Best-available result kept but NOT marked as passing quality gate (budget_exhausted)."
         )
-        emit_trace(state.get("trace"), "reflect", state["run_log"][-1], accepted=True)
-        logger.info("Max iterations reached. Accepting best: Sharpe %.2f", sharpe)
+        emit_trace(state.get("trace"), "reflect", state["run_log"][-1], accepted=False, status=state["run_status"])
+        logger.info("Max iterations reached without clearing threshold. Best: Sharpe %.2f (budget_exhausted)", sharpe)
     else:
         state["should_continue"] = True
         state["run_log"].append(
@@ -469,7 +515,11 @@ def store_node(state: AgentState) -> AgentState:
 
 
 def _hypothesize_with_tools(
-    state: AgentState, strategy_type: str, context: RegimeContext, iteration: int
+    state: AgentState,
+    strategy_type: str,
+    context: RegimeContext,
+    iteration: int,
+    harness: Optional[EffectiveHarnessConfig] = None,
 ) -> List[Proposal]:
     """
     Generate proposals using tool orchestrator with Claude tool-use.
@@ -492,11 +542,14 @@ def _hypothesize_with_tools(
     """
     try:
         registry = get_default_registry()
+        if harness is not None and not harness.use_web_search:
+            registry = registry.without_tool("search_market_sentiment")
         orchestrator = ToolOrchestrator(registry)
 
+        prompt_prefix = _prompt_prefix_for(harness)
         result = orchestrator.run_tool_loop(
             user_prompt=f"""
-Generate 5 high-confidence {strategy_type} strategy proposals for the current market regime.
+{prompt_prefix}Generate 5 high-confidence {strategy_type} strategy proposals for the current market regime.
 
 For each proposal:
 1. Identify which regime characteristic (volatility, trend, mean reversion) you're targeting
@@ -547,14 +600,35 @@ def run_agent(
     asset: str = None,
     max_iterations: int = None,
     trace: Optional[TraceRecorder] = None,
+    harness_config: Optional[Any] = None,
 ) -> AgentState:
     """
     Run the full agent loop: analyze → hypothesize → backtest → reflect → (loop or store).
 
     This is a pure-Python implementation of the agent graph.
     If langgraph is available, it could be swapped for a StateGraph.
+
+    Args:
+        harness_config: An EffectiveHarnessConfig (already resolved via
+            src.agent.harness_config.resolve_effective_config), or a raw
+            HarnessConfig which will be resolved here. Governs tool
+            admission, prompt content, and the quality-gate threshold for
+            this run. If omitted, the loop behaves exactly as it did before
+            harness config threading existed (global config.agent.*).
     """
+    from src.agent.harness_config import HarnessConfig, resolve_effective_config
+
     resolved_asset = asset or config.reference_asset
+    effective_max_iterations = max_iterations or config.agent.max_iterations
+
+    effective_harness: Optional[EffectiveHarnessConfig] = None
+    if isinstance(harness_config, HarnessConfig):
+        effective_harness = resolve_effective_config(
+            harness_config, max_iterations_override=effective_max_iterations
+        )
+    elif harness_config is not None:
+        effective_harness = harness_config
+
     search_ohlcv, holdout_start = _split_search_and_holdout(
         ohlcv_data, resolved_asset, config.agent.holdout_fraction
     )
@@ -569,33 +643,71 @@ def run_agent(
         "results": [],
         "best_result": None,
         "iteration": 0,
-        "max_iterations": max_iterations or config.agent.max_iterations,
+        "max_iterations": effective_max_iterations,
         "strategy_type": strategy_type,
         "asset": resolved_asset,
         "should_continue": True,
         "memory_context": "",
         "run_log": [],
         "trace": trace,
+        "harness_config": effective_harness,
+        "run_status": None,
     }
     if holdout_start is not None:
         state["run_log"].append(
             f"Holdout: reserving data from {holdout_start.date()} onward; "
             f"search loop only sees data before it."
         )
+    if effective_harness is not None:
+        state["run_log"].append(
+            f"Harness config resolved (hash={effective_harness.config_hash}): "
+            f"use_tools={effective_harness.use_tools}, "
+            f"prompt_template={effective_harness.prompt_template!r}, "
+            f"min_acceptable_sharpe={effective_harness.min_acceptable_sharpe}."
+        )
+        emit_trace(
+            trace, "harness_config",
+            state["run_log"][-1],
+            requested=effective_harness.requested,
+            effective=effective_harness.to_dict(),
+        )
 
-    # Step 1: Analyze (once, on the search window only)
-    state = analyze_node(state)
+    try:
+        # Step 1: Analyze (once, on the search window only)
+        state = analyze_node(state)
 
-    # Step 2-4: Hypothesize → Backtest → Reflect (loop, in-sample search)
-    while state["should_continue"] and state["iteration"] < state["max_iterations"]:
-        state = hypothesize_node(state)
-        state = backtest_node(state)
-        state = reflect_node(state)
+        # Step 2-4: Hypothesize → Backtest → Reflect (loop, in-sample search)
+        while state["should_continue"] and state["iteration"] < state["max_iterations"]:
+            state = hypothesize_node(state)
+            state = backtest_node(state)
+            state = reflect_node(state)
 
-    # Step 5: Grade the winner once against data the loop never saw
-    state = holdout_eval_node(state)
+        # Step 5: Grade the winner once against data the loop never saw
+        state = holdout_eval_node(state)
 
-    # Step 6: Store
-    state = store_node(state)
+        # Step 6: Store
+        state = store_node(state)
+    except Exception as exc:
+        state["run_status"] = STATUS_EXECUTION_FAILED
+        state["run_log"].append(f"Execution failed: {exc!r}")
+        emit_trace(state.get("trace"), "execution_failed", str(exc))
+        logger.exception("Agent run failed with an unhandled exception")
+        raise
+    finally:
+        # The loop may exit (e.g. max_iterations=0) without ever reaching
+        # reflect_node, which is otherwise the only place run_status is set.
+        if state.get("run_status") is None:
+            state["run_status"] = (
+                STATUS_PASSED_QUALITY_GATE if state.get("best_result") is not None
+                else STATUS_NO_VALID_CANDIDATE
+            )
+        try:
+            from src.agent.run_manifest import build_manifest_from_state
+
+            manifest = build_manifest_from_state(state)
+            state["run_manifest"] = manifest.to_dict()
+            manifest.save()
+        except Exception:
+            logger.warning("Failed to build/persist run manifest", exc_info=True)
 
     return state

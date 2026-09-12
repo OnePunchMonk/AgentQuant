@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.agent.agent_graph import run_agent
 from src.agent.trace import TraceRecorder
 from src.backtest.runner import run_backtest
-from src.data.ingest import load_ohlcv_data
+from src.data.ingest import fetch_ohlcv_data as load_ohlcv_data
 from src.features.engine import compute_features
 from src.research.alpha_store import AlphaStore
 from src.utils.config import config

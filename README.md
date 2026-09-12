@@ -102,70 +102,26 @@ Most trading agent frameworks are static parameter-tuning tools. **AgentQuant is
 
 ---
 
-## Live Results (2026-08-28)
+## Evidence Table
 
-### 6-Epoch Harness Evolution
+Numbers in this repo come from three tiers of evidence that must not be conflated.
+Regenerate this table with `scripts/harness_evolution_6_epochs.py` (fixture/measured
+historical rows) and `scripts/reproducible_benchmark.py` (fixture/demo rows); each
+run writes a manifest under `experiments/run_manifests/` and a results JSON that
+this table should link back to.
 
-Starting from a baseline grid-search agent, we evolved the harness through 6 progressive improvements:
+| Tier | What it means | Example | Source (command / file) |
+|------|---------------|---------|--------------------------|
+| **Fixture / demo** | Deterministic synthetic price paths, offline, no API keys. Useful for testing wiring (config threading, holdout mechanics), not for judging strategy quality. | `reproducible_benchmark.py` 1-vs-3-iteration holdout Sharpe comparison | `python3 scripts/reproducible_benchmark.py --output results/reproducible_benchmark.json` |
+| **Measured historical experiment** | Real OHLCV history (yfinance), an actual `run_agent`/epoch execution, with in-sample search Sharpe reported separately from held-out Sharpe. Still a single historical window, not a claim about future/live performance. | 6-epoch harness evolution runs, each producing a `HarnessConfig` hash + run manifest | `python3 scripts/harness_evolution_6_epochs.py --strategy momentum --output results.json` |
+| **Unverified legacy** | Numbers that appeared in earlier revisions of this README/results docs without an attached command, manifest, or seed. Treat as anecdotal until reproduced; do not cite as validation. | Prior "Live Results" table (removed) | none — this is exactly the gap this section replaces |
 
-| Epoch | Harness | Sharpe | Improvement | What Changed |
-|-------|---------|--------|-------------|--------------|
-| 1 | **v1_base** | 0.452 | — | Baseline (grid search only) |
-| 2 | **v2_tool_aware** | 0.523 | +15.7% | ✅ Tools & web search enabled |
-| 3 | **v3_prompt_tuned** | 0.541 | +19.7% | ✅ LLM prompt refined |
-| 4 | **v4_grid_evolved** | 0.572 | +26.5% | ✅ Parameter grid adapted to winners |
-| 5 | **v5_multi_agent** | 0.589 | +30.3% | ✅ Ensemble voting added |
-| 6 | **v6_research** ⭐ | 0.621 | **+37.4%** | ✅ Research agent adds new proposal behavior |
-
-**Key validations:**
-- ✅ **Generalization gap reduced 61%** (0.124 → 0.048) — improvements are real, not artifacts
-- ✅ **Tool efficiency increased 8x** (0 → 8 calls/epoch)
-- ℹ️ **Claim accuracy is not reported** — the current harness records claims but does not yet evaluate numerical Sharpe forecasts against realized outcomes
-
-### Algorithm Comparison
-
-Compared manual evolution against experimental evolutionary optimizers on the same mock fitness function. These figures are a development benchmark, not backtest results.
-
-```
-Manual Evolution (Hand-crafted)  ⭐  0.621  (+37.4%)   Domain knowledge wins
-Genetic Algorithm (20×5)         →   0.594  (+35.6%)   Only 2.7% behind, faster
-Differential Evolution (20×5)    →   0.571  (+28.3%)   Struggles with discrete decisions
-Random Baseline (Control)        →   0.465  (+12.9%)   All beat random 5-33x
-```
-
-**Development observation:** In this mock-fitness benchmark, the hand-crafted configuration scored higher than the experimental optimizers. This is not evidence of live or historical trading performance.
-
-### Evolution Visualization
-
-<div style="text-align: center; margin: 30px 0; padding: 20px; background: #0a0e27; border: 2px solid #00d9ff; border-radius: 8px;">
-  <strong style="color: #00ff88;">🎬 WATCH THE 6-EPOCH EVOLUTION UNFOLD</strong><br>
-  <a href="https://claude.ai/code/artifact/a297e886-911e-4f06-bdf4-bbbb3890888b" target="_blank" style="display: inline-block; margin-top: 10px; padding: 12px 24px; background: #00d9ff; color: #0a0e27; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px;">
-    ⚡ Launch Dark-Themed Interactive Dashboard
-  </a>
-  <p style="margin-top: 10px; font-size: 12px; color: #888;">Live animated visualization with epoch progression & algorithm benchmarks</p>
-</div>
-
-The evolution journey across 6 epochs:
-
-```
-v1_base (0.452)
-    ↓ +15.7%
-v2_tool_aware (0.523)
-    ↓ +4.0%
-v3_prompt_tuned (0.541)
-    ↓ +6.8%
-v4_grid_evolved (0.572)
-    ↓ +3.0%
-v5_multi_agent (0.589)
-    ↓ +5.4%
-v6_research ⭐ (0.621)  [+37.4% total]
-```
-
-**Key Results:**
-- 📈 **Sharpe Improvement:** +37.4% (0.452 → 0.621)
-- 🎯 **Generalization Gap:** -61% (0.124 → 0.048)  
-- 🔧 **Tool Integration:** 8x increase in tool calls per epoch
-- ℹ️ **Claim validation:** recorded for analysis; numerical forecast accuracy is not yet reported
+**What the code actually measures today, and what it doesn't:**
+- ✅ Search-set Sharpe and holdout-set Sharpe are reported separately (`agent_graph.holdout_eval_node`); the generalization gap is `search_sharpe - holdout_sharpe` on the *same* winning proposal, and is reported as `unavailable` (not 0.0) when no holdout evaluation ran.
+- ✅ Run outcome is one of `passed_quality_gate`, `budget_exhausted`, `no_valid_candidate`, or `execution_failed` — "we ran out of iterations and kept the best guess" is never reported as having passed the quality gate.
+- ✅ GA/DE optimizer comparisons (see `docs/EVOLUTIONARY_HARNESS_OPTIMIZATION.md`) use a **mock fitness function**, not real backtests — treat any GA/DE numbers as algorithm-search behavior, not trading performance.
+- ❌ There is no calibrated numerical Sharpe-forecast-accuracy metric yet; falsifiable claims are recorded as text, not scored against realized outcomes.
+- ❌ "Tool calls per epoch" is a raw count, not an efficiency ratio; a change in tool-call count alone is not evidence of an efficiency improvement and should not be reported as one (the previous "8x efficiency" framing has been removed for this reason).
 
 ### UI & Dashboards
 
@@ -215,11 +171,11 @@ graph TD
 ```
 
 **Implemented Features:**
-- ✅ **Tool Orchestration** — Claude reasons over market context, web search, and research
-- ✅ **Multi-Agent Ensemble** — Tool-based, grid search, and random proposals voted together
-- ✅ **Walk-Forward Validation** — Train/validation/test splits prevent overfitting
+- ✅ **Tool Orchestration** — Claude reasons over market context, web search, and research; a resolved, versioned harness config gates tool admission (disabling tools yields zero tool-orchestrator calls) and prompt content
+- 🧪 **Multi-Agent Ensemble** — Planned (epochs 5-6 in the harness sequence); the runtime currently rejects a harness config that requests ensemble voting (`use_ensemble=True`) with an explicit `UnsupportedHarnessKnobError` rather than silently ignoring it, since it is not wired through yet
+- ✅ **Walk-Forward Validation** — A trailing holdout window is carved out before the search loop runs and is scored exactly once (`holdout_eval_node`), separate from in-sample search Sharpe
 - ✅ **Memory Persistence** — Learns which strategies work in which market regimes
-- ✅ **Falsifiable Claims** — Tracks prediction accuracy (86% validated)
+- ✅ **Falsifiable Claims** — Proposals record a written, falsifiable claim and confidence score; numerical Sharpe-forecast accuracy against realized outcomes is not yet computed or reported (no accuracy percentage should be cited until that scoring exists)
 
 ---
 
@@ -263,22 +219,26 @@ graph TD
 The system itself evolves across epochs:
 
 ```
-Epoch 1: Start with grid search
-         ↓ (Analyze results: tools could help)
-Epoch 2: Enable tools + Claude reasoning
-         ↓ (Analyze results: need to refine prompt)
-Epoch 3: Tune prompt based on v2 learnings
-         ↓ (Analyze results: focus on winning parameters)
-Epoch 4: Adapt grid to high-performers
-         ↓ (Analyze results: ensemble improves robustness)
-Epoch 5: Add multi-agent voting
-         ↓ (Analyze results: need novel ideas)
-Epoch 6: Deploy research agent
-         ↓
-RESEARCH HARNESS: 0.621 Sharpe, 61% gap reduction
+Epoch 1: Grid search only                  (use_tools=False)               -- implemented
+Epoch 2: Enable tools + Claude reasoning    (use_tools=True)                -- implemented
+Epoch 3: Tune prompt based on v2 learnings  (prompt_template changed)       -- implemented
+Epoch 4: Adapt grid to high-performers      (grid_adaptation_strategy)      -- NOT wired: runtime raises
+Epoch 5: Add multi-agent voting             (use_ensemble=True)             -- NOT wired: runtime raises
+Epoch 6: Deploy research agent              (prompt_template + ensemble)    -- prompt change only
 ```
 
-Each epoch's config is saved. The latest research harness is `v6_research.json`.
+Epochs 1-3 change agent behavior through the resolved harness config (tool admission and
+prompt content). Epochs 4-6 as originally specified also requested grid adaptation and
+ensemble voting; those knobs are not implemented in the runtime yet, so
+`resolve_effective_config` raises `UnsupportedHarnessKnobError` for them rather than
+silently no-opping. Run `scripts/harness_evolution_6_epochs.py` to see this: it catches
+the error, records it in the epoch checkpoint's `config_error` field, and re-runs that
+epoch with only the supported knobs so the comparison table still has a number for every
+epoch -- but the epoch-over-epoch Sharpe delta for epochs 4-6 should not be read as
+evidence that grid adaptation or ensemble voting help, since neither actually ran.
+
+Each epoch's config (requested and effective, with a content hash) is saved in the
+run's output JSON and in `experiments/run_manifests/<run_id>.json`.
 
 ---
 
@@ -386,9 +346,12 @@ Interactively run the agent on chosen date ranges and assets.
 - `HARNESS_EVOLUTION_RESULTS.md` — Full analysis + findings
 
 ### Evolved Harnesses
-- `.harness/v6_research.json` — **Latest research harness** (Sharpe 0.621)
-- `.harness/v_ga_optimal.json` — GA-optimized (Sharpe 0.594)
-- `.harness/v_de_optimal.json` — DE-optimized (Sharpe 0.571)
+Sharpe figures for saved harness configs are tied to a specific historical run and
+seed; see the Evidence Table above and the run manifest referenced by each result
+file before citing a number from here.
+- `.harness/v6_research.json` — Latest research harness config (requested + effective settings)
+- `.harness/v_ga_optimal.json` — GA-optimized on the mock fitness function (not a backtest result)
+- `.harness/v_de_optimal.json` — DE-optimized on the mock fitness function (not a backtest result)
 
 ### Documentation
 - `docs/TOOL_INTEGRATION_GUIDE.md` — Tool orchestration system
@@ -400,7 +363,7 @@ Interactively run the agent on chosen date ranges and assets.
 ### Tests
 ```bash
 pytest tests/
-# 63 tests covering:
+# 82 tests covering (count as of this branch; re-run `pytest tests/ -q` to reconfirm):
 # - Agent loop correctness
 # - Backtest metrics (hand-verified against numpy)
 # - Regime detection
@@ -489,7 +452,10 @@ MIT — Use freely, modify as needed, mention if you find bugs.
 🔄 **Beta roadmap** — Research agent, multi-objective optimization  
 ⚠️ **Not yet production** — Backtest results don't guarantee live returns  
 
-**Latest:** 6-epoch evolution complete (+37.4% Sharpe, 61% gap reduction). v6_research harness ready for testing.
+**Latest:** Harness config threading, run-status separation (`passed_quality_gate` / `budget_exhausted` /
+`no_valid_candidate` / `execution_failed`), and a real search-vs-holdout generalization gap are implemented
+and covered by tests (see Evidence Table above). Epoch-over-epoch Sharpe deltas from a specific historical
+run are reported in that run's manifest/results JSON, not as a standing README claim.
 
 ---
 
