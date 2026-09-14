@@ -38,6 +38,70 @@ from src.agent.search_arms import (  # noqa: E402
 
 ASSET = "SIM"
 
+# Fixed seed for the paired bootstrap CI below -- deterministic across runs,
+# not tunable per result.
+_BOOTSTRAP_SEED = 20260101
+_BOOTSTRAP_RESAMPLES = 2000
+
+
+def _paired_comparison(rows_a: List[dict], rows_b: List[dict], metric: str = "holdout_net_return") -> Dict[str, Any]:
+    """Paired comparison of two arms' results on `metric`, matched by
+    (episode_id, seed) -- never by independently averaging each arm's own
+    subset, which would let unequal coverage masquerade as a fair diff.
+    Cells missing (status != 'ok') on either side are excluded from the
+    pairing and reported separately, not imputed.
+
+    Returns mean paired delta (b - a), its std, a percentile bootstrap 95%
+    CI (fixed seed, deterministic), and how many (episode, seed) cells were
+    actually paired vs. dropped for missing coverage on either side.
+    """
+    import random as _random
+
+    by_key_a = {(r["episode_id"], r["seed"]): r for r in rows_a}
+    by_key_b = {(r["episode_id"], r["seed"]): r for r in rows_b}
+    all_keys = sorted(set(by_key_a) | set(by_key_b))
+
+    deltas = []
+    dropped_missing = 0
+    for key in all_keys:
+        ra, rb = by_key_a.get(key), by_key_b.get(key)
+        if ra is None or rb is None or ra["status"] != "ok" or rb["status"] != "ok":
+            dropped_missing += 1
+            continue
+        deltas.append(rb[metric] - ra[metric])
+
+    if not deltas:
+        return {
+            "metric": metric, "n_paired": 0, "n_dropped_missing_coverage": dropped_missing,
+            "mean_delta": None, "std_delta": None, "ci95_low": None, "ci95_high": None,
+        }
+
+    mean_delta = sum(deltas) / len(deltas)
+    var = sum((d - mean_delta) ** 2 for d in deltas) / len(deltas)
+    std_delta = var ** 0.5
+
+    rng = _random.Random(_BOOTSTRAP_SEED)
+    boot_means = []
+    n = len(deltas)
+    for _ in range(_BOOTSTRAP_RESAMPLES):
+        sample = [deltas[rng.randrange(n)] for _ in range(n)]
+        boot_means.append(sum(sample) / n)
+    boot_means.sort()
+    lo_idx = int(0.025 * len(boot_means))
+    hi_idx = int(0.975 * len(boot_means))
+
+    return {
+        "metric": metric,
+        "n_paired": len(deltas),
+        "n_dropped_missing_coverage": dropped_missing,
+        "mean_delta": mean_delta,
+        "std_delta": std_delta,
+        "ci95_low": boot_means[lo_idx],
+        "ci95_high": boot_means[hi_idx],
+        "note": "delta = arm_b - arm_a on matched (episode_id, seed) cells; "
+                "CI excludes zero => the difference is not attributable to noise at 95%.",
+    }
+
 
 def _summarize(results: List[dict]) -> Dict[str, Any]:
     ok = [r for r in results if r["status"] == "ok"]
@@ -206,6 +270,26 @@ def main() -> None:
             "between these three modes requires running with a live LLM key so the mutated "
             "prompt actually reaches the proposal backend."
         )
+
+        # Paired uncertainty on the comparisons #31 actually asks about:
+        # does evidence-conditioning beat no evidence, and does it beat
+        # evidence that's present but attributed to the wrong episode?
+        # Matched by (episode_id, seed), fixed-seed bootstrap CI -- see the
+        # caveat above for why these are expected to be ~0 offline.
+        pairs = [
+            ("evidence_conditioned_mutation", "random_mutation"),
+            ("evidence_conditioned_mutation", "shuffled_evidence_mutation"),
+            ("evidence_conditioned_mutation", "frozen_agent"),
+        ]
+        report["paired_comparisons"] = {}
+        for arm_a, arm_b in pairs:
+            if arm_a in report["arms"] and arm_b in report["arms"]:
+                key = f"{arm_b}_minus_{arm_a}"
+                report["paired_comparisons"][key] = _paired_comparison(
+                    report["arms"][arm_a]["episode_results"],
+                    report["arms"][arm_b]["episode_results"],
+                )
+                print(f"[paired: {key}] {report['paired_comparisons'][key]}")
 
     out_path = ROOT / args.output
     out_path.parent.mkdir(parents=True, exist_ok=True)

@@ -302,3 +302,70 @@ def test_offline_benchmark_run_documents_that_mutation_arms_collapse_to_frozen_a
     frozen = report["arms"]["frozen_agent"]["summary"]["net_return_mean"]
     for arm in ("evidence_conditioned_mutation", "random_mutation", "shuffled_evidence_mutation"):
         assert report["arms"][arm]["summary"]["net_return_mean"] == frozen
+
+    # Offline: mutation never reaches the proposal backend, so every paired
+    # delta must be exactly zero with a CI that (degenerately) pins at zero.
+    for comparison in report["paired_comparisons"].values():
+        assert comparison["mean_delta"] == 0.0
+        assert comparison["n_dropped_missing_coverage"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Paired-uncertainty comparison
+# ---------------------------------------------------------------------------
+
+def test_paired_comparison_matches_by_episode_and_seed_not_position():
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import fair_search_benchmark
+
+    # Deliberately out-of-order / mismatched-length rows: pairing must be by
+    # (episode_id, seed), not list position.
+    rows_a = [
+        {"episode_id": "ep00", "seed": 1, "status": "ok", "holdout_net_return": 0.10},
+        {"episode_id": "ep01", "seed": 1, "status": "ok", "holdout_net_return": 0.20},
+    ]
+    rows_b = [
+        {"episode_id": "ep01", "seed": 1, "status": "ok", "holdout_net_return": 0.25},
+        {"episode_id": "ep00", "seed": 1, "status": "ok", "holdout_net_return": 0.12},
+    ]
+    result = fair_search_benchmark._paired_comparison(rows_a, rows_b)
+    assert result["n_paired"] == 2
+    # deltas: ep00 0.12-0.10=0.02, ep01 0.25-0.20=0.05 -> mean 0.035
+    assert abs(result["mean_delta"] - 0.035) < 1e-9
+    assert result["ci95_low"] <= result["mean_delta"] <= result["ci95_high"]
+
+
+def test_paired_comparison_drops_cells_missing_on_either_side():
+    rows_a = [
+        {"episode_id": "ep00", "seed": 1, "status": "ok", "holdout_net_return": 0.10},
+        {"episode_id": "ep01", "seed": 1, "status": "missing", "holdout_net_return": "missing"},
+    ]
+    rows_b = [
+        {"episode_id": "ep00", "seed": 1, "status": "ok", "holdout_net_return": 0.15},
+        {"episode_id": "ep01", "seed": 1, "status": "ok", "holdout_net_return": 0.50},
+    ]
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import fair_search_benchmark
+
+    result = fair_search_benchmark._paired_comparison(rows_a, rows_b)
+    assert result["n_paired"] == 1
+    assert result["n_dropped_missing_coverage"] == 1
+
+
+def test_paired_comparison_deterministic_ci_across_runs():
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import fair_search_benchmark
+
+    rows_a = [{"episode_id": f"ep{i:02d}", "seed": 1, "status": "ok", "holdout_net_return": 0.1 + 0.01 * i}
+              for i in range(10)]
+    rows_b = [{"episode_id": f"ep{i:02d}", "seed": 1, "status": "ok", "holdout_net_return": 0.12 + 0.01 * i}
+              for i in range(10)]
+    r1 = fair_search_benchmark._paired_comparison(rows_a, rows_b)
+    r2 = fair_search_benchmark._paired_comparison(rows_a, rows_b)
+    assert r1 == r2
