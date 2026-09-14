@@ -103,6 +103,44 @@ jobs:
           output=$(python run_app.py --app 2>&1) && exit 1 || true
           echo "$output" | grep -q '\[ui\]' && echo "✓ actionable error shown" || (echo "$output" && exit 1)
 
+  wheel-install:
+    name: Build wheel/sdist and run CLI from outside the checkout
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Build sdist and wheel
+        run: |
+          pip install --upgrade pip build
+          python -m build
+          ls dist/
+
+      - name: Install the built wheel into a clean venv (no editable, no source checkout on path)
+        run: |
+          python -m venv /tmp/agentquant-wheel-venv
+          /tmp/agentquant-wheel-venv/bin/pip install --upgrade pip
+          /tmp/agentquant-wheel-venv/bin/pip install dist/*.whl
+
+      - name: Run installed CLI entry points from a directory outside the checkout
+        run: |
+          mkdir -p /tmp/agentquant-outside-checkout
+          cd /tmp/agentquant-outside-checkout
+          /tmp/agentquant-wheel-venv/bin/agentquant --help
+          /tmp/agentquant-wheel-venv/bin/agentquant run --help
+          /tmp/agentquant-wheel-venv/bin/agentquant memory --help
+          # config.yaml is intentionally not packaged; confirm the CLI still
+          # runs from defaults rather than crashing on a repo-relative path.
+          /tmp/agentquant-wheel-venv/bin/python -c "from src.utils.config import config; print('config loaded with defaults:', config.reference_asset)"
+
   harness-verification:
     name: Harness Evolution Verification
     runs-on: ubuntu-latest
@@ -175,7 +213,7 @@ jobs:
 
   quality-gates:
     name: Quality Gates
-    needs: [test, base-install, harness-verification, security-check]
+    needs: [test, base-install, wheel-install, harness-verification, security-check]
     runs-on: ubuntu-latest
     permissions:
       contents: read
