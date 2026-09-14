@@ -16,6 +16,19 @@ Arms implemented:
                     carried across episodes (fresh memory snapshot each time).
   - frozen_agent_memory: same agent loop, but reads memory written by
                     strictly earlier episodes (never future episodes).
+  - mutation arms (see run_mutation_agent_arm): the agent loop run under a
+    policy that is mutated once per episode by src.agent.policy_mutation,
+    conditioned on a structured failure derived from the *previous*
+    episode's own graded outcome. Three variants share this function:
+      - evidence_conditioned_mutation: real failure -> propose_mutation.
+      - random_mutation:               propose_random_mutation (control;
+                                        ignores the failure entirely).
+      - shuffled_evidence_mutation:    propose_mutation, but fed a failure
+                                        tag drawn from a *different* episode
+                                        than the one it's supposedly
+                                        diagnosing (control for whether any
+                                        gain comes from the evidence being
+                                        *correct*, not just present).
 """
 
 from __future__ import annotations
@@ -365,3 +378,87 @@ def run_frozen_agent_memory_arm(
     holdout_df = slice_holdout(ohlcv, episode)[episode.asset]
     return _grade_on_holdout("frozen_agent_memory", episode, seed, candidates, winner_params,
                               holdout_df, cost_bps, tool_calls, started)
+
+
+# Fixed thresholds reused from HarnessConfig's own defaults, so the failure
+# taxonomy applied here isn't an independent set of numbers to argue with.
+_DRAWDOWN_FAILURE_THRESHOLD = 0.20  # HarnessConfig.max_acceptable_drawdown default
+
+
+def derive_structured_failure(prior_result: Optional[EpisodeResult]) -> "list":
+    """Turn a graded EpisodeResult into the StructuredFailure(s) that a
+    mutation mechanism would condition on -- a machine-checkable read of the
+    prior episode's own numbers, not free text. Returns [] when there is no
+    prior episode (first episode of a run) or its grading is missing, which
+    propose_mutation treats as the fixed "unspecified" fallback."""
+    from src.agent.policy_mutation import StructuredFailure
+
+    if prior_result is None or prior_result.status != "ok":
+        return []
+    dd = prior_result.holdout_max_drawdown
+    ret = prior_result.holdout_net_return
+    if dd is not None and dd > _DRAWDOWN_FAILURE_THRESHOLD:
+        return [StructuredFailure("high_drawdown", f"holdout_max_drawdown={dd:.3f} > {_DRAWDOWN_FAILURE_THRESHOLD}")]
+    if ret is not None and ret < 0:
+        return [StructuredFailure("low_return_no_tools", f"holdout_net_return={ret:.4f} < 0")]
+    return [StructuredFailure("unspecified", "prior episode within acceptable bounds")]
+
+
+def run_mutation_agent_arm(
+    ohlcv: Dict[str, pd.DataFrame], episode: Episode, seed: int, cost_bps: float,
+    incumbent: Any, prior_result: Optional[EpisodeResult],
+    mode: str,  # "evidence_conditioned" | "random" | "shuffled_evidence"
+    shuffle_source_result: Optional[EpisodeResult] = None,
+    max_iterations: int = 2,
+) -> "tuple[EpisodeResult, Dict[str, Any], Any]":
+    """Mutate `incumbent` once (per `mode`), run the agent loop under the
+    mutated policy for this episode, grade on holdout. Returns
+    (episode_result, mutation_record_dict, child_policy) so the caller can
+    carry the child forward as next episode's incumbent and log the full
+    mutation trail for audit.
+
+    `shuffle_source_result` supplies the (wrong-episode) prior result the
+    "shuffled_evidence" control derives its failure tag from -- the caller
+    is responsible for choosing a result from a *different* episode than
+    the one being mutated for."""
+    import random as _random
+
+    from src.agent.policy_mutation import propose_mutation, propose_random_mutation
+
+    started = time.time()
+    rng = _random.Random(seed)
+
+    if mode == "random":
+        record, child = propose_random_mutation(incumbent, rng)
+    elif mode == "evidence_conditioned":
+        failures = derive_structured_failure(prior_result)
+        record, child = propose_mutation(incumbent, rng, failures=failures)
+    elif mode == "shuffled_evidence":
+        failures = derive_structured_failure(shuffle_source_result)
+        record, child = propose_mutation(incumbent, rng, failures=failures)
+    else:
+        raise ValueError(f"unknown mutation mode {mode!r}")
+
+    dev_ohlcv = slice_dev(ohlcv, episode)
+    with tempfile.TemporaryDirectory() as tmp:
+        state = _run_agent_offline(dev_ohlcv, episode.asset, seed, str(Path(tmp) / "memory.db"),
+                                    max_iterations=max_iterations, harness_config=child,
+                                    cost_bps=cost_bps)
+    candidates = [
+        Candidate(params=r.get("params"), dev_sharpe=r.get("sharpe"), status="ok",
+                  generation_method=r.get("generation_method", "agent"))
+        for r in state.get("all_results", [])
+    ]
+    best = state.get("best_result")
+    winner_params = best.get("params") if best else None
+    tool_calls = int(sum(1 for e in (getattr(state.get("trace"), "events", []) or [])
+                          if getattr(e, "stage", "") == "tool_call"))
+    holdout_df = slice_holdout(ohlcv, episode)[episode.asset]
+    arm_name = {
+        "evidence_conditioned": "evidence_conditioned_mutation",
+        "random": "random_mutation",
+        "shuffled_evidence": "shuffled_evidence_mutation",
+    }[mode]
+    result = _grade_on_holdout(arm_name, episode, seed, candidates, winner_params, holdout_df,
+                                cost_bps, tool_calls, started)
+    return result, record.to_dict(), child
