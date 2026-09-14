@@ -1,6 +1,9 @@
 """Tests for the P1 fair search benchmark: leakage sentinels, future-dated
 memory, and missing-outcome handling."""
 
+import json
+from pathlib import Path
+
 import pandas as pd
 
 from src.agent.episode_splits import (
@@ -156,3 +159,213 @@ def test_transaction_cost_reduces_returns_when_trading():
     costed = apply_transaction_costs(returns, signal, cost_bps=50.0)
     assert costed["net_returns"].sum() < returns.sum()
     assert costed["turnover"] > 0
+
+
+# ---------------------------------------------------------------------------
+# Mutation arms (#31): evidence-conditioned mutation vs. random vs.
+# shuffled-evidence controls, wired into the fair benchmark.
+# ---------------------------------------------------------------------------
+
+def test_derive_structured_failure_reads_prior_episode_drawdown():
+    from src.agent.search_arms import EpisodeResult, derive_structured_failure
+
+    prior = EpisodeResult(
+        arm="x", episode_id="ep00", seed=1, candidates=[], winner_params=None,
+        holdout_net_return=0.05, holdout_max_drawdown=0.35, holdout_turnover=0.1,
+        tool_calls=0, wall_time_s=0.0, status="ok",
+    )
+    failures = derive_structured_failure(prior)
+    assert len(failures) == 1
+    assert failures[0].tag == "high_drawdown"
+    assert "0.35" in failures[0].evidence
+
+
+def test_derive_structured_failure_empty_for_no_prior_episode():
+    from src.agent.search_arms import derive_structured_failure
+
+    assert derive_structured_failure(None) == []
+
+
+def test_derive_structured_failure_missing_grading_yields_no_evidence():
+    from src.agent.search_arms import EpisodeResult, derive_structured_failure
+
+    missing = EpisodeResult(
+        arm="x", episode_id="ep00", seed=1, candidates=[], winner_params=None,
+        holdout_net_return="missing", holdout_max_drawdown="missing", holdout_turnover="missing",
+        tool_calls=0, wall_time_s=0.0, status="missing",
+    )
+    assert derive_structured_failure(missing) == []
+
+
+def test_evidence_conditioned_arm_runs_and_carries_mutated_policy_forward():
+    from src.agent.harness_config import harness_v1_base
+    from src.agent.search_arms import EpisodeResult, run_mutation_agent_arm
+
+    ohlcv = synthetic_ohlcv(seed=3, n_days=400, asset="SIM")
+    episodes = build_episodes(ohlcv, "SIM", n_episodes=1, dev_days=200, holdout_days=60)
+    ep = episodes[0]
+    incumbent = harness_v1_base()
+
+    prior = EpisodeResult(
+        arm="x", episode_id="ep_prior", seed=1, candidates=[], winner_params=None,
+        holdout_net_return=0.05, holdout_max_drawdown=0.40, holdout_turnover=0.1,
+        tool_calls=0, wall_time_s=0.0, status="ok",
+    )
+    result, record, child = run_mutation_agent_arm(
+        ohlcv, ep, seed=1, cost_bps=5.0, incumbent=incumbent, prior_result=prior,
+        mode="evidence_conditioned",
+    )
+    assert result.arm == "evidence_conditioned_mutation"
+    assert "high_drawdown" in record["diagnosis"]
+    assert child.prompt_template == "tool_aware_tuned_v2_learnings"
+    assert child.prompt_template != incumbent.prompt_template
+
+
+def test_random_mode_ignores_prior_result():
+    """The random-mutation arm's diagnosis must never reference the prior
+    episode's failure -- it's a control precisely because it ignores it."""
+    from src.agent.harness_config import harness_v1_base
+    from src.agent.search_arms import EpisodeResult, run_mutation_agent_arm
+
+    ohlcv = synthetic_ohlcv(seed=3, n_days=400, asset="SIM")
+    episodes = build_episodes(ohlcv, "SIM", n_episodes=1, dev_days=200, holdout_days=60)
+    ep = episodes[0]
+    incumbent = harness_v1_base()
+    prior = EpisodeResult(
+        arm="x", episode_id="ep_prior", seed=1, candidates=[], winner_params=None,
+        holdout_net_return=0.05, holdout_max_drawdown=0.40, holdout_turnover=0.1,
+        tool_calls=0, wall_time_s=0.0, status="ok",
+    )
+    _, record, _ = run_mutation_agent_arm(
+        ohlcv, ep, seed=1, cost_bps=5.0, incumbent=incumbent, prior_result=prior, mode="random",
+    )
+    assert "random_baseline" in record["diagnosis"]
+    assert "high_drawdown" not in record["diagnosis"]
+
+
+def test_shuffled_evidence_mode_uses_shuffle_source_not_true_prior():
+    """The shuffled-evidence control must derive its failure tag from
+    `shuffle_source_result`, not `prior_result` -- otherwise it's
+    indistinguishable from evidence_conditioned."""
+    from src.agent.harness_config import harness_v1_base
+    from src.agent.search_arms import EpisodeResult, run_mutation_agent_arm
+
+    ohlcv = synthetic_ohlcv(seed=3, n_days=400, asset="SIM")
+    episodes = build_episodes(ohlcv, "SIM", n_episodes=1, dev_days=200, holdout_days=60)
+    ep = episodes[0]
+    incumbent = harness_v1_base()
+
+    true_prior = EpisodeResult(  # high drawdown -- must NOT drive the mutation
+        arm="x", episode_id="ep_true_prior", seed=1, candidates=[], winner_params=None,
+        holdout_net_return=0.05, holdout_max_drawdown=0.40, holdout_turnover=0.1,
+        tool_calls=0, wall_time_s=0.0, status="ok",
+    )
+    shuffle_source = EpisodeResult(  # within bounds -- SHOULD drive the mutation
+        arm="x", episode_id="ep_wrong_episode", seed=1, candidates=[], winner_params=None,
+        holdout_net_return=0.02, holdout_max_drawdown=0.05, holdout_turnover=0.1,
+        tool_calls=0, wall_time_s=0.0, status="ok",
+    )
+    _, record, child = run_mutation_agent_arm(
+        ohlcv, ep, seed=1, cost_bps=5.0, incumbent=incumbent, prior_result=true_prior,
+        mode="shuffled_evidence", shuffle_source_result=shuffle_source,
+    )
+    assert "unspecified" in record["diagnosis"] or "no non-no-op" in record["diagnosis"]
+    assert "high_drawdown" not in record["diagnosis"]
+    # unspecified's mapped patch (grid_search_default) equals the incumbent's
+    # own template, so it falls through to the first distinct pool entry.
+    assert child.prompt_template == "tool_aware_default"
+
+
+def test_offline_benchmark_run_documents_that_mutation_arms_collapse_to_frozen_agent(tmp_path, monkeypatch):
+    """End-to-end honesty check for #31 acceptance: with no LLM key set, the
+    mutated prompt_template never reaches a live proposal backend (offline
+    FallbackPlanner ignores it), so the mutation arms MUST match
+    frozen_agent numerically -- and the report MUST say so explicitly rather
+    than let identical numbers pass as a silent null result."""
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import fair_search_benchmark
+
+    out = tmp_path / "bench.json"
+    monkeypatch.setattr(sys, "argv", [
+        "fair_search_benchmark.py", "--episodes", "1", "--seeds", "1", "2", "3",
+        "--max-iterations", "1", "--output", str(out),
+        "--splits-path", str(tmp_path / "splits.json"),
+    ])
+    fair_search_benchmark.main()
+
+    report = json.loads(out.read_text())
+    assert "mutation_arms_caveat" in report
+    assert "does not masquerade" in report["mutation_arms_caveat"]
+
+    frozen = report["arms"]["frozen_agent"]["summary"]["net_return_mean"]
+    for arm in ("evidence_conditioned_mutation", "random_mutation", "shuffled_evidence_mutation"):
+        assert report["arms"][arm]["summary"]["net_return_mean"] == frozen
+
+    # Offline: mutation never reaches the proposal backend, so every paired
+    # delta must be exactly zero with a CI that (degenerately) pins at zero.
+    for comparison in report["paired_comparisons"].values():
+        assert comparison["mean_delta"] == 0.0
+        assert comparison["n_dropped_missing_coverage"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Paired-uncertainty comparison
+# ---------------------------------------------------------------------------
+
+def test_paired_comparison_matches_by_episode_and_seed_not_position():
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import fair_search_benchmark
+
+    # Deliberately out-of-order / mismatched-length rows: pairing must be by
+    # (episode_id, seed), not list position.
+    rows_a = [
+        {"episode_id": "ep00", "seed": 1, "status": "ok", "holdout_net_return": 0.10},
+        {"episode_id": "ep01", "seed": 1, "status": "ok", "holdout_net_return": 0.20},
+    ]
+    rows_b = [
+        {"episode_id": "ep01", "seed": 1, "status": "ok", "holdout_net_return": 0.25},
+        {"episode_id": "ep00", "seed": 1, "status": "ok", "holdout_net_return": 0.12},
+    ]
+    result = fair_search_benchmark._paired_comparison(rows_a, rows_b)
+    assert result["n_paired"] == 2
+    # deltas: ep00 0.12-0.10=0.02, ep01 0.25-0.20=0.05 -> mean 0.035
+    assert abs(result["mean_delta"] - 0.035) < 1e-9
+    assert result["ci95_low"] <= result["mean_delta"] <= result["ci95_high"]
+
+
+def test_paired_comparison_drops_cells_missing_on_either_side():
+    rows_a = [
+        {"episode_id": "ep00", "seed": 1, "status": "ok", "holdout_net_return": 0.10},
+        {"episode_id": "ep01", "seed": 1, "status": "missing", "holdout_net_return": "missing"},
+    ]
+    rows_b = [
+        {"episode_id": "ep00", "seed": 1, "status": "ok", "holdout_net_return": 0.15},
+        {"episode_id": "ep01", "seed": 1, "status": "ok", "holdout_net_return": 0.50},
+    ]
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import fair_search_benchmark
+
+    result = fair_search_benchmark._paired_comparison(rows_a, rows_b)
+    assert result["n_paired"] == 1
+    assert result["n_dropped_missing_coverage"] == 1
+
+
+def test_paired_comparison_deterministic_ci_across_runs():
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import fair_search_benchmark
+
+    rows_a = [{"episode_id": f"ep{i:02d}", "seed": 1, "status": "ok", "holdout_net_return": 0.1 + 0.01 * i}
+              for i in range(10)]
+    rows_b = [{"episode_id": f"ep{i:02d}", "seed": 1, "status": "ok", "holdout_net_return": 0.12 + 0.01 * i}
+              for i in range(10)]
+    r1 = fair_search_benchmark._paired_comparison(rows_a, rows_b)
+    r2 = fair_search_benchmark._paired_comparison(rows_a, rows_b)
+    assert r1 == r2
