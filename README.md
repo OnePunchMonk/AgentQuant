@@ -385,10 +385,12 @@ until this experiment contract is stable, per issue #28's own ordering.
 ### Run Agent (Streamlit UI)
 
 ```bash
-streamlit run src/app/streamlit_app.py
+python run_app.py --app
 ```
 
-Interactively run the agent on chosen date ranges and assets.
+Interactively run the agent on chosen date ranges and assets. Requires the
+`ui` extra (`pip install -e ".[ui]"`); running `streamlit run
+src/app/streamlit_app.py` directly also works once that extra is installed.
 
 ---
 
