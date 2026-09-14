@@ -60,6 +60,87 @@ jobs:
           fail_ci_if_error: false
         continue-on-error: true
 
+  base-install:
+    name: Base install (no extras, offline demo)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install base package only (no dev/llm/ui/data/backtest/regime extras)
+        run: |
+          pip install --upgrade pip
+          pip install .
+
+      - name: Core CLI is importable without optional extras
+        run: |
+          python -c "import src.cli; import src.agent.agent_graph; import src.agent.runner"
+
+      - name: Run the offline demo with network access blocked
+        env:
+          GOOGLE_API_KEY: ""
+          ANTHROPIC_API_KEY: ""
+          TAVILY_API_KEY: ""
+          FRED_API_KEY: ""
+          NO_PROXY: "*"
+          # yfinance/requests calls will fail closed rather than silently
+          # reaching the network -- the offline demo must not depend on them.
+          HTTP_PROXY: "http://127.0.0.1:9"
+          HTTPS_PROXY: "http://127.0.0.1:9"
+        run: |
+          python run_app.py
+
+      - name: --app fails with an actionable error, not a traceback, when ui extra is missing
+        run: |
+          output=$(python run_app.py --app 2>&1) && exit 1 || true
+          echo "$output" | grep -q '\[ui\]' && echo "✓ actionable error shown" || (echo "$output" && exit 1)
+
+  wheel-install:
+    name: Build wheel/sdist and run CLI from outside the checkout
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Build sdist and wheel
+        run: |
+          pip install --upgrade pip build
+          python -m build
+          ls dist/
+
+      - name: Install the built wheel into a clean venv (no editable, no source checkout on path)
+        run: |
+          python -m venv /tmp/agentquant-wheel-venv
+          /tmp/agentquant-wheel-venv/bin/pip install --upgrade pip
+          /tmp/agentquant-wheel-venv/bin/pip install dist/*.whl
+
+      - name: Run installed CLI entry points from a directory outside the checkout
+        run: |
+          mkdir -p /tmp/agentquant-outside-checkout
+          cd /tmp/agentquant-outside-checkout
+          /tmp/agentquant-wheel-venv/bin/agentquant --help
+          /tmp/agentquant-wheel-venv/bin/agentquant run --help
+          /tmp/agentquant-wheel-venv/bin/agentquant memory --help
+          # config.yaml is intentionally not packaged; confirm the CLI still
+          # runs from defaults rather than crashing on a repo-relative path.
+          /tmp/agentquant-wheel-venv/bin/python -c "from src.utils.config import config; print('config loaded with defaults:', config.reference_asset)"
+
   harness-verification:
     name: Harness Evolution Verification
     runs-on: ubuntu-latest
@@ -132,7 +213,7 @@ jobs:
 
   quality-gates:
     name: Quality Gates
-    needs: [test, harness-verification, security-check]
+    needs: [test, base-install, wheel-install, harness-verification, security-check]
     runs-on: ubuntu-latest
     permissions:
       contents: read

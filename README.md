@@ -255,8 +255,11 @@ run's output JSON and in `experiments/run_manifests/<run_id>.json`.
 git clone https://github.com/OnePunchMonk/AgentQuant.git
 cd AgentQuant
 
-# Install with all extras
+# Install with all extras (adds LLM providers, tool-use search, and web research)
 pip install -e ".[dev,llm]"
+
+# Add the interactive Streamlit dashboard (only needed for `python run_app.py --app`)
+pip install -e ".[ui]"
 
 # Set API keys (optional; agent degrades gracefully without them)
 cp .env.example .env
