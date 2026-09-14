@@ -18,6 +18,18 @@ def ensure_directories():
 
 def run_streamlit():
     """Run the Streamlit application"""
+    try:
+        import streamlit  # noqa: F401
+    except ImportError:
+        print(
+            "The interactive dashboard needs the 'ui' extra, which is not installed.\n"
+            "Install it with:\n\n"
+            '    python -m pip install -e ".[ui]"\n\n'
+            "The core CLI and offline demo (python run_app.py, without --app) do not "
+            "require it."
+        )
+        raise SystemExit(1)
+
     # Ensure we're in the correct directory
     project_root = Path(__file__).parent
     os.chdir(project_root)

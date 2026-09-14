@@ -15,9 +15,6 @@ dependencies = [
     "pydantic>=2.0,<3.0",
     "yfinance>=0.2.28",
     "scipy>=1.12",
-    "streamlit>=1.39",
-    "plotly>=5.17",
-    "matplotlib>=3.8",
     "pyarrow>=16.0",
     "tabulate>=0.9",
     "rich>=13.7",
@@ -26,6 +23,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Interactive dashboard and plotting (src/app/streamlit_app.py,
+# src/visualization/plots.py). Not required for the CLI, the offline demo,
+# or the agent search loop -- nothing in the core import path touches these.
+ui = [
+    "streamlit>=1.39",
+    "plotly>=5.17",
+    "matplotlib>=3.8",
+]
 llm = [
     "google-generativeai>=0.8",
     "langchain>=0.2",
