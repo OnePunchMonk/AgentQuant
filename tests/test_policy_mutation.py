@@ -12,6 +12,7 @@ from src.agent.harness_config import harness_v1_base
 from src.agent.policy_mutation import (
     PROMOTION_EPSILON,
     FinalHoldoutGuard,
+    StructuredFailure,
     evaluate_promotion,
     propose_mutation,
     run_bounded_self_improvement,
@@ -217,6 +218,108 @@ def test_inconclusive_outer_loop_keeps_incumbent_selected(tmp_path):
     )
     assert result["promotion_decision"]["promote"] is False
     assert result["selected_policy_version"] == incumbent.version
+
+
+# ---------------------------------------------------------------------------
+# Evidence-conditioned mutation (diagnosis actually selects the patch)
+# ---------------------------------------------------------------------------
+
+def test_different_failure_tags_select_different_patches():
+    """The whole point of evidence-conditioning: distinct structured
+    failures must produce distinct, deterministic mutations -- this is the
+    test that catches diagnosis being ignored (e.g. a regression back to
+    rng.choice over the pool would make this flaky/wrong)."""
+    parent = harness_v1_base()
+    rng = random.Random(0)
+
+    _, child_drawdown = propose_mutation(
+        parent, rng, failures=[StructuredFailure("high_drawdown", "dd=0.31 > 0.20")]
+    )
+    _, child_ungrounded = propose_mutation(
+        parent, rng, failures=[StructuredFailure("ungrounded_hypothesis", "no external evidence cited")]
+    )
+    assert child_drawdown.prompt_template != child_ungrounded.prompt_template
+    assert child_drawdown.prompt_template == "tool_aware_tuned_v2_learnings"
+    assert child_ungrounded.prompt_template == "research_informed"
+
+
+def test_same_failure_tag_is_deterministic_regardless_of_rng_seed():
+    parent = harness_v1_base()
+    failures = [StructuredFailure("high_drawdown", "dd=0.31")]
+    _, child_a = propose_mutation(parent, random.Random(1), failures=failures)
+    _, child_b = propose_mutation(parent, random.Random(999), failures=failures)
+    assert child_a.prompt_template == child_b.prompt_template
+    assert child_a.prompt_context == child_b.prompt_context
+
+
+def test_diagnosis_records_traceable_reason_to_patch_mapping():
+    parent = harness_v1_base()
+    failures = [StructuredFailure("overfit_selection", "val sharpe >> dev sharpe by 0.6")]
+    record, _ = propose_mutation(parent, random.Random(0), failures=failures)
+    assert "overfit_selection" in record.diagnosis
+    assert "val sharpe >> dev sharpe by 0.6" in record.diagnosis
+
+
+def test_dominant_failure_that_would_be_a_noop_falls_through_to_next():
+    """If the top-ranked failure maps to the parent's own template (a no-op
+    mutation), the mechanism must not silently do nothing -- it must
+    consider the next failure in the list."""
+    parent = harness_v1_base()
+    parent.prompt_template = "tool_aware_tuned_v2_learnings"  # == high_drawdown's target
+    failures = [
+        StructuredFailure("high_drawdown", "dd=0.25"),  # maps to parent's own template
+        StructuredFailure("ungrounded_hypothesis", "no citations"),
+    ]
+    record, child = propose_mutation(parent, random.Random(0), failures=failures)
+    assert child.prompt_template == "research_informed"
+    assert "ungrounded_hypothesis" in record.diagnosis
+
+
+def test_unrecognized_failure_tag_is_rejected_not_ignored():
+    parent = harness_v1_base()
+    with pytest.raises(ValueError):
+        propose_mutation(parent, random.Random(0), failures=[StructuredFailure("made_up_tag", "n/a")])
+
+
+def test_random_baseline_ignores_structured_failures(tmp_path):
+    """The random control must sample the identical candidate space without
+    being conditioned on evidence -- otherwise it isn't a valid control."""
+    incumbent = harness_v1_base()
+    episodes = [_episode(i) for i in range(4)]
+    dev, val, final, protected = episodes[:2], [episodes[2]], [episodes[3]], episodes[1]
+    eval_fn = _fake_eval_fn({})
+    failures = [StructuredFailure("ungrounded_hypothesis", "no citations")]
+
+    with_failures = run_bounded_self_improvement(
+        incumbent, dev, val, final, protected, eval_fn, seeds=[1],
+        n_mutations=3, holdout_guard=FinalHoldoutGuard(tmp_path / "g1.json"),
+        use_random_baseline=True, rng_seed=7, structured_failures=failures,
+    )
+    without_failures = run_bounded_self_improvement(
+        incumbent, dev, val, final, protected, eval_fn, seeds=[1],
+        n_mutations=3, holdout_guard=FinalHoldoutGuard(tmp_path / "g2.json"),
+        use_random_baseline=True, rng_seed=7, structured_failures=None,
+    )
+    templates_a = [r["patch"]["prompt_template"] for r in with_failures["mutation_records"]]
+    templates_b = [r["patch"]["prompt_template"] for r in without_failures["mutation_records"]]
+    assert templates_a == templates_b  # same rng seed, same draws, evidence had no effect
+
+
+def test_evidence_conditioned_run_diagnosis_traces_to_supplied_evidence(tmp_path):
+    incumbent = harness_v1_base()
+    episodes = [_episode(i) for i in range(4)]
+    dev, val, final, protected = episodes[:2], [episodes[2]], [episodes[3]], episodes[1]
+    eval_fn = _fake_eval_fn({})
+    failures = [StructuredFailure("high_drawdown", "dd=0.31 > 0.20")]
+
+    result = run_bounded_self_improvement(
+        incumbent, dev, val, final, protected, eval_fn, seeds=[1],
+        n_mutations=2, holdout_guard=FinalHoldoutGuard(tmp_path / "g.json"),
+        use_random_baseline=False, rng_seed=0, structured_failures=failures,
+    )
+    for rec in result["mutation_records"]:
+        assert "high_drawdown" in rec["diagnosis"]
+        assert rec["patch"]["prompt_template"] == "tool_aware_tuned_v2_learnings"
 
 
 # ---------------------------------------------------------------------------
