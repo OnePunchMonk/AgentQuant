@@ -55,6 +55,43 @@ PROMPT_MUTATION_POOL = [
 
 
 @dataclass
+class StructuredFailure:
+    """One structured, machine-checkable failure signal about the incumbent
+    policy's recent episode(s) -- e.g. derived from reflect/backtest output,
+    not free-text. `tag` must be one of FAILURE_TAG_TO_PATCH's keys."""
+
+    tag: str
+    evidence: str  # e.g. "protected episode drawdown 0.31 > max_acceptable_drawdown 0.20"
+
+
+# Fixed, documented mapping from a structured failure tag to the single
+# candidate patch it selects. This is the entire evidence-conditioned
+# candidate space -- adding a tag or a patch requires touching this table,
+# so the reason-to-patch mapping stays traceable and cannot silently drift.
+# Every value must be a template name present in PROMPT_MUTATION_POOL.
+FAILURE_TAG_TO_PATCH: Dict[str, str] = {
+    # Sharpe/return well below threshold with no crisis/drawdown signal:
+    # try surfacing tool-derived signals instead of the un-augmented grid.
+    "low_return_no_tools": "tool_aware_default",
+    # Large drawdown / crisis-period underperformance: the pool's only patch
+    # that explicitly narrows windows and avoids overfit combos in crises.
+    "high_drawdown": "tool_aware_tuned_v2_learnings",
+    "overfit_selection": "tool_aware_tuned_v2_learnings",
+    # Reflect output indicates the policy is not grounding proposals in any
+    # external evidence/hypothesis: switch to the research-informed template.
+    "ungrounded_hypothesis": "research_informed",
+    # No specific failure identified (e.g. regressed for an unclear reason):
+    # fall back to the unaugmented baseline rather than guessing a "fix".
+    "unspecified": "grid_search_default",
+}
+
+_TEMPLATE_TO_PATCH = {p["prompt_template"]: p for p in PROMPT_MUTATION_POOL}
+assert set(FAILURE_TAG_TO_PATCH.values()) <= set(_TEMPLATE_TO_PATCH), (
+    "FAILURE_TAG_TO_PATCH references a template not in PROMPT_MUTATION_POOL"
+)
+
+
+@dataclass
 class PolicyMutationRecord:
     """A candidate policy mutation, fully auditable."""
 
@@ -85,16 +122,60 @@ def _policy_id(config: HarnessConfig) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
 
 
+def _patch_for_failures(
+    failures: List["StructuredFailure"], parent_template: str
+) -> Tuple[Dict[str, Any], str]:
+    """Deterministically select the patch dictated by the dominant (first)
+    structured failure, falling through to the next failure in order if the
+    dominant one maps to the parent's own template (a no-op mutation), and
+    finally to the fixed "unspecified" fallback. Never falls back to random
+    choice -- an unrecognized tag is a caller bug, not evidence to ignore."""
+    for failure in failures:
+        if failure.tag not in FAILURE_TAG_TO_PATCH:
+            raise ValueError(
+                f"unrecognized structured failure tag {failure.tag!r}; must be one of "
+                f"{sorted(FAILURE_TAG_TO_PATCH)} (add it to FAILURE_TAG_TO_PATCH, don't guess)"
+            )
+        template = FAILURE_TAG_TO_PATCH[failure.tag]
+        if template != parent_template:
+            reason = f"evidence-conditioned: failure={failure.tag!r} ({failure.evidence}) -> {template!r}"
+            return _TEMPLATE_TO_PATCH[template], reason
+
+    # Every mapped patch was a no-op relative to the parent (or no failures
+    # were supplied): fall back to the fixed unspecified-failure patch,
+    # rotating to the next distinct pool entry if even that is a no-op.
+    fallback_template = FAILURE_TAG_TO_PATCH["unspecified"]
+    if fallback_template == parent_template:
+        distinct = [p for p in PROMPT_MUTATION_POOL if p["prompt_template"] != parent_template]
+        patch = distinct[0] if distinct else PROMPT_MUTATION_POOL[0]
+    else:
+        patch = _TEMPLATE_TO_PATCH[fallback_template]
+    tags = [f.tag for f in failures]
+    reason = (
+        f"no non-no-op mapped patch among structured failures {tags}; "
+        f"falling back to unspecified-failure patch {patch['prompt_template']!r}"
+        if failures else
+        "no structured failure evidence supplied; using unspecified-failure patch "
+        f"{patch['prompt_template']!r}"
+    )
+    return patch, reason
+
+
 def propose_mutation(
     parent: HarnessConfig,
     rng: random.Random,
-    diagnosis: str = "heuristic: rotate prompt template/context based on prior reflect output",
+    failures: Optional[List["StructuredFailure"]] = None,
     evaluation_budget: int = 2,
 ) -> Tuple["PolicyMutationRecord", HarnessConfig]:
-    """Propose a diagnosis-driven mutation: pick a different point in the
-    prompt-template/context space than the parent."""
-    pool = [p for p in PROMPT_MUTATION_POOL if p["prompt_template"] != parent.prompt_template]
-    patch = rng.choice(pool) if pool else PROMPT_MUTATION_POOL[0]
+    """Propose an evidence-conditioned mutation: `failures` (structured,
+    machine-checkable failure signals from the parent's prior episode(s))
+    deterministically selects the patch via FAILURE_TAG_TO_PATCH -- diagnosis
+    text is never itself the selector, so a mutation can always be traced
+    back to the specific failure tag/evidence that caused it. `rng` is
+    accepted for interface parity with propose_random_mutation but is not
+    used to choose the patch."""
+    del rng  # unused: patch selection here is evidence-driven, not random
+    patch, reason = _patch_for_failures(failures or [], parent.prompt_template)
     child = HarnessConfig(**{**parent.to_dict()})
     child.version = f"mut_{uuid.uuid4().hex[:8]}"
     child.epoch = parent.epoch + 1
@@ -105,7 +186,7 @@ def propose_mutation(
         mutation_id=child.version,
         parent_policy_id=_policy_id(parent),
         patch=patch,
-        diagnosis=diagnosis,
+        diagnosis=reason,
         expected_benefit="untested; evaluated empirically on dev episodes",
         evaluation_budget=evaluation_budget,
         rollback_ref=_policy_id(parent),
@@ -255,20 +336,28 @@ def run_bounded_self_improvement(
     holdout_guard: Optional[FinalHoldoutGuard] = None,
     use_random_baseline: bool = False,
     rng_seed: int = 0,
+    structured_failures: Optional[List["StructuredFailure"]] = None,
 ) -> Dict[str, Any]:
     """Ties inner (eval_fn) and outer (mutation/promotion) loops together.
 
     eval_fn(policy, episode, seed) -> holdout sharpe for that episode/seed,
     reusing whatever inner-loop machinery the caller wires up (e.g.
     src.agent.search_arms.run_frozen_agent_arm under the hood).
+
+    `structured_failures`, when supplied, drives evidence-conditioned patch
+    selection for every candidate (see `_patch_for_failures`); it is ignored
+    by the random baseline, which must sample the identical candidate space
+    without using the evidence -- that's the whole point of the control.
     """
     rng = random.Random(rng_seed)
-    propose_fn = propose_random_mutation if use_random_baseline else propose_mutation
 
     mutation_records = []
     candidates: List[HarnessConfig] = []
     for _ in range(n_mutations):
-        record, child = propose_fn(incumbent, rng)
+        if use_random_baseline:
+            record, child = propose_random_mutation(incumbent, rng)
+        else:
+            record, child = propose_mutation(incumbent, rng, failures=structured_failures)
         mutation_records.append(record)
         candidates.append(child)
 
