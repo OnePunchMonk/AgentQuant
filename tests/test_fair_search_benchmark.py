@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from src.agent.episode_splits import (
     apply_transaction_costs,
@@ -308,6 +309,30 @@ def test_offline_benchmark_run_documents_that_mutation_arms_collapse_to_frozen_a
     for comparison in report["paired_comparisons"].values():
         assert comparison["mean_delta"] == 0.0
         assert comparison["n_dropped_missing_coverage"] == 0
+
+    assert report["live_mode"] is False
+
+
+def test_live_flag_without_any_llm_key_fails_loudly(tmp_path, monkeypatch):
+    """#31: --live must not silently degrade to the offline collapse when no
+    key is present -- it must fail loudly, so a "live" run can never
+    accidentally be an offline run that forgot to say so."""
+    import sys
+
+    for var in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import fair_search_benchmark
+
+    out = tmp_path / "bench.json"
+    monkeypatch.setattr(sys, "argv", [
+        "fair_search_benchmark.py", "--episodes", "1", "--seeds", "1", "2", "3",
+        "--max-iterations", "1", "--output", str(out), "--live",
+        "--splits-path", str(tmp_path / "splits.json"),
+    ])
+    with pytest.raises(RuntimeError, match="requires at least one of"):
+        fair_search_benchmark.main()
 
 
 # ---------------------------------------------------------------------------
