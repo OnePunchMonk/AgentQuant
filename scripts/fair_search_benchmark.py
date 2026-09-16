@@ -13,7 +13,10 @@ Usage:
 
 This is a development benchmark on deterministic synthetic fixtures, not a
 claim about live or historical trading performance. Runs offline (no LLM/API
-keys) by default via the agent's existing offline fallback path.
+keys) by default via the agent's existing offline fallback path. Pass
+--live (with an LLM key exported) to run the agent/mutation arms against the
+real backend instead -- see the `live` parameter on
+src.agent.search_arms._run_agent_offline.
 """
 from __future__ import annotations
 
@@ -160,6 +163,14 @@ def main() -> None:
     p.add_argument("--output", default="results/fair_search_benchmark.json")
     p.add_argument("--skip-agent-arms", action="store_true",
                     help="skip frozen_agent/frozen_agent_memory (faster, no agent_graph dependency)")
+    p.add_argument(
+        "--live", action="store_true",
+        help="Run agent/mutation arms against the real LLM backend instead of the offline "
+             "FallbackPlanner -- required to get a non-collapsed evidence_conditioned_mutation "
+             "vs random_mutation vs shuffled_evidence_mutation comparison (see issue #31). "
+             "Requires ANTHROPIC_API_KEY/OPENAI_API_KEY/GOOGLE_API_KEY to be set; fails loudly "
+             "if none is, rather than silently falling back to offline.",
+    )
     args = p.parse_args()
 
     if len(args.seeds) < 3:
@@ -191,7 +202,7 @@ def main() -> None:
 
     if not args.skip_agent_arms:
         run_arm("frozen_agent", lambda oh, ep, seed, cb: run_frozen_agent_arm(
-            oh, ep, seed, cb, max_iterations=args.max_iterations))
+            oh, ep, seed, cb, max_iterations=args.max_iterations, live=args.live))
 
         # frozen_agent_memory: one persistent memory db shared across
         # episodes IN CHRONOLOGICAL ORDER, reset once per seed so results
@@ -202,7 +213,7 @@ def main() -> None:
                 for ep in episodes:  # episodes list is already chronological
                     res = run_frozen_agent_memory_arm(
                         ohlcv, ep, seed, args.cost_bps, memory_db_path=memory_db,
-                        max_iterations=args.max_iterations,
+                        max_iterations=args.max_iterations, live=args.live,
                     )
                     report["arms"].setdefault("frozen_agent_memory", {"episode_results": []})
                     report["arms"]["frozen_agent_memory"]["episode_results"].append(res.to_dict())
@@ -237,7 +248,7 @@ def main() -> None:
                     result, record, child = run_mutation_agent_arm(
                         ohlcv, ep, seed, args.cost_bps, incumbent, prior_result,
                         mode=mode, shuffle_source_result=shuffle_source,
-                        max_iterations=args.max_iterations,
+                        max_iterations=args.max_iterations, live=args.live,
                     )
                     rows.append(result.to_dict())
                     mutation_log.append({"seed": seed, "episode_id": ep.episode_id, **record})
@@ -256,21 +267,32 @@ def main() -> None:
         "Missing/failed outcomes are reported as status='missing' and are not coerced into "
         "a fallback numeric score."
     )
-    if mutation_arms_ran:
+    report["live_mode"] = args.live
+    if mutation_arms_ran and not args.live:
         report["mutation_arms_caveat"] = (
-            "This run has no LLM API keys set, so hypothesize_node's tool-orchestration path "
-            "(the only path that reads _prompt_prefix_for's rendering of prompt_template/"
-            "prompt_context, per src/agent/agent_graph.py) never executes -- it fails closed to "
-            "the offline FallbackPlanner (grid search), which does not read prompt_template at "
-            "all. Consequently evidence_conditioned_mutation, random_mutation, and "
+            "This run has no LLM API keys set (pass --live with a key exported to change "
+            "that), so hypothesize_node's tool-orchestration path (the only path that reads "
+            "_prompt_prefix_for's rendering of prompt_template/prompt_context, per "
+            "src/agent/agent_graph.py) never executes -- it fails closed to the offline "
+            "FallbackPlanner (grid search), which does not read prompt_template at all. "
+            "Consequently evidence_conditioned_mutation, random_mutation, and "
             "shuffled_evidence_mutation are EXPECTED to produce identical numbers to "
             "frozen_agent/frozen_agent_memory in this offline configuration -- that is not a "
             "null result about evidence-conditioning, it is confirmation that the offline "
             "fallback does not masquerade as an LLM prompt intervention. A real comparison "
-            "between these three modes requires running with a live LLM key so the mutated "
-            "prompt actually reaches the proposal backend."
+            "between these three modes requires running with --live and a real LLM key so the "
+            "mutated prompt actually reaches the proposal backend."
+        )
+    elif mutation_arms_ran and args.live:
+        report["mutation_arms_caveat"] = (
+            "This run had --live set and an LLM key present, so hypothesize_node's "
+            "tool-orchestration path actually executed against the real backend -- "
+            "evidence_conditioned_mutation, random_mutation, and shuffled_evidence_mutation "
+            "results below reflect real mutated-prompt behavior, not the offline collapse. "
+            "See paired_comparisons for the matched-sample deltas."
         )
 
+    if mutation_arms_ran:
         # Paired uncertainty on the comparisons #31 actually asks about:
         # does evidence-conditioning beat no evidence, and does it beat
         # evidence that's present but attributed to the wrong episode?

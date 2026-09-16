@@ -279,15 +279,34 @@ def run_grid_search_arm(
                               cost_bps, 0, started)
 
 
+# Env vars that, if any is set, let the agent's real LLM backend execute
+# instead of the offline FallbackPlanner. Kept in one place so the offline
+# path (which strips them) and the live path (which requires one) can't
+# silently drift apart.
+_LLM_KEY_VARS = ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY")
+
+
 def _run_agent_offline(dev_ohlcv: Dict[str, pd.DataFrame], asset: str, seed: int,
                         memory_db_path: str, max_iterations: int = 2,
                         harness_config: Optional[Any] = None,
-                        cost_bps: Optional[float] = None) -> Dict[str, Any]:
+                        cost_bps: Optional[float] = None,
+                        live: bool = False) -> Dict[str, Any]:
     """Invoke the existing propose->backtest->reflect inner loop
-    (src.agent.agent_graph.run_agent) once, offline (no LLM/network calls),
-    pointed at an explicit memory db path. Does not change agent_graph's
-    core semantics -- just calls it per-episode with a controlled memory
-    snapshot.
+    (src.agent.agent_graph.run_agent) once, pointed at an explicit memory
+    db path. Does not change agent_graph's core semantics -- just calls it
+    per-episode with a controlled memory snapshot.
+
+    By default (`live=False`) this strips every LLM/API key from the
+    environment and forces AGENTQUANT_OFFLINE=1, so mutated
+    prompt_template/prompt_context settings are evaluated through the
+    offline FallbackPlanner (see issue #31's `mutation_arms_caveat`: in this
+    mode, mutation arms necessarily collapse to `frozen_agent`, since
+    `_prompt_prefix_for` is only read on the LLM-orchestration path).
+
+    `live=True` opts into actually calling the real LLM backend instead --
+    it does NOT strip keys or force offline mode, and it fails loudly if no
+    known key is present, rather than silently falling back to offline and
+    letting that read as a "live" comparison that never actually ran live.
 
     `harness_config` (a HarnessConfig or EffectiveHarnessConfig) is forwarded
     straight into run_agent so the policy actually being evaluated (e.g. its
@@ -306,9 +325,19 @@ def _run_agent_offline(dev_ohlcv: Dict[str, pd.DataFrame], asset: str, seed: int
     from src.agent.agent_graph import run_agent
     from src.utils.config import config as app_config
 
-    for var in ("ANTHROPIC_API_KEY", "TAVILY_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY"):
-        os.environ.pop(var, None)
-    os.environ["AGENTQUANT_OFFLINE"] = "1"
+    if live:
+        if not any(os.environ.get(var) for var in _LLM_KEY_VARS):
+            raise RuntimeError(
+                "live=True requires at least one of "
+                f"{_LLM_KEY_VARS} to be set in the environment; refusing to silently "
+                "fall back to the offline FallbackPlanner and have that masquerade as "
+                "a live LLM run."
+            )
+        os.environ.pop("AGENTQUANT_OFFLINE", None)
+    else:
+        for var in ("ANTHROPIC_API_KEY", "TAVILY_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY"):
+            os.environ.pop(var, None)
+        os.environ["AGENTQUANT_OFFLINE"] = "1"
 
     original_db_path = app_config.results_db_path
     original_market_impact_bps = app_config.backtest.market_impact_bps
@@ -330,15 +359,19 @@ def _run_agent_offline(dev_ohlcv: Dict[str, pd.DataFrame], asset: str, seed: int
 
 def run_frozen_agent_arm(
     ohlcv: Dict[str, pd.DataFrame], episode: Episode, seed: int, cost_bps: float,
-    max_iterations: int = 2,
+    max_iterations: int = 2, live: bool = False,
 ) -> EpisodeResult:
     """LLM agent loop run once per episode, no memory carried across
-    episodes: a fresh, empty memory snapshot each time."""
+    episodes: a fresh, empty memory snapshot each time.
+
+    `live`: see `_run_agent_offline` -- default False runs offline against
+    the FallbackPlanner; True requires an LLM key and calls the real
+    backend."""
     started = time.time()
     dev_ohlcv = slice_dev(ohlcv, episode)
     with tempfile.TemporaryDirectory() as tmp:
         state = _run_agent_offline(dev_ohlcv, episode.asset, seed, str(Path(tmp) / "memory.db"),
-                                    max_iterations=max_iterations)
+                                    max_iterations=max_iterations, live=live)
     candidates = [
         Candidate(params=r.get("params"), dev_sharpe=r.get("sharpe"), status="ok",
                   generation_method=r.get("generation_method", "agent"))
@@ -355,17 +388,19 @@ def run_frozen_agent_arm(
 
 def run_frozen_agent_memory_arm(
     ohlcv: Dict[str, pd.DataFrame], episode: Episode, seed: int, cost_bps: float,
-    memory_db_path: str, max_iterations: int = 2,
+    memory_db_path: str, max_iterations: int = 2, live: bool = False,
 ) -> EpisodeResult:
     """Same agent loop as `frozen_agent`, but reusing one persistent memory
     db path across the *chronologically earlier* episodes only. The caller
     is responsible for invoking this arm in chronological episode order and
     passing the same `memory_db_path` throughout a run, so episode N can
-    only ever read memory rows written while grading episodes < N."""
+    only ever read memory rows written while grading episodes < N.
+
+    `live`: see `_run_agent_offline`."""
     started = time.time()
     dev_ohlcv = slice_dev(ohlcv, episode)
     state = _run_agent_offline(dev_ohlcv, episode.asset, seed, memory_db_path,
-                                max_iterations=max_iterations)
+                                max_iterations=max_iterations, live=live)
     candidates = [
         Candidate(params=r.get("params"), dev_sharpe=r.get("sharpe"), status="ok",
                   generation_method=r.get("generation_method", "agent"))
@@ -409,7 +444,7 @@ def run_mutation_agent_arm(
     incumbent: Any, prior_result: Optional[EpisodeResult],
     mode: str,  # "evidence_conditioned" | "random" | "shuffled_evidence"
     shuffle_source_result: Optional[EpisodeResult] = None,
-    max_iterations: int = 2,
+    max_iterations: int = 2, live: bool = False,
 ) -> "tuple[EpisodeResult, Dict[str, Any], Any]":
     """Mutate `incumbent` once (per `mode`), run the agent loop under the
     mutated policy for this episode, grade on holdout. Returns
@@ -420,7 +455,13 @@ def run_mutation_agent_arm(
     `shuffle_source_result` supplies the (wrong-episode) prior result the
     "shuffled_evidence" control derives its failure tag from -- the caller
     is responsible for choosing a result from a *different* episode than
-    the one being mutated for."""
+    the one being mutated for.
+
+    `live`: see `_run_agent_offline`. Offline (default) is where the three
+    mutation arms necessarily collapse to identical numbers (see
+    `mutation_arms_caveat` in fair_search_benchmark.py) since the offline
+    FallbackPlanner never reads prompt_template; `live=True` is required to
+    get a real evidence-conditioned-vs-random comparison."""
     import random as _random
 
     from src.agent.policy_mutation import propose_mutation, propose_random_mutation
@@ -443,7 +484,7 @@ def run_mutation_agent_arm(
     with tempfile.TemporaryDirectory() as tmp:
         state = _run_agent_offline(dev_ohlcv, episode.asset, seed, str(Path(tmp) / "memory.db"),
                                     max_iterations=max_iterations, harness_config=child,
-                                    cost_bps=cost_bps)
+                                    cost_bps=cost_bps, live=live)
     candidates = [
         Candidate(params=r.get("params"), dev_sharpe=r.get("sharpe"), status="ok",
                   generation_method=r.get("generation_method", "agent"))
