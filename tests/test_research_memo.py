@@ -108,3 +108,33 @@ def test_memo_end_to_end_produces_all_required_sections():
         "a": "grid_search_default",
         "b": "tool_aware_default",
     }
+
+
+def test_memo_includes_self_contained_html_with_required_sections():
+    result = _minimal_episode_result(promote=True)
+    memo = build_research_memo(
+        result,
+        rerun_command="python scripts/export_research_memo.py --episodes 4",
+        data_access_requirements="offline synthetic data only, no network access",
+    )
+    html = memo["html"]
+    assert html.startswith("<!doctype html>")
+    assert "<title>Research Episode Memo</title>" in html
+    for heading in [
+        "1. Hypothesis", "2. Evidence Available At The Time", "3. Experiment",
+        "4. Promotion Decision", "5. Policy Change", "6. Fresh Result",
+        "7. Rejected / Attempted Candidates",
+    ]:
+        assert heading in html
+    assert "offline synthetic data only" in html
+    # No external stylesheets/scripts -- self-contained.
+    assert "<link" not in html
+    assert "src=\"http" not in html
+
+
+def test_memo_marks_missing_data_access_requirements_unavailable():
+    result = _minimal_episode_result()
+    memo = build_research_memo(result)
+    data = json.loads(memo["json"])
+    assert data["data_access_requirements"] == UNAVAILABLE
+    assert UNAVAILABLE in memo["html"]
