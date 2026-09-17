@@ -195,6 +195,39 @@ class OpenAIPlanner(BasePlanner):
         return GeminiPlanner._parse_json_response(None, text, n)
 
 
+class ClaudePlanner(BasePlanner):
+    """Anthropic Claude implementation for users with an Anthropic key."""
+
+    def __init__(self):
+        self._api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        self._model_name = config.llm.model if config.llm.provider == "claude" else "claude-sonnet-5"
+
+    def is_available(self) -> bool:
+        if not _looks_like_valid_key(self._api_key):
+            return False
+        try:
+            import anthropic  # noqa: F401
+            return True
+        except ImportError:
+            return False
+
+    def generate_proposals(self, prompt: str, n: int = 5) -> List[Dict[str, Any]]:
+        import anthropic
+
+        client = anthropic.Anthropic(api_key=self._api_key)
+        response = _call_with_retry(
+            lambda: client.messages.create(
+                model=self._model_name,
+                max_tokens=4096,
+                temperature=config.llm.temperature,
+                messages=[{"role": "user", "content": prompt}],
+            ),
+            config.llm.max_retries,
+        )
+        text = "".join(block.text for block in response.content if hasattr(block, "text"))
+        return GeminiPlanner._parse_json_response(None, text, n)
+
+
 class FallbackPlanner(BasePlanner):
     """No-LLM fallback — always returns empty (caller uses grid search)."""
 
@@ -217,10 +250,11 @@ def create_planner(provider: Optional[str] = None) -> BasePlanner:
     planners = {
         "gemini": [LangChainPlanner, GeminiPlanner],
         "openai": [OpenAIPlanner],
+        "claude": [ClaudePlanner],
         "ollama": [FallbackPlanner],  # placeholder for future Ollama support
     }
 
-    candidates = planners.get(provider, [GeminiPlanner, OpenAIPlanner])
+    candidates = planners.get(provider, [GeminiPlanner, OpenAIPlanner, ClaudePlanner])
 
     for planner_cls in candidates:
         planner = planner_cls()
