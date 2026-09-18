@@ -2,8 +2,8 @@
 
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-passing-brightgreen)](https://github.com/OnePunchMonk/AgentQuant/actions)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-111%20passed-brightgreen)
-![Last Updated](https://img.shields.io/badge/last%20updated-2026--09--17-blue)
+![Tests](https://img.shields.io/badge/tests-126%20passed-brightgreen)
+![Last Updated](https://img.shields.io/badge/last%20updated-2026--09--19-blue)
 
 > **AgentQuant does not just search for trading strategies; it evolves how it searches for them.**
 
@@ -26,6 +26,14 @@ python -m pip install -e ".[dev]"
 python run_app.py
 ```
 
+The base install is enough for the CLI, offline demo, and search loop. Add the
+optional extras only when you need them:
+
+```bash
+python -m pip install -e ".[ui]"       # Streamlit dashboard and plots
+python -m pip install -e ".[llm]"      # LLM-guided proposals and web research
+```
+
 The demo validates installation, the core search loop, metric calculation, and
 artifact generation; it does not establish live-trading performance.
 
@@ -34,6 +42,8 @@ To launch the interactive Streamlit app instead:
 ```bash
 python run_app.py --app
 ```
+
+The dashboard requires the `ui` extra shown above.
 
 Add `ANTHROPIC_API_KEY` and `TAVILY_API_KEY` later to unlock optional
 LLM-guided proposals and web research; the core loop remains runnable without
