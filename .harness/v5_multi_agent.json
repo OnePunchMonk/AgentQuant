@@ -1,20 +1,19 @@
 {
-  "version": "v6_research",
-  "epoch": 6,
-  "created": "2026-09-20T00:52:38.536902",
+  "version": "v5_multi_agent",
+  "epoch": 5,
+  "created": "2026-09-20T00:52:38.536897",
   "use_tools": true,
   "use_web_search": true,
   "use_ensemble": true,
   "tool_weight": 0.4,
-  "prompt_template": "research_informed",
+  "prompt_template": "tool_aware_tuned_v2_learnings",
   "prompt_context": {
-    "research_sources": [
-      "academic_papers",
-      "industry_research",
-      "strategy_blogs"
+    "ensemble_strategies": [
+      "tool_based_proposals",
+      "grid_search_winners",
+      "random_exploration"
     ],
-    "hypothesis_generation": "enabled",
-    "citation_tracking": "enabled"
+    "voting_method": "sharpe_weighted"
   },
   "temperature": 0.2,
   "max_retries": 2,
@@ -35,7 +34,7 @@
   "min_acceptable_sharpe": 0.3,
   "max_acceptable_drawdown": 0.2,
   "required_win_rate": 0.0,
-  "description": "Research agent discovers ideas; tools validate",
-  "reasoning": "Research agent searches literature; validates via tools",
-  "expected_improvement": "+3-7% (novel research-backed ideas)"
+  "description": "Multi-agent ensemble (tools + grid + random)",
+  "reasoning": "Combine multiple proposal strategies; ensemble voting",
+  "expected_improvement": "+2-4% (ensemble diversity)"
 }

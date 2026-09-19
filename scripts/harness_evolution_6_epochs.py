@@ -186,10 +186,9 @@ class MultiIterationHarnessEvolution:
     def load_data(self) -> None:
         """Load market data once."""
         logger.info("Loading market data (5 years)...")
-        self.ohlcv_data = load_ohlcv_data(
-            tickers=config.universe,
-            period=config.data.yfinance_period,
-        )
+        # fetch_ohlcv_data(ticker=None) fetches the full config.universe (+ VIX)
+        # over config.data.yfinance_period -- it takes no tickers=/period= kwargs.
+        self.ohlcv_data = load_ohlcv_data()
 
     def run_all_epochs(self) -> None:
         """Run 6 epochs with iterative evolution."""
