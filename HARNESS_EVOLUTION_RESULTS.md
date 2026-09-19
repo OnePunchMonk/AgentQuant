@@ -11,6 +11,21 @@
 > Table, not as measured historical results. To regenerate a trustworthy version of
 > this report, run `python3 scripts/harness_evolution_6_epochs.py` on the current
 > branch and cite the resulting `results.json` + `experiments/run_manifests/*.json`.
+>
+> **2026-09-20 update (issue #19):** `scripts/harness_evolution_6_epochs.py` could not
+> actually run before this date — it called `fetch_ohlcv_data(tickers=..., period=...)`,
+> which doesn't match that function's real signature (`ticker=`, no `period=` kwarg), so
+> every number below and in `results/harness_evolution_6epochs_results.json` predates any
+> real execution. That call is now fixed, and `results/harness_evolution_6epochs_results.json`
+> has been regenerated from an actual run against real yfinance SPY history. Without an
+> LLM API key set (the environment this was regenerated in has none), all 6 epochs
+> execute the identical offline `FallbackPlanner` grid search — `prompt_template` is
+> never read, so `v1_base` through `v6_research` produce byte-identical Sharpe (0.581)
+> and 0.0% epoch-over-epoch improvement, with `tool_calls: 0` throughout. That flat
+> result is the real, reproducible offline number, not a bug: the epoch-over-epoch
+> improvement narrative in this file (tool calls 0→8, +37.4% Sharpe) has never been
+> reproduced end-to-end and requires re-running with `ANTHROPIC_API_KEY` (and ideally
+> `TAVILY_API_KEY`) exported to mean anything.
 
 ## Executive Summary
 

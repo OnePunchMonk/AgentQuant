@@ -1,66 +1,360 @@
 {
-  "timestamp": "2026-08-28T12:45:00",
+  "timestamp": "2026-09-20T00:52:38.538814",
   "strategy": "momentum",
   "asset": "SPY",
   "strategies": [
     {
       "name": "Manual Evolution (Hand-crafted)",
       "type": "manual",
-      "fitness_scores": [0.452, 0.523, 0.541, 0.572, 0.589, 0.621],
-      "execution_time": 379.2,
-      "final_sharpe": 0.621,
-      "improvement_pct": 37.4,
-      "description": "v1 → v6 progression with strategic changes each epoch"
+      "configs": [
+        {
+          "version": "v1_base",
+          "epoch": 1,
+          "created": "2026-09-20T00:52:38.536875",
+          "use_tools": false,
+          "use_web_search": false,
+          "use_ensemble": false,
+          "tool_weight": 0.5,
+          "prompt_template": "grid_search_default",
+          "prompt_context": {},
+          "temperature": 0.2,
+          "max_retries": 2,
+          "grid_adaptation_strategy": null,
+          "grid_params": {},
+          "grid_focus_regions": [],
+          "track_falsifiable_claims": false,
+          "claim_weighting": 0.5,
+          "min_acceptable_sharpe": 0.3,
+          "max_acceptable_drawdown": 0.2,
+          "required_win_rate": 0.0,
+          "description": "Baseline grid search (no tools)",
+          "reasoning": "Establish baseline performance with grid sampling",
+          "expected_improvement": "Reference point (0%)"
+        },
+        {
+          "version": "v2_tool_aware",
+          "epoch": 2,
+          "created": "2026-09-20T00:52:38.536884",
+          "use_tools": true,
+          "use_web_search": true,
+          "use_ensemble": false,
+          "tool_weight": 0.6,
+          "prompt_template": "tool_aware_default",
+          "prompt_context": {},
+          "temperature": 0.2,
+          "max_retries": 2,
+          "grid_adaptation_strategy": null,
+          "grid_params": {},
+          "grid_focus_regions": [],
+          "track_falsifiable_claims": true,
+          "claim_weighting": 0.5,
+          "min_acceptable_sharpe": 0.3,
+          "max_acceptable_drawdown": 0.2,
+          "required_win_rate": 0.0,
+          "description": "Enable tool orchestration (Claude + Tavily)",
+          "reasoning": "Tools help gather market context; enable web search integration",
+          "expected_improvement": "+10-15% (tools provide better context)"
+        },
+        {
+          "version": "v3_prompt_tuned",
+          "epoch": 3,
+          "created": "2026-09-20T00:52:38.536888",
+          "use_tools": true,
+          "use_web_search": true,
+          "use_ensemble": false,
+          "tool_weight": 0.6,
+          "prompt_template": "tool_aware_tuned_v2_learnings",
+          "prompt_context": {
+            "emphasis": [
+              "short windows in crisis",
+              "momentum in bull markets"
+            ],
+            "avoid": [
+              "parameter combinations that underperformed"
+            ]
+          },
+          "temperature": 0.2,
+          "max_retries": 2,
+          "grid_adaptation_strategy": null,
+          "grid_params": {},
+          "grid_focus_regions": [],
+          "track_falsifiable_claims": true,
+          "claim_weighting": 0.5,
+          "min_acceptable_sharpe": 0.3,
+          "max_acceptable_drawdown": 0.2,
+          "required_win_rate": 0.0,
+          "description": "Optimized prompt based on v2 learnings",
+          "reasoning": "Use v2 results to refine LLM prompt; emphasize what worked",
+          "expected_improvement": "+3-5% (refined guidance to Claude)"
+        },
+        {
+          "version": "v4_grid_evolved",
+          "epoch": 4,
+          "created": "2026-09-20T00:52:38.536892",
+          "use_tools": true,
+          "use_web_search": true,
+          "use_ensemble": false,
+          "tool_weight": 0.6,
+          "prompt_template": "tool_aware_tuned_v2_learnings",
+          "prompt_context": {
+            "emphasis": [
+              "short windows in crisis",
+              "momentum in bull markets"
+            ],
+            "avoid": [
+              "parameter combinations that underperformed"
+            ]
+          },
+          "temperature": 0.2,
+          "max_retries": 2,
+          "grid_adaptation_strategy": "shrink_to_winners",
+          "grid_params": {},
+          "grid_focus_regions": [
+            {
+              "description": "High-Sharpe regions",
+              "samples_per_region": 5
+            },
+            {
+              "description": "Stable combinations",
+              "samples_per_region": 3
+            }
+          ],
+          "track_falsifiable_claims": true,
+          "claim_weighting": 0.5,
+          "min_acceptable_sharpe": 0.3,
+          "max_acceptable_drawdown": 0.2,
+          "required_win_rate": 0.0,
+          "description": "Parameter grid evolved toward high-performers",
+          "reasoning": "Focus search on discovered high-performing regions",
+          "expected_improvement": "+5-8% (concentrated search)"
+        },
+        {
+          "version": "v5_multi_agent",
+          "epoch": 5,
+          "created": "2026-09-20T00:52:38.536897",
+          "use_tools": true,
+          "use_web_search": true,
+          "use_ensemble": true,
+          "tool_weight": 0.4,
+          "prompt_template": "tool_aware_tuned_v2_learnings",
+          "prompt_context": {
+            "ensemble_strategies": [
+              "tool_based_proposals",
+              "grid_search_winners",
+              "random_exploration"
+            ],
+            "voting_method": "sharpe_weighted"
+          },
+          "temperature": 0.2,
+          "max_retries": 2,
+          "grid_adaptation_strategy": "shrink_to_winners",
+          "grid_params": {},
+          "grid_focus_regions": [
+            {
+              "description": "High-Sharpe regions",
+              "samples_per_region": 5
+            },
+            {
+              "description": "Stable combinations",
+              "samples_per_region": 3
+            }
+          ],
+          "track_falsifiable_claims": true,
+          "claim_weighting": 0.5,
+          "min_acceptable_sharpe": 0.3,
+          "max_acceptable_drawdown": 0.2,
+          "required_win_rate": 0.0,
+          "description": "Multi-agent ensemble (tools + grid + random)",
+          "reasoning": "Combine multiple proposal strategies; ensemble voting",
+          "expected_improvement": "+2-4% (ensemble diversity)"
+        },
+        {
+          "version": "v6_research",
+          "epoch": 6,
+          "created": "2026-09-20T00:52:38.536902",
+          "use_tools": true,
+          "use_web_search": true,
+          "use_ensemble": true,
+          "tool_weight": 0.4,
+          "prompt_template": "research_informed",
+          "prompt_context": {
+            "research_sources": [
+              "academic_papers",
+              "industry_research",
+              "strategy_blogs"
+            ],
+            "hypothesis_generation": "enabled",
+            "citation_tracking": "enabled"
+          },
+          "temperature": 0.2,
+          "max_retries": 2,
+          "grid_adaptation_strategy": "shrink_to_winners",
+          "grid_params": {},
+          "grid_focus_regions": [
+            {
+              "description": "High-Sharpe regions",
+              "samples_per_region": 5
+            },
+            {
+              "description": "Stable combinations",
+              "samples_per_region": 3
+            }
+          ],
+          "track_falsifiable_claims": true,
+          "claim_weighting": 0.5,
+          "min_acceptable_sharpe": 0.3,
+          "max_acceptable_drawdown": 0.2,
+          "required_win_rate": 0.0,
+          "description": "Research agent discovers ideas; tools validate",
+          "reasoning": "Research agent searches literature; validates via tools",
+          "expected_improvement": "+3-7% (novel research-backed ideas)"
+        }
+      ],
+      "fitness_scores": [
+        0.3754483579515349,
+        0.5227735242555718,
+        0.5310146008822704,
+        0.533698816617367,
+        0.5999925608079174,
+        0.5849097944821023
+      ],
+      "execution_time": 0.0009589195251464844,
+      "final_sharpe": 0.5849097944821023,
+      "improvement_pct": 55.78967975073843,
+      "description": "v1 \u2192 v6 progression with strategic changes each epoch"
     },
     {
       "name": "Genetic Algorithm",
       "type": "ga",
-      "fitness_scores": [0.438, 0.465, 0.502, 0.528, 0.556, 0.594],
-      "execution_time": 312.5,
-      "final_sharpe": 0.594,
-      "improvement_pct": 35.6,
-      "description": "GA: 20 population × 5 generations, found near-optimal harness"
+      "configs": [
+        {
+          "version": "v_ga_optimal",
+          "epoch": 99,
+          "created": "2026-09-20T00:52:38.538396",
+          "use_tools": true,
+          "use_web_search": true,
+          "use_ensemble": true,
+          "tool_weight": 0.5999651038719052,
+          "prompt_template": "default",
+          "prompt_context": {},
+          "temperature": 0.2018636139172954,
+          "max_retries": 2,
+          "grid_adaptation_strategy": "expand_neighborhood",
+          "grid_params": {},
+          "grid_focus_regions": [],
+          "track_falsifiable_claims": true,
+          "claim_weighting": 0.5195254110529962,
+          "min_acceptable_sharpe": 0.3,
+          "max_acceptable_drawdown": 0.2,
+          "required_win_rate": 0.0,
+          "description": "",
+          "reasoning": "",
+          "expected_improvement": ""
+        }
+      ],
+      "fitness_scores": [
+        0.4649782901411184,
+        0.5513586283846412,
+        0.5876426124287695,
+        0.6071940461203769,
+        0.6206965341604088
+      ],
+      "execution_time": 0.0005431175231933594,
+      "final_sharpe": 0.6503630759974766,
+      "improvement_pct": 33.48935795949328,
+      "description": "GA: 20 population \u00d7 5 generations, found optimal harness"
     },
     {
       "name": "Differential Evolution",
       "type": "de",
-      "fitness_scores": [0.445, 0.471, 0.491, 0.518, 0.542, 0.571],
-      "execution_time": 287.3,
-      "final_sharpe": 0.571,
-      "improvement_pct": 28.3,
-      "description": "DE: 20 population × 5 generations, continuous optimization"
+      "configs": [
+        {
+          "version": "v_de_optimal",
+          "epoch": 99,
+          "created": "2026-09-20T00:52:38.538734",
+          "use_tools": true,
+          "use_web_search": false,
+          "use_ensemble": false,
+          "tool_weight": 0.43567871338564523,
+          "prompt_template": "default",
+          "prompt_context": {},
+          "temperature": 0.0,
+          "max_retries": 2,
+          "grid_adaptation_strategy": null,
+          "grid_params": {},
+          "grid_focus_regions": [],
+          "track_falsifiable_claims": true,
+          "claim_weighting": 0.35902293722996564,
+          "min_acceptable_sharpe": 0.3,
+          "max_acceptable_drawdown": 0.2,
+          "required_win_rate": 0.0,
+          "description": "",
+          "reasoning": "",
+          "expected_improvement": ""
+        }
+      ],
+      "fitness_scores": [
+        0.41322790625781397,
+        0.41770553089103996,
+        0.42161683323528026,
+        0.42581569686540044,
+        0.4303193808822181
+      ],
+      "execution_time": 0.0003173351287841797,
+      "final_sharpe": 0.5064317164197798,
+      "improvement_pct": 4.136089156994329,
+      "description": "DE: 20 population \u00d7 5 generations, continuous optimization"
     },
     {
       "name": "Random Baseline",
       "type": "random",
-      "fitness_scores": [0.412, 0.428, 0.441, 0.437, 0.451, 0.465],
-      "execution_time": 42.1,
-      "final_sharpe": 0.465,
-      "improvement_pct": 12.9,
+      "configs": [
+        {
+          "version": "v_random_best",
+          "epoch": 99,
+          "created": "2026-09-20T00:52:38.538796",
+          "use_tools": false,
+          "use_web_search": false,
+          "use_ensemble": false,
+          "tool_weight": 0.5,
+          "prompt_template": "default",
+          "prompt_context": {},
+          "temperature": 0.2,
+          "max_retries": 2,
+          "grid_adaptation_strategy": null,
+          "grid_params": {},
+          "grid_focus_regions": [],
+          "track_falsifiable_claims": false,
+          "claim_weighting": 0.5,
+          "min_acceptable_sharpe": 0.3,
+          "max_acceptable_drawdown": 0.2,
+          "required_win_rate": 0.0,
+          "description": "",
+          "reasoning": "",
+          "expected_improvement": ""
+        }
+      ],
+      "fitness_scores": [
+        0.44412206160758405,
+        0.4646040400914172,
+        0.43923686355074637,
+        0.6546414389150469,
+        0.35968022271345074,
+        0.5188724911835969
+      ],
+      "execution_time": 4.1961669921875e-05,
+      "final_sharpe": 0.6546414389150469,
+      "improvement_pct": 16.83105525211684,
       "description": "6 random harness configurations (control)"
     }
   ],
   "summary": {
-    "best_strategy": "Manual Evolution (Hand-crafted)",
-    "best_sharpe": 0.621,
-    "average_sharpe": 0.563,
+    "best_strategy": "Random Baseline",
+    "best_sharpe": 0.6546414389150469,
+    "average_sharpe": 0.5990865064536014,
     "fastest_strategy": "Random Baseline",
-    "fastest_time": 42.1,
+    "fastest_time": 4.1961669921875e-05,
     "most_improved": "Manual Evolution (Hand-crafted)",
-    "max_improvement": 37.4,
-    "analysis": {
-      "manual_vs_ga": "Manual achieved 0.027 sharpe advantage (4.5%) over GA due to domain knowledge encoding",
-      "manual_vs_de": "Manual achieved 0.050 sharpe advantage (8.8%) over DE - discrete decisions matter",
-      "manual_vs_random": "Manual achieved 0.156 sharpe advantage (33.5%) over random baseline",
-      "ga_advantage": "GA found good solutions in less computation time (312.5s vs 379.2s for manual)",
-      "de_advantage": "DE's continuous optimization excelled but discrete harness choices hurt performance",
-      "key_finding": "Domain knowledge beats algorithmic search in small parameter spaces with discrete decisions"
-    }
-  },
-  "recommendations": {
-    "next_iteration": "Combine manual strategy framework with GA fine-tuning on continuous parameters",
-    "multi_objective": "Optimize both Sharpe (0.621) and Drawdown (0.138) simultaneously",
-    "nested_optimization": "Use GA to evolve GA parameters (population size, mutation rate)",
-    "production_ready": "Manual evolution v6_research harness ready for deployment"
+    "max_improvement": 55.78967975073843
   }
 }
