@@ -1,0 +1,6029 @@
+{
+  "episodes": [
+    {
+      "episode_id": "ep00",
+      "asset": "SIM",
+      "dev_start": "2015-01-01",
+      "dev_end": "2015-11-04",
+      "holdout_start": "2015-11-05",
+      "holdout_end": "2016-01-27"
+    },
+    {
+      "episode_id": "ep01",
+      "asset": "SIM",
+      "dev_start": "2016-01-28",
+      "dev_end": "2016-11-30",
+      "holdout_start": "2016-12-01",
+      "holdout_end": "2017-02-22"
+    },
+    {
+      "episode_id": "ep02",
+      "asset": "SIM",
+      "dev_start": "2017-02-23",
+      "dev_end": "2017-12-27",
+      "holdout_start": "2017-12-28",
+      "holdout_end": "2018-03-21"
+    }
+  ],
+  "arms": {
+    "fixed": {
+      "episode_results": [
+        {
+          "arm": "fixed",
+          "episode_id": "ep00",
+          "seed": 7,
+          "n_candidates": 1,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "strategy": "buy_and_hold"
+              },
+              "dev_sharpe": -1.8352901840019262,
+              "status": "ok",
+              "generation_method": "fixed",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "strategy": "buy_and_hold"
+          },
+          "holdout_net_return": -0.09721431344455755,
+          "holdout_max_drawdown": 0.11682961727196983,
+          "holdout_turnover": 1.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0015408992767333984,
+          "status": "ok"
+        },
+        {
+          "arm": "fixed",
+          "episode_id": "ep00",
+          "seed": 11,
+          "n_candidates": 1,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "strategy": "buy_and_hold"
+              },
+              "dev_sharpe": -1.8352901840019262,
+              "status": "ok",
+              "generation_method": "fixed",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "strategy": "buy_and_hold"
+          },
+          "holdout_net_return": -0.09721431344455755,
+          "holdout_max_drawdown": 0.11682961727196983,
+          "holdout_turnover": 1.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0008730888366699219,
+          "status": "ok"
+        },
+        {
+          "arm": "fixed",
+          "episode_id": "ep00",
+          "seed": 19,
+          "n_candidates": 1,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "strategy": "buy_and_hold"
+              },
+              "dev_sharpe": -1.8352901840019262,
+              "status": "ok",
+              "generation_method": "fixed",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "strategy": "buy_and_hold"
+          },
+          "holdout_net_return": -0.09721431344455755,
+          "holdout_max_drawdown": 0.11682961727196983,
+          "holdout_turnover": 1.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0008311271667480469,
+          "status": "ok"
+        },
+        {
+          "arm": "fixed",
+          "episode_id": "ep01",
+          "seed": 7,
+          "n_candidates": 1,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "strategy": "buy_and_hold"
+              },
+              "dev_sharpe": -1.0829185225616313,
+              "status": "ok",
+              "generation_method": "fixed",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "strategy": "buy_and_hold"
+          },
+          "holdout_net_return": -0.13601848460331056,
+          "holdout_max_drawdown": 0.14879790700047857,
+          "holdout_turnover": 1.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0008039474487304688,
+          "status": "ok"
+        },
+        {
+          "arm": "fixed",
+          "episode_id": "ep01",
+          "seed": 11,
+          "n_candidates": 1,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "strategy": "buy_and_hold"
+              },
+              "dev_sharpe": -1.0829185225616313,
+              "status": "ok",
+              "generation_method": "fixed",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "strategy": "buy_and_hold"
+          },
+          "holdout_net_return": -0.13601848460331056,
+          "holdout_max_drawdown": 0.14879790700047857,
+          "holdout_turnover": 1.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0008609294891357422,
+          "status": "ok"
+        },
+        {
+          "arm": "fixed",
+          "episode_id": "ep01",
+          "seed": 19,
+          "n_candidates": 1,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "strategy": "buy_and_hold"
+              },
+              "dev_sharpe": -1.0829185225616313,
+              "status": "ok",
+              "generation_method": "fixed",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "strategy": "buy_and_hold"
+          },
+          "holdout_net_return": -0.13601848460331056,
+          "holdout_max_drawdown": 0.14879790700047857,
+          "holdout_turnover": 1.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0009720325469970703,
+          "status": "ok"
+        },
+        {
+          "arm": "fixed",
+          "episode_id": "ep02",
+          "seed": 7,
+          "n_candidates": 1,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "strategy": "buy_and_hold"
+              },
+              "dev_sharpe": 1.0178763218896454,
+              "status": "ok",
+              "generation_method": "fixed",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "strategy": "buy_and_hold"
+          },
+          "holdout_net_return": -0.13705072292717668,
+          "holdout_max_drawdown": 0.13705072292717668,
+          "holdout_turnover": 1.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0008318424224853516,
+          "status": "ok"
+        },
+        {
+          "arm": "fixed",
+          "episode_id": "ep02",
+          "seed": 11,
+          "n_candidates": 1,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "strategy": "buy_and_hold"
+              },
+              "dev_sharpe": 1.0178763218896454,
+              "status": "ok",
+              "generation_method": "fixed",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "strategy": "buy_and_hold"
+          },
+          "holdout_net_return": -0.13705072292717668,
+          "holdout_max_drawdown": 0.13705072292717668,
+          "holdout_turnover": 1.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.000804901123046875,
+          "status": "ok"
+        },
+        {
+          "arm": "fixed",
+          "episode_id": "ep02",
+          "seed": 19,
+          "n_candidates": 1,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "strategy": "buy_and_hold"
+              },
+              "dev_sharpe": 1.0178763218896454,
+              "status": "ok",
+              "generation_method": "fixed",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "strategy": "buy_and_hold"
+          },
+          "holdout_net_return": -0.13705072292717668,
+          "holdout_max_drawdown": 0.13705072292717668,
+          "holdout_turnover": 1.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0007889270782470703,
+          "status": "ok"
+        }
+      ],
+      "summary": {
+        "n_episode_seed_runs": 9,
+        "success_rate": 1.0,
+        "n_missing": 0,
+        "net_return_mean": -0.12342784032501493,
+        "net_return_std": 0.018540552358252627,
+        "max_drawdown_mean": 0.13422608239987502,
+        "max_drawdown_std": 0.013202949989120501,
+        "turnover_mean": 1.0,
+        "turnover_std": 0.0,
+        "search_efficiency_return_per_candidate": -0.013714204480557214,
+        "total_candidates_attempted": 9,
+        "total_candidates_failed": 0,
+        "total_tool_calls": 0,
+        "total_wall_time_s": 0.008307695388793945
+      }
+    },
+    "random_search": {
+      "episode_results": [
+        {
+          "arm": "random_search",
+          "episode_id": "ep00",
+          "seed": 7,
+          "n_candidates": 8,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 23,
+                "slow_window": 66
+              },
+              "dev_sharpe": -1.284914961371029,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 28,
+                "slow_window": 199
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 6,
+                "slow_window": 29
+              },
+              "dev_sharpe": -0.4122990796877478,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 55,
+                "slow_window": 197
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 9,
+                "slow_window": 107
+              },
+              "dev_sharpe": -2.0881954894487182,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 40,
+                "slow_window": 59
+              },
+              "dev_sharpe": -1.1264275270663007,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 35,
+                "slow_window": 94
+              },
+              "dev_sharpe": -1.1061335120151294,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 32
+              },
+              "dev_sharpe": -0.5695278006087946,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 28,
+            "slow_window": 199
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.00403285026550293,
+          "status": "ok"
+        },
+        {
+          "arm": "random_search",
+          "episode_id": "ep00",
+          "seed": 11,
+          "n_candidates": 8,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 31,
+                "slow_window": 179
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 57,
+                "slow_window": 181
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 31,
+                "slow_window": 166
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 57,
+                "slow_window": 212
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 67
+              },
+              "dev_sharpe": -0.9064224403392983,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 54,
+                "slow_window": 190
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 33,
+                "slow_window": 199
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 42,
+                "slow_window": 94
+              },
+              "dev_sharpe": -1.2044382568448755,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 31,
+            "slow_window": 179
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.003757953643798828,
+          "status": "ok"
+        },
+        {
+          "arm": "random_search",
+          "episode_id": "ep00",
+          "seed": 19,
+          "n_candidates": 8,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 46,
+                "slow_window": 62
+              },
+              "dev_sharpe": -0.5679397387133271,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 53,
+                "slow_window": 191
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 145
+              },
+              "dev_sharpe": -1.4202229716456987,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 120
+              },
+              "dev_sharpe": -1.624739701706763,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 25,
+                "slow_window": 165
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 21,
+                "slow_window": 175
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 12,
+                "slow_window": 169
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 19,
+                "slow_window": 51
+              },
+              "dev_sharpe": -1.2424282613690278,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 53,
+            "slow_window": 191
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0038080215454101562,
+          "status": "ok"
+        },
+        {
+          "arm": "random_search",
+          "episode_id": "ep01",
+          "seed": 7,
+          "n_candidates": 8,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 23,
+                "slow_window": 66
+              },
+              "dev_sharpe": -0.05895040888529163,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 28,
+                "slow_window": 199
+              },
+              "dev_sharpe": -0.7785978002991785,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 6,
+                "slow_window": 29
+              },
+              "dev_sharpe": -0.7682724057447309,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 55,
+                "slow_window": 197
+              },
+              "dev_sharpe": -0.11758168256545505,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 9,
+                "slow_window": 107
+              },
+              "dev_sharpe": 0.3330867200978288,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 40,
+                "slow_window": 59
+              },
+              "dev_sharpe": 0.2641376713651816,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 35,
+                "slow_window": 94
+              },
+              "dev_sharpe": -0.1615091391310589,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 32
+              },
+              "dev_sharpe": 0.16137511489314513,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 9,
+            "slow_window": 107
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0038101673126220703,
+          "status": "ok"
+        },
+        {
+          "arm": "random_search",
+          "episode_id": "ep01",
+          "seed": 11,
+          "n_candidates": 8,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 31,
+                "slow_window": 179
+              },
+              "dev_sharpe": -0.8049091900798142,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 57,
+                "slow_window": 181
+              },
+              "dev_sharpe": -0.06646873262361105,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 31,
+                "slow_window": 166
+              },
+              "dev_sharpe": -0.8049091900798142,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 57,
+                "slow_window": 212
+              },
+              "dev_sharpe": -0.06646873262361105,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 67
+              },
+              "dev_sharpe": -0.39928660378237135,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 54,
+                "slow_window": 190
+              },
+              "dev_sharpe": -0.23397870100834697,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 33,
+                "slow_window": 199
+              },
+              "dev_sharpe": -0.38703395604859037,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 42,
+                "slow_window": 94
+              },
+              "dev_sharpe": -0.11260197793083368,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 57,
+            "slow_window": 181
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0038919448852539062,
+          "status": "ok"
+        },
+        {
+          "arm": "random_search",
+          "episode_id": "ep01",
+          "seed": 19,
+          "n_candidates": 8,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 46,
+                "slow_window": 62
+              },
+              "dev_sharpe": 0.006424334204716744,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 53,
+                "slow_window": 191
+              },
+              "dev_sharpe": -0.26293922630806293,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 145
+              },
+              "dev_sharpe": -0.15222118068342255,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 120
+              },
+              "dev_sharpe": -0.1489377129542256,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 25,
+                "slow_window": 165
+              },
+              "dev_sharpe": -1.062936713273249,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 21,
+                "slow_window": 175
+              },
+              "dev_sharpe": -0.798022652545178,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 12,
+                "slow_window": 169
+              },
+              "dev_sharpe": -0.2796571340341989,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 19,
+                "slow_window": 51
+              },
+              "dev_sharpe": -0.296171311286229,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 46,
+            "slow_window": 62
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0037529468536376953,
+          "status": "ok"
+        },
+        {
+          "arm": "random_search",
+          "episode_id": "ep02",
+          "seed": 7,
+          "n_candidates": 8,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 23,
+                "slow_window": 66
+              },
+              "dev_sharpe": -0.6882701989817073,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 28,
+                "slow_window": 199
+              },
+              "dev_sharpe": 0.3642129193789384,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 6,
+                "slow_window": 29
+              },
+              "dev_sharpe": 0.4884671702859132,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 55,
+                "slow_window": 197
+              },
+              "dev_sharpe": 0.8149464192706016,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 9,
+                "slow_window": 107
+              },
+              "dev_sharpe": -0.3178359807446214,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 40,
+                "slow_window": 59
+              },
+              "dev_sharpe": 0.19164646306561223,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 35,
+                "slow_window": 94
+              },
+              "dev_sharpe": 0.5665989643761767,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 32
+              },
+              "dev_sharpe": -0.1271243125028808,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 55,
+            "slow_window": 197
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0038568973541259766,
+          "status": "ok"
+        },
+        {
+          "arm": "random_search",
+          "episode_id": "ep02",
+          "seed": 11,
+          "n_candidates": 8,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 31,
+                "slow_window": 179
+              },
+              "dev_sharpe": 1.004222125124683,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 57,
+                "slow_window": 181
+              },
+              "dev_sharpe": 0.8300434410429959,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 31,
+                "slow_window": 166
+              },
+              "dev_sharpe": 1.004222125124683,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 57,
+                "slow_window": 212
+              },
+              "dev_sharpe": 0.8300434410429959,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 67
+              },
+              "dev_sharpe": -0.38478558501859833,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 54,
+                "slow_window": 190
+              },
+              "dev_sharpe": 0.5299769443259408,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 33,
+                "slow_window": 199
+              },
+              "dev_sharpe": 0.6158515076149674,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 42,
+                "slow_window": 94
+              },
+              "dev_sharpe": 0.6134835645240703,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 31,
+            "slow_window": 179
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0038559436798095703,
+          "status": "ok"
+        },
+        {
+          "arm": "random_search",
+          "episode_id": "ep02",
+          "seed": 19,
+          "n_candidates": 8,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 46,
+                "slow_window": 62
+              },
+              "dev_sharpe": 0.22647217938212622,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 53,
+                "slow_window": 191
+              },
+              "dev_sharpe": 0.5228027873706765,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 145
+              },
+              "dev_sharpe": 0.11899044818288856,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 120
+              },
+              "dev_sharpe": -0.06198480674381723,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 25,
+                "slow_window": 165
+              },
+              "dev_sharpe": 0.3510256805577916,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 21,
+                "slow_window": 175
+              },
+              "dev_sharpe": 0.14965631844510327,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 12,
+                "slow_window": 169
+              },
+              "dev_sharpe": 0.19175785054882272,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 19,
+                "slow_window": 51
+              },
+              "dev_sharpe": -0.9007408221642109,
+              "status": "ok",
+              "generation_method": "random_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 53,
+            "slow_window": 191
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0037190914154052734,
+          "status": "ok"
+        }
+      ],
+      "summary": {
+        "n_episode_seed_runs": 9,
+        "success_rate": 1.0,
+        "n_missing": 0,
+        "net_return_mean": 0.0,
+        "net_return_std": 0.0,
+        "max_drawdown_mean": 0.0,
+        "max_drawdown_std": 0.0,
+        "turnover_mean": 0.0,
+        "turnover_std": 0.0,
+        "search_efficiency_return_per_candidate": 0.0,
+        "total_candidates_attempted": 72,
+        "total_candidates_failed": 0,
+        "total_tool_calls": 0,
+        "total_wall_time_s": 0.034485816955566406
+      }
+    },
+    "grid_search": {
+      "episode_results": [
+        {
+          "arm": "grid_search",
+          "episode_id": "ep00",
+          "seed": 7,
+          "n_candidates": 10,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -0.5189460684066525,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.2177616136350298,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -0.8706575254761398,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -1.8864054677460147,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": -1.5424370217541974,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -1.2975391048672884,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": -1.624739701706763,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 50,
+            "slow_window": 150
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.004685163497924805,
+          "status": "ok"
+        },
+        {
+          "arm": "grid_search",
+          "episode_id": "ep00",
+          "seed": 11,
+          "n_candidates": 10,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -0.5189460684066525,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.2177616136350298,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -0.8706575254761398,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -1.8864054677460147,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": -1.5424370217541974,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -1.2975391048672884,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": -1.624739701706763,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 50,
+            "slow_window": 150
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0045299530029296875,
+          "status": "ok"
+        },
+        {
+          "arm": "grid_search",
+          "episode_id": "ep00",
+          "seed": 19,
+          "n_candidates": 10,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -0.5189460684066525,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.2177616136350298,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -0.8706575254761398,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -1.8864054677460147,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": -1.5424370217541974,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -1.2975391048672884,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": -1.624739701706763,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 50,
+            "slow_window": 150
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.004807949066162109,
+          "status": "ok"
+        },
+        {
+          "arm": "grid_search",
+          "episode_id": "ep01",
+          "seed": 7,
+          "n_candidates": 10,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -0.4472046400357202,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.13746710149166433,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.4282188788977822,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -0.3376559689756675,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 0.11832448502275172,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.5277106352695354,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.05304895784155585,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": -0.20987889897525203,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": -0.4512023677193333,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": -0.8554764817479716,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 10,
+            "slow_window": 50
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.004590034484863281,
+          "status": "ok"
+        },
+        {
+          "arm": "grid_search",
+          "episode_id": "ep01",
+          "seed": 11,
+          "n_candidates": 10,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -0.4472046400357202,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.13746710149166433,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.4282188788977822,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -0.3376559689756675,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 0.11832448502275172,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.5277106352695354,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.05304895784155585,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": -0.20987889897525203,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": -0.4512023677193333,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": -0.8554764817479716,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 10,
+            "slow_window": 50
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0046558380126953125,
+          "status": "ok"
+        },
+        {
+          "arm": "grid_search",
+          "episode_id": "ep01",
+          "seed": 19,
+          "n_candidates": 10,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -0.4472046400357202,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.13746710149166433,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.4282188788977822,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -0.3376559689756675,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 0.11832448502275172,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.5277106352695354,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.05304895784155585,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": -0.20987889897525203,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": -0.4512023677193333,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": -0.8554764817479716,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 10,
+            "slow_window": 50
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.004544973373413086,
+          "status": "ok"
+        },
+        {
+          "arm": "grid_search",
+          "episode_id": "ep02",
+          "seed": 7,
+          "n_candidates": 10,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": 0.549704800218237,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.19515416195155105,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -0.746534487479488,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.08810445677538642,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": -0.24760820176660836,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.33575266136189813,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.26957554011393264,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 0.7919219377579363,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.7919219377579363,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.8850188909920826,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 63,
+            "slow_window": 252
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.004559040069580078,
+          "status": "ok"
+        },
+        {
+          "arm": "grid_search",
+          "episode_id": "ep02",
+          "seed": 11,
+          "n_candidates": 10,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": 0.549704800218237,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.19515416195155105,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -0.746534487479488,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.08810445677538642,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": -0.24760820176660836,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.33575266136189813,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.26957554011393264,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 0.7919219377579363,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.7919219377579363,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.8850188909920826,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 63,
+            "slow_window": 252
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0044977664947509766,
+          "status": "ok"
+        },
+        {
+          "arm": "grid_search",
+          "episode_id": "ep02",
+          "seed": 19,
+          "n_candidates": 10,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": 0.549704800218237,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.19515416195155105,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -0.746534487479488,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.08810445677538642,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": -0.24760820176660836,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.33575266136189813,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.26957554011393264,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 0.7919219377579363,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.7919219377579363,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.8850188909920826,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 63,
+            "slow_window": 252
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0044879913330078125,
+          "status": "ok"
+        }
+      ],
+      "summary": {
+        "n_episode_seed_runs": 9,
+        "success_rate": 1.0,
+        "n_missing": 0,
+        "net_return_mean": 0.0,
+        "net_return_std": 0.0,
+        "max_drawdown_mean": 0.0,
+        "max_drawdown_std": 0.0,
+        "turnover_mean": 0.0,
+        "turnover_std": 0.0,
+        "search_efficiency_return_per_candidate": 0.0,
+        "total_candidates_attempted": 90,
+        "total_candidates_failed": 0,
+        "total_tool_calls": 0,
+        "total_wall_time_s": 0.04135870933532715
+      }
+    },
+    "frozen_agent": {
+      "episode_results": [
+        {
+          "arm": "frozen_agent",
+          "episode_id": "ep00",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 2.2879583279873743,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 2.1912858455555537,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": 1.0656650106832959,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.9875994543287744,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 50,
+            "slow_window": 150
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.6064481735229492,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent",
+          "episode_id": "ep00",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 2.0003195608359836,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": 1.6148492315263259,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": 1.0656650106832959,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": 0.6040863519260661,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.5745147115571457,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0850210189819336,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent",
+          "episode_id": "ep00",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 2.0003195608359836,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": 1.6148492315263259,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.9875994543287744,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.5745147115571457,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.07910799980163574,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent",
+          "episode_id": "ep01",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 0.523662086612761,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 0.011098478265484572,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7868438206129105,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -1.0010959172925544,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 50,
+            "slow_window": 150
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.07915902137756348,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent",
+          "episode_id": "ep01",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.4923365104253033,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.1318651822614095,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.7007552475676604,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7868438206129105,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -1.2719527089662028,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08645296096801758,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent",
+          "episode_id": "ep01",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.4923365104253033,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.1318651822614095,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.7007552475676604,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -1.0010959172925544,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08077001571655273,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent",
+          "episode_id": "ep02",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.35786350310579174,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 0.2415983921654794,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7502085254159856,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": -1.793800496229326,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 15,
+            "slow_window": 80
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0792839527130127,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent",
+          "episode_id": "ep02",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.5338516716230887,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -0.1927417429231321,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.6840665743544666,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7502085254159856,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -1.4402143449325635,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08631205558776855,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent",
+          "episode_id": "ep02",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.5338516716230887,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.35786350310579174,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.6840665743544666,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -1.4402143449325635,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.07962203025817871,
+          "status": "ok"
+        }
+      ],
+      "summary": {
+        "n_episode_seed_runs": 9,
+        "success_rate": 1.0,
+        "n_missing": 0,
+        "net_return_mean": 0.0,
+        "net_return_std": 0.0,
+        "max_drawdown_mean": 0.0,
+        "max_drawdown_std": 0.0,
+        "turnover_mean": 0.0,
+        "turnover_std": 0.0,
+        "search_efficiency_return_per_candidate": 0.0,
+        "total_candidates_attempted": 45,
+        "total_candidates_failed": 0,
+        "total_tool_calls": 0,
+        "total_wall_time_s": 1.2621772289276123
+      }
+    },
+    "frozen_agent_memory": {
+      "episode_results": [
+        {
+          "arm": "frozen_agent_memory",
+          "episode_id": "ep00",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 2.2879583279873743,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 2.1912858455555537,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": 1.0656650106832959,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.9875994543287744,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 50,
+            "slow_window": 150
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.07814502716064453,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent_memory",
+          "episode_id": "ep01",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 0.523662086612761,
+              "status": "ok",
+              "generation_method": "alpha_memory",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 0.011098478265484572,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7868438206129105,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -1.0010959172925544,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 50,
+            "slow_window": 150
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.07708978652954102,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent_memory",
+          "episode_id": "ep02",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.35786350310579174,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 0.2415983921654794,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7502085254159856,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": -1.793800496229326,
+              "status": "ok",
+              "generation_method": "alpha_memory",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 15,
+            "slow_window": 80
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.07717299461364746,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent_memory",
+          "episode_id": "ep00",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 2.0003195608359836,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": 1.6148492315263259,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": 1.0656650106832959,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": 0.6040863519260661,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.5745147115571457,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0846858024597168,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent_memory",
+          "episode_id": "ep01",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.4923365104253033,
+              "status": "ok",
+              "generation_method": "alpha_memory",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.1318651822614095,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.7007552475676604,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7868438206129105,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -1.2719527089662028,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08430099487304688,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent_memory",
+          "episode_id": "ep02",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.5338516716230887,
+              "status": "ok",
+              "generation_method": "alpha_memory",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -0.1927417429231321,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.6840665743544666,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7502085254159856,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -1.4402143449325635,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08351588249206543,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent_memory",
+          "episode_id": "ep00",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 2.0003195608359836,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": 1.6148492315263259,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.9875994543287744,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.5745147115571457,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08574318885803223,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent_memory",
+          "episode_id": "ep01",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.4923365104253033,
+              "status": "ok",
+              "generation_method": "alpha_memory",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.1318651822614095,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.7007552475676604,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -1.0010959172925544,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.09467911720275879,
+          "status": "ok"
+        },
+        {
+          "arm": "frozen_agent_memory",
+          "episode_id": "ep02",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.5338516716230887,
+              "status": "ok",
+              "generation_method": "alpha_memory",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.35786350310579174,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.6840665743544666,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -1.4402143449325635,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08598613739013672,
+          "status": "ok"
+        }
+      ],
+      "summary": {
+        "n_episode_seed_runs": 9,
+        "success_rate": 1.0,
+        "n_missing": 0,
+        "net_return_mean": 0.0,
+        "net_return_std": 0.0,
+        "max_drawdown_mean": 0.0,
+        "max_drawdown_std": 0.0,
+        "turnover_mean": 0.0,
+        "turnover_std": 0.0,
+        "search_efficiency_return_per_candidate": 0.0,
+        "total_candidates_attempted": 45,
+        "total_candidates_failed": 0,
+        "total_tool_calls": 0,
+        "total_wall_time_s": 0.7513189315795898
+      }
+    },
+    "evidence_conditioned_mutation": {
+      "episode_results": [
+        {
+          "arm": "evidence_conditioned_mutation",
+          "episode_id": "ep00",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 2.2879583279873743,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 2.1912858455555537,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": 1.0656650106832959,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.9875994543287744,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 50,
+            "slow_window": 150
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08196401596069336,
+          "status": "ok"
+        },
+        {
+          "arm": "evidence_conditioned_mutation",
+          "episode_id": "ep01",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 0.523662086612761,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 0.011098478265484572,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7868438206129105,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -1.0010959172925544,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 50,
+            "slow_window": 150
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08179593086242676,
+          "status": "ok"
+        },
+        {
+          "arm": "evidence_conditioned_mutation",
+          "episode_id": "ep02",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.35786350310579174,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 0.2415983921654794,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7502085254159856,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": -1.793800496229326,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 15,
+            "slow_window": 80
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08412003517150879,
+          "status": "ok"
+        },
+        {
+          "arm": "evidence_conditioned_mutation",
+          "episode_id": "ep00",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 2.0003195608359836,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": 1.6148492315263259,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": 1.0656650106832959,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": 0.6040863519260661,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.5745147115571457,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08652329444885254,
+          "status": "ok"
+        },
+        {
+          "arm": "evidence_conditioned_mutation",
+          "episode_id": "ep01",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.4923365104253033,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.1318651822614095,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.7007552475676604,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7868438206129105,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -1.2719527089662028,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08630228042602539,
+          "status": "ok"
+        },
+        {
+          "arm": "evidence_conditioned_mutation",
+          "episode_id": "ep02",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.5338516716230887,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -0.1927417429231321,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.6840665743544666,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7502085254159856,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -1.4402143449325635,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08608412742614746,
+          "status": "ok"
+        },
+        {
+          "arm": "evidence_conditioned_mutation",
+          "episode_id": "ep00",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 2.0003195608359836,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": 1.6148492315263259,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.9875994543287744,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.5745147115571457,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08418512344360352,
+          "status": "ok"
+        },
+        {
+          "arm": "evidence_conditioned_mutation",
+          "episode_id": "ep01",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.4923365104253033,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.1318651822614095,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.7007552475676604,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -1.0010959172925544,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.09048771858215332,
+          "status": "ok"
+        },
+        {
+          "arm": "evidence_conditioned_mutation",
+          "episode_id": "ep02",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.5338516716230887,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.35786350310579174,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.6840665743544666,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -1.4402143449325635,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08297967910766602,
+          "status": "ok"
+        }
+      ],
+      "summary": {
+        "n_episode_seed_runs": 9,
+        "success_rate": 1.0,
+        "n_missing": 0,
+        "net_return_mean": 0.0,
+        "net_return_std": 0.0,
+        "max_drawdown_mean": 0.0,
+        "max_drawdown_std": 0.0,
+        "turnover_mean": 0.0,
+        "turnover_std": 0.0,
+        "search_efficiency_return_per_candidate": 0.0,
+        "total_candidates_attempted": 45,
+        "total_candidates_failed": 0,
+        "total_tool_calls": 0,
+        "total_wall_time_s": 0.7644422054290771
+      },
+      "mutation_log": [
+        {
+          "seed": 7,
+          "episode_id": "ep00",
+          "mutation_id": "mut_aa8ff710",
+          "parent_policy_id": "2809b6d94ccf",
+          "patch": {
+            "prompt_template": "tool_aware_default",
+            "prompt_context": {
+              "emphasis": [
+                "momentum in bull markets"
+              ]
+            }
+          },
+          "diagnosis": "no structured failure evidence supplied; using unspecified-failure patch 'tool_aware_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "2809b6d94ccf",
+          "created": "2026-09-19T18:50:40.781288+00:00"
+        },
+        {
+          "seed": 7,
+          "episode_id": "ep01",
+          "mutation_id": "mut_bf5ee933",
+          "parent_policy_id": "d2167310ca36",
+          "patch": {
+            "prompt_template": "grid_search_default",
+            "prompt_context": {}
+          },
+          "diagnosis": "evidence-conditioned: failure='unspecified' (prior episode within acceptable bounds) -> 'grid_search_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "d2167310ca36",
+          "created": "2026-09-19T18:50:40.863285+00:00"
+        },
+        {
+          "seed": 7,
+          "episode_id": "ep02",
+          "mutation_id": "mut_47115ec9",
+          "parent_policy_id": "073709c4465c",
+          "patch": {
+            "prompt_template": "tool_aware_default",
+            "prompt_context": {
+              "emphasis": [
+                "momentum in bull markets"
+              ]
+            }
+          },
+          "diagnosis": "no non-no-op mapped patch among structured failures ['unspecified']; falling back to unspecified-failure patch 'tool_aware_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "073709c4465c",
+          "created": "2026-09-19T18:50:40.945130+00:00"
+        },
+        {
+          "seed": 11,
+          "episode_id": "ep00",
+          "mutation_id": "mut_3b461725",
+          "parent_policy_id": "7a325726f5e1",
+          "patch": {
+            "prompt_template": "tool_aware_default",
+            "prompt_context": {
+              "emphasis": [
+                "momentum in bull markets"
+              ]
+            }
+          },
+          "diagnosis": "no structured failure evidence supplied; using unspecified-failure patch 'tool_aware_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "7a325726f5e1",
+          "created": "2026-09-19T18:50:41.029304+00:00"
+        },
+        {
+          "seed": 11,
+          "episode_id": "ep01",
+          "mutation_id": "mut_3ba9ace1",
+          "parent_policy_id": "37bb4ac9ae3e",
+          "patch": {
+            "prompt_template": "grid_search_default",
+            "prompt_context": {}
+          },
+          "diagnosis": "evidence-conditioned: failure='unspecified' (prior episode within acceptable bounds) -> 'grid_search_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "37bb4ac9ae3e",
+          "created": "2026-09-19T18:50:41.115858+00:00"
+        },
+        {
+          "seed": 11,
+          "episode_id": "ep02",
+          "mutation_id": "mut_022804b3",
+          "parent_policy_id": "cc61868c41ec",
+          "patch": {
+            "prompt_template": "tool_aware_default",
+            "prompt_context": {
+              "emphasis": [
+                "momentum in bull markets"
+              ]
+            }
+          },
+          "diagnosis": "no non-no-op mapped patch among structured failures ['unspecified']; falling back to unspecified-failure patch 'tool_aware_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "cc61868c41ec",
+          "created": "2026-09-19T18:50:41.202190+00:00"
+        },
+        {
+          "seed": 19,
+          "episode_id": "ep00",
+          "mutation_id": "mut_f34cbf0a",
+          "parent_policy_id": "cc6b7ec6687a",
+          "patch": {
+            "prompt_template": "tool_aware_default",
+            "prompt_context": {
+              "emphasis": [
+                "momentum in bull markets"
+              ]
+            }
+          },
+          "diagnosis": "no structured failure evidence supplied; using unspecified-failure patch 'tool_aware_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "cc6b7ec6687a",
+          "created": "2026-09-19T18:50:41.288319+00:00"
+        },
+        {
+          "seed": 19,
+          "episode_id": "ep01",
+          "mutation_id": "mut_af27840a",
+          "parent_policy_id": "9f1de4bb5ba5",
+          "patch": {
+            "prompt_template": "grid_search_default",
+            "prompt_context": {}
+          },
+          "diagnosis": "evidence-conditioned: failure='unspecified' (prior episode within acceptable bounds) -> 'grid_search_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "9f1de4bb5ba5",
+          "created": "2026-09-19T18:50:41.372554+00:00"
+        },
+        {
+          "seed": 19,
+          "episode_id": "ep02",
+          "mutation_id": "mut_49411a70",
+          "parent_policy_id": "cac154633085",
+          "patch": {
+            "prompt_template": "tool_aware_default",
+            "prompt_context": {
+              "emphasis": [
+                "momentum in bull markets"
+              ]
+            }
+          },
+          "diagnosis": "no non-no-op mapped patch among structured failures ['unspecified']; falling back to unspecified-failure patch 'tool_aware_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "cac154633085",
+          "created": "2026-09-19T18:50:41.463073+00:00"
+        }
+      ]
+    },
+    "random_mutation": {
+      "episode_results": [
+        {
+          "arm": "random_mutation",
+          "episode_id": "ep00",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 2.2879583279873743,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 2.1912858455555537,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": 1.0656650106832959,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.9875994543287744,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 50,
+            "slow_window": 150
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08331489562988281,
+          "status": "ok"
+        },
+        {
+          "arm": "random_mutation",
+          "episode_id": "ep01",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 0.523662086612761,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 0.011098478265484572,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7868438206129105,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -1.0010959172925544,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 50,
+            "slow_window": 150
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.07990598678588867,
+          "status": "ok"
+        },
+        {
+          "arm": "random_mutation",
+          "episode_id": "ep02",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.35786350310579174,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 0.2415983921654794,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7502085254159856,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": -1.793800496229326,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 15,
+            "slow_window": 80
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08161401748657227,
+          "status": "ok"
+        },
+        {
+          "arm": "random_mutation",
+          "episode_id": "ep00",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 2.0003195608359836,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": 1.6148492315263259,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": 1.0656650106832959,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": 0.6040863519260661,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.5745147115571457,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08425498008728027,
+          "status": "ok"
+        },
+        {
+          "arm": "random_mutation",
+          "episode_id": "ep01",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.4923365104253033,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.1318651822614095,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.7007552475676604,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7868438206129105,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -1.2719527089662028,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08637189865112305,
+          "status": "ok"
+        },
+        {
+          "arm": "random_mutation",
+          "episode_id": "ep02",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.5338516716230887,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -0.1927417429231321,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.6840665743544666,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7502085254159856,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -1.4402143449325635,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08492183685302734,
+          "status": "ok"
+        },
+        {
+          "arm": "random_mutation",
+          "episode_id": "ep00",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 2.0003195608359836,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": 1.6148492315263259,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.9875994543287744,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.5745147115571457,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08390402793884277,
+          "status": "ok"
+        },
+        {
+          "arm": "random_mutation",
+          "episode_id": "ep01",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.4923365104253033,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.1318651822614095,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.7007552475676604,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -1.0010959172925544,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08342289924621582,
+          "status": "ok"
+        },
+        {
+          "arm": "random_mutation",
+          "episode_id": "ep02",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.5338516716230887,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.35786350310579174,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.6840665743544666,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -1.4402143449325635,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08964371681213379,
+          "status": "ok"
+        }
+      ],
+      "summary": {
+        "n_episode_seed_runs": 9,
+        "success_rate": 1.0,
+        "n_missing": 0,
+        "net_return_mean": 0.0,
+        "net_return_std": 0.0,
+        "max_drawdown_mean": 0.0,
+        "max_drawdown_std": 0.0,
+        "turnover_mean": 0.0,
+        "turnover_std": 0.0,
+        "search_efficiency_return_per_candidate": 0.0,
+        "total_candidates_attempted": 45,
+        "total_candidates_failed": 0,
+        "total_tool_calls": 0,
+        "total_wall_time_s": 0.7573542594909668
+      },
+      "mutation_log": [
+        {
+          "seed": 7,
+          "episode_id": "ep00",
+          "mutation_id": "randmut_bf696c92",
+          "parent_policy_id": "ce26fc4bb98a",
+          "patch": {
+            "prompt_template": "tool_aware_tuned_v2_learnings",
+            "prompt_context": {
+              "emphasis": [
+                "short windows in crisis"
+              ],
+              "avoid": [
+                "overfit combos"
+              ]
+            }
+          },
+          "diagnosis": "random_baseline: uniformly sampled mutation, no diagnosis",
+          "expected_benefit": "none claimed (baseline)",
+          "evaluation_budget": 2,
+          "rollback_ref": "ce26fc4bb98a",
+          "created": "2026-09-19T18:50:41.546127+00:00"
+        },
+        {
+          "seed": 7,
+          "episode_id": "ep01",
+          "mutation_id": "randmut_a718b80e",
+          "parent_policy_id": "dd4fd9a7d28e",
+          "patch": {
+            "prompt_template": "tool_aware_tuned_v2_learnings",
+            "prompt_context": {
+              "emphasis": [
+                "short windows in crisis"
+              ],
+              "avoid": [
+                "overfit combos"
+              ]
+            }
+          },
+          "diagnosis": "random_baseline: uniformly sampled mutation, no diagnosis",
+          "expected_benefit": "none claimed (baseline)",
+          "evaluation_budget": 2,
+          "rollback_ref": "dd4fd9a7d28e",
+          "created": "2026-09-19T18:50:41.629493+00:00"
+        },
+        {
+          "seed": 7,
+          "episode_id": "ep02",
+          "mutation_id": "randmut_b6cc7b67",
+          "parent_policy_id": "7cf07511b0b0",
+          "patch": {
+            "prompt_template": "tool_aware_tuned_v2_learnings",
+            "prompt_context": {
+              "emphasis": [
+                "short windows in crisis"
+              ],
+              "avoid": [
+                "overfit combos"
+              ]
+            }
+          },
+          "diagnosis": "random_baseline: uniformly sampled mutation, no diagnosis",
+          "expected_benefit": "none claimed (baseline)",
+          "evaluation_budget": 2,
+          "rollback_ref": "7cf07511b0b0",
+          "created": "2026-09-19T18:50:41.709427+00:00"
+        },
+        {
+          "seed": 11,
+          "episode_id": "ep00",
+          "mutation_id": "randmut_d6fa64f2",
+          "parent_policy_id": "7fc7a5993dfc",
+          "patch": {
+            "prompt_template": "research_informed",
+            "prompt_context": {
+              "hypothesis_generation": "enabled"
+            }
+          },
+          "diagnosis": "random_baseline: uniformly sampled mutation, no diagnosis",
+          "expected_benefit": "none claimed (baseline)",
+          "evaluation_budget": 2,
+          "rollback_ref": "7fc7a5993dfc",
+          "created": "2026-09-19T18:50:41.791080+00:00"
+        },
+        {
+          "seed": 11,
+          "episode_id": "ep01",
+          "mutation_id": "randmut_a45f0651",
+          "parent_policy_id": "c20522aefdbf",
+          "patch": {
+            "prompt_template": "research_informed",
+            "prompt_context": {
+              "hypothesis_generation": "enabled"
+            }
+          },
+          "diagnosis": "random_baseline: uniformly sampled mutation, no diagnosis",
+          "expected_benefit": "none claimed (baseline)",
+          "evaluation_budget": 2,
+          "rollback_ref": "c20522aefdbf",
+          "created": "2026-09-19T18:50:41.875369+00:00"
+        },
+        {
+          "seed": 11,
+          "episode_id": "ep02",
+          "mutation_id": "randmut_49d3e3e1",
+          "parent_policy_id": "5d65a1b6011b",
+          "patch": {
+            "prompt_template": "research_informed",
+            "prompt_context": {
+              "hypothesis_generation": "enabled"
+            }
+          },
+          "diagnosis": "random_baseline: uniformly sampled mutation, no diagnosis",
+          "expected_benefit": "none claimed (baseline)",
+          "evaluation_budget": 2,
+          "rollback_ref": "5d65a1b6011b",
+          "created": "2026-09-19T18:50:41.961769+00:00"
+        },
+        {
+          "seed": 19,
+          "episode_id": "ep00",
+          "mutation_id": "randmut_7df96cb5",
+          "parent_policy_id": "8d4d9e534f37",
+          "patch": {
+            "prompt_template": "grid_search_default",
+            "prompt_context": {}
+          },
+          "diagnosis": "random_baseline: uniformly sampled mutation, no diagnosis",
+          "expected_benefit": "none claimed (baseline)",
+          "evaluation_budget": 2,
+          "rollback_ref": "8d4d9e534f37",
+          "created": "2026-09-19T18:50:42.046723+00:00"
+        },
+        {
+          "seed": 19,
+          "episode_id": "ep01",
+          "mutation_id": "randmut_137ddc7e",
+          "parent_policy_id": "5895d222f28c",
+          "patch": {
+            "prompt_template": "grid_search_default",
+            "prompt_context": {}
+          },
+          "diagnosis": "random_baseline: uniformly sampled mutation, no diagnosis",
+          "expected_benefit": "none claimed (baseline)",
+          "evaluation_budget": 2,
+          "rollback_ref": "5895d222f28c",
+          "created": "2026-09-19T18:50:42.130672+00:00"
+        },
+        {
+          "seed": 19,
+          "episode_id": "ep02",
+          "mutation_id": "randmut_daf96cfd",
+          "parent_policy_id": "001a37feef9b",
+          "patch": {
+            "prompt_template": "grid_search_default",
+            "prompt_context": {}
+          },
+          "diagnosis": "random_baseline: uniformly sampled mutation, no diagnosis",
+          "expected_benefit": "none claimed (baseline)",
+          "evaluation_budget": 2,
+          "rollback_ref": "001a37feef9b",
+          "created": "2026-09-19T18:50:42.214140+00:00"
+        }
+      ]
+    },
+    "shuffled_evidence_mutation": {
+      "episode_results": [
+        {
+          "arm": "shuffled_evidence_mutation",
+          "episode_id": "ep00",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 2.2879583279873743,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 2.1912858455555537,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": 1.0656650106832959,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.9875994543287744,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 50,
+            "slow_window": 150
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0868990421295166,
+          "status": "ok"
+        },
+        {
+          "arm": "shuffled_evidence_mutation",
+          "episode_id": "ep01",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": 0.523662086612761,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 0.011098478265484572,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7868438206129105,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -1.0010959172925544,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 50,
+            "slow_window": 150
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08039379119873047,
+          "status": "ok"
+        },
+        {
+          "arm": "shuffled_evidence_mutation",
+          "episode_id": "ep02",
+          "seed": 7,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.35786350310579174,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 17,
+                "slow_window": 91
+              },
+              "dev_sharpe": 0.2415983921654794,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7502085254159856,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 50,
+                "slow_window": 150
+              },
+              "dev_sharpe": -1.793800496229326,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 15,
+            "slow_window": 80
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08165216445922852,
+          "status": "ok"
+        },
+        {
+          "arm": "shuffled_evidence_mutation",
+          "episode_id": "ep00",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 2.0003195608359836,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": 1.6148492315263259,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": 1.0656650106832959,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": 0.6040863519260661,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.5745147115571457,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08588576316833496,
+          "status": "ok"
+        },
+        {
+          "arm": "shuffled_evidence_mutation",
+          "episode_id": "ep01",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.4923365104253033,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.1318651822614095,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.7007552475676604,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7868438206129105,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -1.2719527089662028,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08654379844665527,
+          "status": "ok"
+        },
+        {
+          "arm": "shuffled_evidence_mutation",
+          "episode_id": "ep02",
+          "seed": 11,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.5338516716230887,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "dev_sharpe": -0.1927417429231321,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.6840665743544666,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 30
+              },
+              "dev_sharpe": -0.7502085254159856,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -1.4402143449325635,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.08688497543334961,
+          "status": "ok"
+        },
+        {
+          "arm": "shuffled_evidence_mutation",
+          "episode_id": "ep00",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 2.0003195608359836,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": 1.6148492315263259,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.9875994543287744,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.5745147115571457,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.07900309562683105,
+          "status": "ok"
+        },
+        {
+          "arm": "shuffled_evidence_mutation",
+          "episode_id": "ep01",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.4923365104253033,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": 0.1318651822614095,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.7007552475676604,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": -1.0010959172925544,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.07964801788330078,
+          "status": "ok"
+        },
+        {
+          "arm": "shuffled_evidence_mutation",
+          "episode_id": "ep02",
+          "seed": 19,
+          "n_candidates": 5,
+          "n_failed": 0,
+          "candidates": [
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "dev_sharpe": 0.5338516716230887,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 15,
+                "slow_window": 80
+              },
+              "dev_sharpe": 0.35786350310579174,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 63,
+                "slow_window": 252
+              },
+              "dev_sharpe": 0.0,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 20,
+                "slow_window": 60
+              },
+              "dev_sharpe": -0.6840665743544666,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            },
+            {
+              "params": {
+                "fast_window": 10,
+                "slow_window": 50
+              },
+              "dev_sharpe": -1.4402143449325635,
+              "status": "ok",
+              "generation_method": "grid_search",
+              "error": null
+            }
+          ],
+          "winner_params": {
+            "fast_window": 20,
+            "slow_window": 100
+          },
+          "holdout_net_return": 0.0,
+          "holdout_max_drawdown": -0.0,
+          "holdout_turnover": 0.0,
+          "tool_calls": 0,
+          "wall_time_s": 0.0974891185760498,
+          "status": "ok"
+        }
+      ],
+      "summary": {
+        "n_episode_seed_runs": 9,
+        "success_rate": 1.0,
+        "n_missing": 0,
+        "net_return_mean": 0.0,
+        "net_return_std": 0.0,
+        "max_drawdown_mean": 0.0,
+        "max_drawdown_std": 0.0,
+        "turnover_mean": 0.0,
+        "turnover_std": 0.0,
+        "search_efficiency_return_per_candidate": 0.0,
+        "total_candidates_attempted": 45,
+        "total_candidates_failed": 0,
+        "total_tool_calls": 0,
+        "total_wall_time_s": 0.7643997669219971
+      },
+      "mutation_log": [
+        {
+          "seed": 7,
+          "episode_id": "ep00",
+          "mutation_id": "mut_98cd1425",
+          "parent_policy_id": "1b52c4f50888",
+          "patch": {
+            "prompt_template": "tool_aware_default",
+            "prompt_context": {
+              "emphasis": [
+                "momentum in bull markets"
+              ]
+            }
+          },
+          "diagnosis": "no structured failure evidence supplied; using unspecified-failure patch 'tool_aware_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "1b52c4f50888",
+          "created": "2026-09-19T18:50:42.303865+00:00"
+        },
+        {
+          "seed": 7,
+          "episode_id": "ep01",
+          "mutation_id": "mut_40444fa5",
+          "parent_policy_id": "c54380e4e7a2",
+          "patch": {
+            "prompt_template": "grid_search_default",
+            "prompt_context": {}
+          },
+          "diagnosis": "no structured failure evidence supplied; using unspecified-failure patch 'grid_search_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "c54380e4e7a2",
+          "created": "2026-09-19T18:50:42.390798+00:00"
+        },
+        {
+          "seed": 7,
+          "episode_id": "ep02",
+          "mutation_id": "mut_e06c1417",
+          "parent_policy_id": "f84c926f361d",
+          "patch": {
+            "prompt_template": "tool_aware_default",
+            "prompt_context": {
+              "emphasis": [
+                "momentum in bull markets"
+              ]
+            }
+          },
+          "diagnosis": "no non-no-op mapped patch among structured failures ['unspecified']; falling back to unspecified-failure patch 'tool_aware_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "f84c926f361d",
+          "created": "2026-09-19T18:50:42.471221+00:00"
+        },
+        {
+          "seed": 11,
+          "episode_id": "ep00",
+          "mutation_id": "mut_95e7915a",
+          "parent_policy_id": "f44066649b2f",
+          "patch": {
+            "prompt_template": "tool_aware_default",
+            "prompt_context": {
+              "emphasis": [
+                "momentum in bull markets"
+              ]
+            }
+          },
+          "diagnosis": "no structured failure evidence supplied; using unspecified-failure patch 'tool_aware_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "f44066649b2f",
+          "created": "2026-09-19T18:50:42.552915+00:00"
+        },
+        {
+          "seed": 11,
+          "episode_id": "ep01",
+          "mutation_id": "mut_2332f85e",
+          "parent_policy_id": "178dd2cef231",
+          "patch": {
+            "prompt_template": "grid_search_default",
+            "prompt_context": {}
+          },
+          "diagnosis": "no structured failure evidence supplied; using unspecified-failure patch 'grid_search_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "178dd2cef231",
+          "created": "2026-09-19T18:50:42.638835+00:00"
+        },
+        {
+          "seed": 11,
+          "episode_id": "ep02",
+          "mutation_id": "mut_b0f176bb",
+          "parent_policy_id": "20c3fcf44958",
+          "patch": {
+            "prompt_template": "tool_aware_default",
+            "prompt_context": {
+              "emphasis": [
+                "momentum in bull markets"
+              ]
+            }
+          },
+          "diagnosis": "no non-no-op mapped patch among structured failures ['unspecified']; falling back to unspecified-failure patch 'tool_aware_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "20c3fcf44958",
+          "created": "2026-09-19T18:50:42.725414+00:00"
+        },
+        {
+          "seed": 19,
+          "episode_id": "ep00",
+          "mutation_id": "mut_72c7b739",
+          "parent_policy_id": "b8b9ae1fa68c",
+          "patch": {
+            "prompt_template": "tool_aware_default",
+            "prompt_context": {
+              "emphasis": [
+                "momentum in bull markets"
+              ]
+            }
+          },
+          "diagnosis": "no structured failure evidence supplied; using unspecified-failure patch 'tool_aware_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "b8b9ae1fa68c",
+          "created": "2026-09-19T18:50:42.812343+00:00"
+        },
+        {
+          "seed": 19,
+          "episode_id": "ep01",
+          "mutation_id": "mut_0be2f439",
+          "parent_policy_id": "04e3d2b44aa5",
+          "patch": {
+            "prompt_template": "grid_search_default",
+            "prompt_context": {}
+          },
+          "diagnosis": "no structured failure evidence supplied; using unspecified-failure patch 'grid_search_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "04e3d2b44aa5",
+          "created": "2026-09-19T18:50:42.891374+00:00"
+        },
+        {
+          "seed": 19,
+          "episode_id": "ep02",
+          "mutation_id": "mut_11a11452",
+          "parent_policy_id": "3a3de7ed04a4",
+          "patch": {
+            "prompt_template": "tool_aware_default",
+            "prompt_context": {
+              "emphasis": [
+                "momentum in bull markets"
+              ]
+            }
+          },
+          "diagnosis": "no non-no-op mapped patch among structured failures ['unspecified']; falling back to unspecified-failure patch 'tool_aware_default'",
+          "expected_benefit": "untested; evaluated empirically on dev episodes",
+          "evaluation_budget": 2,
+          "rollback_ref": "3a3de7ed04a4",
+          "created": "2026-09-19T18:50:42.971058+00:00"
+        }
+      ]
+    }
+  },
+  "cost_model": {
+    "cost_bps": 5.0
+  },
+  "seeds": [
+    7,
+    11,
+    19
+  ],
+  "note": "Negative or tied results for adaptive arms are reported as-is, not suppressed. Missing/failed outcomes are reported as status='missing' and are not coerced into a fallback numeric score.",
+  "live_mode": false,
+  "mutation_arms_caveat": "This run has no LLM API keys set (pass --live with a key exported to change that), so hypothesize_node's tool-orchestration path (the only path that reads _prompt_prefix_for's rendering of prompt_template/prompt_context, per src/agent/agent_graph.py) never executes -- it fails closed to the offline FallbackPlanner (grid search), which does not read prompt_template at all. Consequently evidence_conditioned_mutation, random_mutation, and shuffled_evidence_mutation are EXPECTED to produce identical numbers to frozen_agent/frozen_agent_memory in this offline configuration -- that is not a null result about evidence-conditioning, it is confirmation that the offline fallback does not masquerade as an LLM prompt intervention. A real comparison between these three modes requires running with --live and a real LLM key so the mutated prompt actually reaches the proposal backend.",
+  "paired_comparisons": {
+    "random_mutation_minus_evidence_conditioned_mutation": {
+      "metric": "holdout_net_return",
+      "n_paired": 9,
+      "n_dropped_missing_coverage": 0,
+      "mean_delta": 0.0,
+      "std_delta": 0.0,
+      "ci95_low": 0.0,
+      "ci95_high": 0.0,
+      "note": "delta = arm_b - arm_a on matched (episode_id, seed) cells; CI excludes zero => the difference is not attributable to noise at 95%."
+    },
+    "shuffled_evidence_mutation_minus_evidence_conditioned_mutation": {
+      "metric": "holdout_net_return",
+      "n_paired": 9,
+      "n_dropped_missing_coverage": 0,
+      "mean_delta": 0.0,
+      "std_delta": 0.0,
+      "ci95_low": 0.0,
+      "ci95_high": 0.0,
+      "note": "delta = arm_b - arm_a on matched (episode_id, seed) cells; CI excludes zero => the difference is not attributable to noise at 95%."
+    },
+    "frozen_agent_minus_evidence_conditioned_mutation": {
+      "metric": "holdout_net_return",
+      "n_paired": 9,
+      "n_dropped_missing_coverage": 0,
+      "mean_delta": 0.0,
+      "std_delta": 0.0,
+      "ci95_low": 0.0,
+      "ci95_high": 0.0,
+      "note": "delta = arm_b - arm_a on matched (episode_id, seed) cells; CI excludes zero => the difference is not attributable to noise at 95%."
+    }
+  }
+}
