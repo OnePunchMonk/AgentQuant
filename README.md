@@ -2,8 +2,8 @@
 
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-passing-brightgreen)](https://github.com/OnePunchMonk/AgentQuant/actions)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-126%20passed-brightgreen)
-![Last Updated](https://img.shields.io/badge/last%20updated-2026--09--19-blue)
+![Tests](https://img.shields.io/badge/tests-167%20passed-brightgreen)
+![Last Updated](https://img.shields.io/badge/last%20updated-2026--09--20-blue)
 
 > **AgentQuant does not just search for trading strategies; it evolves how it searches for them.**
 
