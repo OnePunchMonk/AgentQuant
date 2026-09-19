@@ -227,6 +227,16 @@ def _stress_test_tool(ohlcv_data, assets, strategy_name, params):
     return stress_test(ohlcv_data, assets, strategy_name, params)
 
 
+def _fetch_and_extract_content(url: str, query: str = "") -> Dict[str, Any]:
+    """Literature discovery tool (#22, research agent Phase 1): fetch a
+    URL (academic paper, industry research, strategy blog) and extract its
+    readable text plus citation metadata (title/authors/date), scored for
+    relevance against `query` if given."""
+    from src.agent.tools.content_extraction import fetch_and_extract_content
+
+    return fetch_and_extract_content(url=url, query=query)
+
+
 # ============================================================================
 # Default Registry Setup
 # ============================================================================
@@ -327,6 +337,31 @@ def get_default_registry() -> ToolRegistry:
             },
             callable_fn=_run_benchmark_tool,
             category="evaluation",
+        )
+    )
+
+    registry.register(
+        Tool(
+            name="fetch_and_extract_content",
+            description=(
+                "Fetch a URL (academic paper, industry research, or strategy blog) and extract "
+                "its readable text and citation metadata (title, authors, published date). Use "
+                "this after search_strategy_research finds a promising URL, to read what it "
+                "actually says before treating it as evidence for a hypothesis."
+            ),
+            input_schema={
+                "properties": {
+                    "url": {"type": "string", "description": "Full URL to fetch, e.g. an arXiv or SSRN paper page."},
+                    "query": {
+                        "type": "string",
+                        "description": "The research question/topic driving this fetch, used to score "
+                        "how relevant the extracted text is (0-1). Optional.",
+                    },
+                },
+                "required": ["url"],
+            },
+            callable_fn=_fetch_and_extract_content,
+            category="web_search",
         )
     )
 

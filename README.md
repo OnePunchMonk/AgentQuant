@@ -2,7 +2,7 @@
 
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-passing-brightgreen)](https://github.com/OnePunchMonk/AgentQuant/actions)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-167%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-183%20passed-brightgreen)
 ![Last Updated](https://img.shields.io/badge/last%20updated-2026--09--20-blue)
 
 > **AgentQuant does not just search for trading strategies; it evolves how it searches for them.**
@@ -108,6 +108,7 @@ Most trading agent frameworks are static parameter-tuning tools. **AgentQuant is
 - 🧪 **Includes experimental optimizers** — Genetic algorithms and differential evolution can search harness parameters; their benchmark currently uses a mock fitness function
 - ✅ **Records falsifiable claims** — Proposals can include confidence and written outcome claims for later analysis; no calibrated Sharpe-prediction-accuracy metric is reported
 - ✅ **Integrates web search** — Uses Tavily to find market sentiment and strategy research in real-time
+- 🧪 **Literature discovery (Phase 1)** — `fetch_and_extract_content` fetches a URL (academic paper, industry research, strategy blog) and extracts text + citation metadata (title/authors/date) with a relevance score; the first building block of `docs/RESEARCH_AGENT_DESIGN.md`'s literature agent, not yet wired into a full research loop
 - ✅ **Research-grade engineering**: automated tests, CI checks, security checks, and look-ahead bias guards
 
 ---

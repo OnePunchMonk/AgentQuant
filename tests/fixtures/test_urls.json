@@ -1,0 +1,11 @@
+{
+  "description": "Known finance/research URLs for scripts/verify_research_tool_urls.py (#22 acceptance: '5+ test URLs return expected output format'). Not run in default CI -- live external fetches are slow and rate-limit-prone; run manually or in a dedicated, non-blocking job.",
+  "urls": [
+    { "url": "https://arxiv.org/abs/2106.02975", "query": "momentum strategy", "category": "academic_arxiv" },
+    { "url": "https://arxiv.org/abs/1904.04912", "query": "reinforcement learning trading", "category": "academic_arxiv" },
+    { "url": "https://arxiv.org/abs/1802.03042", "query": "momentum crash risk", "category": "academic_arxiv" },
+    { "url": "https://www.investopedia.com/terms/m/momentum_investing.asp", "query": "momentum investing strategy", "category": "strategy_blog" },
+    { "url": "https://www.federalreserve.gov/econres/feds/index.htm", "query": "monetary policy research", "category": "industry_research" },
+    { "url": "https://quantpedia.com/strategies/momentum-effect-in-stocks/", "query": "momentum trading strategy", "category": "strategy_blog" }
+  ]
+}
