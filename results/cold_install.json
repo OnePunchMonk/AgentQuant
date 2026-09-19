@@ -1,0 +1,33 @@
+{
+  "python": "3.12.14 (main, Aug 12 2026, 13:57:54) [Clang 21.0.0 (clang-2100.1.1.101)]",
+  "measurements": [
+    {
+      "label": "base",
+      "extras": "(none)",
+      "install_time_s": 11.04,
+      "site_packages_size_mb": 474.2,
+      "run_label": "snapshot"
+    },
+    {
+      "label": "dev",
+      "extras": "[dev]",
+      "install_time_s": 10.94,
+      "site_packages_size_mb": 549.8,
+      "run_label": "snapshot"
+    },
+    {
+      "label": "dev_llm",
+      "extras": "[dev,llm]",
+      "install_time_s": 21.42,
+      "site_packages_size_mb": 789.1,
+      "run_label": "snapshot"
+    },
+    {
+      "label": "dev_llm_ui",
+      "extras": "[dev,llm,ui]",
+      "install_time_s": 23.97,
+      "site_packages_size_mb": 978.0,
+      "run_label": "snapshot"
+    }
+  ]
+}

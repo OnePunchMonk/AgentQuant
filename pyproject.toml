@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentquant"
-version = "0.2.0"
+version = "0.3.0"
 description = "Autonomous quantitative trading research platform with LLM regime-aware strategy optimization."
 authors = [{ name = "Avaya Aggarwal", email = "aggarwal.avaya27@gmail.com" }]
 readme = "README.md"

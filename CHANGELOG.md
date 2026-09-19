@@ -7,6 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-09-20
+
+First tagged, installable release (issue #30). Ships as a built
+wheel/sdist rather than only being usable from an editable source
+checkout.
+
+### Install & demo
+
+Not published to PyPI yet -- install the tagged wheel from the GitHub release,
+or build it yourself from the tag:
+
+```bash
+git checkout v0.3.0
+python -m build                                 # writes dist/agentquant-0.3.0-py3-none-any.whl
+pip install dist/agentquant-0.3.0-py3-none-any.whl          # core: research/backtest CLI, no UI/LLM extras
+agentquant run --help
+
+# optional extras, installed only if you need them:
+pip install "dist/agentquant-0.3.0-py3-none-any.whl[ui]"    # streamlit dashboard + plotting
+pip install "dist/agentquant-0.3.0-py3-none-any.whl[llm]"   # Anthropic/OpenAI/Gemini/Tavily providers
+pip install "dist/agentquant-0.3.0-py3-none-any.whl[dev]"   # pytest, for running the test suite
+
+# offline demo, no API keys or network required beyond the initial install:
+python run_app.py
+```
+
+Installing without `[ui]`/`[llm]` and importing `src.cli` / `src.agent.agent_graph`
+/ `src.agent.runner` works with no missing-import errors; requesting `--app`
+without the `ui` extra fails with an actionable message naming the extra to
+install, not a traceback.
+
+### Measured cold-install cost (this environment, `scripts/measure_cold_install.py`)
+
+| Extras | Install time | site-packages size |
+|---|---|---|
+| (none) — core | 11.0s | 474 MB |
+| `[dev]` | 10.9s | 550 MB |
+| `[dev,llm]` | 21.4s | 789 MB |
+| `[dev,llm,ui]` | 24.0s | 978 MB |
+
+These are one machine's snapshot (network-dependent pip resolution time), not
+a general performance claim — rerun `scripts/measure_cold_install.py` to
+reproduce on your own environment.
+
+### Verified for this release
+
+- `python -m build` produces an installable wheel/sdist; a clean venv
+  installing that wheel (no editable install, no source checkout on
+  `sys.path`) runs `agentquant --help`, `agentquant run --help`, and
+  `agentquant memory --help` successfully from a directory outside the repo.
+- 183 tests pass (`pytest tests/ -v --cov=src`), 0 skipped/xfailed, 69% `src`
+  coverage (see #21).
+- CI's `base-install`, `wheel-install`, and `harness-verification` jobs
+  (`.github/workflows/ci.yml`) cover this: base-only install with runtime
+  network blocked, wheel install run from outside the checkout, and the
+  6-epoch harness evolution script re-run + drift-checked (#19, #20) on
+  every push/PR.
+
+### Known limitations
+
+- No calibrated numerical Sharpe-forecast-accuracy metric; falsifiable
+  claims are recorded as text only (see README Evidence Table).
+- GA/DE harness-parameter optimizers benchmark against a mock fitness
+  function, not real backtests.
+- Without `ANTHROPIC_API_KEY`/`TAVILY_API_KEY` set, all LLM-tool-calling
+  code paths (proposal generation, harness mutation arms, the new
+  `fetch_and_extract_content` literature tool) fail closed to offline
+  fallbacks rather than silently degrading — expect flat/zero numbers for
+  those paths without a real key, not a bug.
+- `use_ensemble` and `grid_adaptation_strategy` harness knobs are declared
+  but not wired through execution yet; a config requesting them is rejected
+  with `UnsupportedHarnessKnobError` rather than silently ignored.
+
 ### Agentic Research Loop — 2026-09-12
 
 This release documents the current agentic design and the features added while
