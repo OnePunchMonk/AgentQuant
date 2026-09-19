@@ -321,10 +321,27 @@ historical trading performance.
 
 ```bash
 # 1. Fair search benchmark: compare arms (fixed / random_search /
-#    grid_search / frozen_agent / frozen_agent_memory) on identical
-#    chronological dev/holdout episode splits, >=3 seeds per arm.
+#    grid_search / frozen_agent / frozen_agent_memory / evidence_conditioned_mutation /
+#    random_mutation / shuffled_evidence_mutation) on identical chronological
+#    dev/holdout episode splits, >=3 seeds per arm, with paired comparisons
+#    between the three mutation arms (see `mutation_log` per arm for the
+#    full diagnosis -> patch trail, and `mutation_arms_caveat` in the report
+#    for why offline runs necessarily collapse the three mutation arms to
+#    identical numbers -- issue #31).
 python scripts/fair_search_benchmark.py --episodes 3 --seeds 7 11 19 \
   --output results/fair_search_benchmark.json
+
+# By default this exercises the offline FallbackPlanner, which never reads
+# prompt_template -- useful for proving the arms/harness are wired correctly
+# (see the checked-in fixture at
+# experiments/fair_search_benchmark_offline_fixture.json) but NOT for
+# comparing evidence-conditioned vs random vs shuffled-evidence mutation,
+# since all three collapse to frozen_agent under it. A real comparison
+# (does conditioning on the agent's own correctly-attributed prior failure
+# beat random and mis-attributed-evidence mutation?) requires --live with a
+# real LLM key so the mutated prompt actually reaches the proposal backend:
+python scripts/fair_search_benchmark.py --episodes 3 --seeds 7 11 19 --live \
+  --output results/fair_search_benchmark_live.json
 
 # 2. Bounded self-improvement: an outer loop mutates the agent's own
 #    prompt/policy, selects on a validation episode, promotes only if it
