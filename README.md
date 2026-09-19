@@ -133,6 +133,23 @@ this table should link back to.
 - ❌ There is no calibrated numerical Sharpe-forecast-accuracy metric yet; falsifiable claims are recorded as text, not scored against realized outcomes.
 - ❌ "Tool calls per epoch" is a raw count, not an efficiency ratio; a change in tool-call count alone is not evidence of an efficiency improvement and should not be reported as one (the previous "8x efficiency" framing has been removed for this reason).
 
+**Keeping the checked-in results honest (#20):** CI's `harness-verification` job runs
+`scripts/verify_harness_results.py` on every push/PR, which re-runs the 6-epoch script
+against live yfinance data and fails the build if the script no longer executes, or if
+the offline (no LLM key) run stops collapsing to identical Sharpe/zero tool-calls across
+all 6 epochs -- both would mean the checked-in `results/*.json`/`.harness/*.json` files
+no longer reflect what the code actually produces. It deliberately does not diff exact
+Sharpe values against the committed file (real market data shifts daily, so that would
+just be flaky). To intentionally update the checked-in results after a real code change:
+
+```bash
+python3 scripts/harness_evolution_6_epochs.py --strategy momentum --asset SPY \
+  --output results/harness_evolution_6epochs_results.json
+python3 scripts/benchmark_harness_evolution.py --strategy momentum \
+  --output results/benchmark_report.json
+python3 scripts/verify_harness_results.py   # confirm it still passes before committing
+```
+
 ### UI & Dashboards
 
 ![Dashboard showing backtest results](screenshots/dashboard1.png)

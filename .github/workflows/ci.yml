@@ -180,6 +180,14 @@ jobs:
           test -f results/harness_evolution_6epochs_results.json && echo "✓ Evolution results found"
           test -f results/benchmark_report.json && echo "✓ Benchmark report found"
 
+      - name: Verify harness evolution results are not stale (#20)
+        env:
+          GOOGLE_API_KEY: ""
+          ANTHROPIC_API_KEY: ""
+          TAVILY_API_KEY: ""
+        run: |
+          python scripts/verify_harness_results.py
+
   security-check:
     name: Security & Configuration
     runs-on: ubuntu-latest
