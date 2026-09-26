@@ -2,7 +2,7 @@
 
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 
 from src.agent.context_builder import RegimeContext
 from src.agent.proposal_generator import Proposal, ProposalGenerator
@@ -18,11 +18,12 @@ class StrategySpecialist:
         self.strategy_type = strategy_type
         self.generator = ProposalGenerator()
 
-    def generate(self, context: RegimeContext, n: int = 3) -> List[Proposal]:
+    def generate(self, context: RegimeContext, n: int = 3, memory_pack: Optional[Any] = None) -> List[Proposal]:
         proposals = self.generator.generate(
             context=context,
             n_proposals=n,
             strategy_type=self.strategy_type,
+            memory_pack=memory_pack,
         )
         for proposal in proposals:
             proposal.generation_method = f"{self.strategy_type}:{proposal.generation_method}"
@@ -44,7 +45,9 @@ def run_strategy_specialists(state: SwarmState) -> SwarmState:
     max_workers = min(len(strategy_types), 4) or 1
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(StrategySpecialist(strategy_type).generate, context, 3): strategy_type
+            executor.submit(
+                StrategySpecialist(strategy_type).generate, context, 3, state.get("memory_pack")
+            ): strategy_type
             for strategy_type in strategy_types
         }
         for future in as_completed(futures):

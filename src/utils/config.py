@@ -63,6 +63,47 @@ class BacktestConfig(BaseModel):
     min_warmup_periods: int = 252
 
 
+class DreamConfig(BaseModel):
+    """Offline consolidation ("dreaming") run by the memory sidecar."""
+    interval_seconds: int = 900
+    # Trials replayed on out-of-sample data per cycle.
+    max_replays: int = 50
+    # Length of the forward window used to replay an in-sample-only trial.
+    oos_bars: int = 126
+    # A replay window shorter than this is skipped until more data exists.
+    min_oos_bars: int = 42
+    # mem_reads audit rows older than this are pruned.
+    read_log_retention_days: int = 30
+
+
+class MemoryConfig(BaseModel):
+    """Unified memory layer (src/memory). See docs/MEMORY_LAYER_DESIGN.md."""
+    # off: no reads or writes. read: recall only. read_write: recall + record.
+    mode: str = "read_write"
+    k_beliefs: int = 6
+    token_budget: int = 1200
+    allow_seeds: bool = True
+    max_seeds: int = 2
+    # Legacy rows backfilled without market dates are invisible to dated
+    # queries unless this is set; enabling it gives up the point-in-time
+    # guarantee for those rows.
+    include_undated: bool = False
+    half_life_days: float = 730.0
+    regime_tau: float = 1.5
+    min_similarity: float = 0.05
+    shrinkage_kappa: float = 1.0
+    in_sample_penalty: float = 0.25
+    dream: DreamConfig = DreamConfig()
+
+    @field_validator("mode")
+    @classmethod
+    def validate_mode(cls, v: str) -> str:
+        allowed = {"off", "read", "read_write"}
+        if v not in allowed:
+            raise ValueError(f"memory.mode must be one of {allowed}, got '{v}'")
+        return v
+
+
 class DataConfig(BaseModel):
     yfinance_period: str = "5y"
     fred_series: Dict[str, str] = Field(default_factory=dict)
@@ -95,6 +136,7 @@ class AppConfig(BaseModel):
     backtest: BacktestConfig = BacktestConfig()
     strategies: List[StrategyConfig] = Field(default_factory=list)
     results_db_path: str = "experiments/results.db"
+    memory: MemoryConfig = MemoryConfig()
 
     @field_validator("log_level")
     @classmethod

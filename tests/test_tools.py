@@ -12,7 +12,6 @@ from src.agent.tools.content_extraction import (
 )
 from src.agent.tools.registry import get_default_registry
 
-
 SAMPLE_HTML = """
 <html>
 <head>

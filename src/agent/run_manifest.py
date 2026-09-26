@@ -75,7 +75,7 @@ def build_manifest_from_state(
     memory_snapshot_id: Optional[str] = None,
 ) -> RunManifest:
     """Build a RunManifest from a finished agent_graph run state."""
-    run_id = str(uuid.uuid4())[:12]
+    run_id = state.get("run_id") or str(uuid.uuid4())[:12]
 
     harness = state.get("harness_config")
     config_hash = getattr(harness, "config_hash", None)

@@ -33,3 +33,7 @@ Thumbs.db
 config.json
 new_env.ini
 experiments/run_manifests/
+
+# Unified memory: SQLite WAL files and dream sidecar heartbeat/lock
+experiments/*.db-*
+experiments/*.dream.*

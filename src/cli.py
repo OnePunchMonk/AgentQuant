@@ -26,7 +26,70 @@ def _print_table(rows: List[Dict[str, Any]]) -> None:
         print(df.to_string(index=False))
 
 
+def _unified_memory_command(args: argparse.Namespace) -> int:
+    from src.memory import MemoryQuery, MemoryService
+
+    service = MemoryService(mode="read")
+    if args.stats:
+        _print_table([service.stats()])
+        return 0
+    if args.trials:
+        rows = []
+        for t in service.list_trials(strategy_type=args.strategy, asset=args.asset, limit=args.limit):
+            rows.append({
+                "Trial": t.trial_id[:8], "Run": t.run_id, "Asset": t.asset, "Strategy": t.strategy_type,
+                "Params": t.params, "Regime": t.regime_label, "Data End": t.data_end,
+                "IS Sharpe": t.is_sharpe, "OOS Sharpe": t.oos_sharpe, "OOS Src": t.oos_source,
+                "Outcome": t.outcome, "Failure": t.failure_mode, "Source": t.source,
+            })
+        _print_table(rows)
+        return 0
+    strategies = [args.strategy] if args.strategy else [s.name for s in config.strategies] or ["momentum"]
+    query = MemoryQuery(
+        as_of=args.as_of,
+        strategy_types=tuple(strategies),
+        asset=args.asset or None,
+        regime_label=args.regime,
+        k_beliefs=args.limit,
+        min_acceptable_sharpe=config.agent.min_acceptable_sharpe,
+    )
+    if args.prompt:
+        print(service.recall(query).to_prompt())
+        return 0
+    rows = []
+    for b in service.beliefs(query)[: args.limit]:
+        rows.append({
+            "Belief": b.short_id, "Verdict": b.verdict, "Strategy": b.strategy_type, "Asset": b.asset,
+            "Params": b.params, "n": b.n_trials, "n OOS": b.n_oos, "IS": b.is_mean, "OOS": b.oos_mean,
+            "Evidence": b.evidence, "Shrunk": b.shrunk, "Last Data": b.last_data_end,
+        })
+    _print_table(rows)
+    return 0
+
+
+def _dream_command(args: argparse.Namespace) -> int:
+    import json
+
+    from src.memory import MemoryService
+    from src.memory.dream import Dreamer
+
+    setup_logging(config.log_level)
+    dreamer = Dreamer(
+        MemoryService(mode="read_write"),
+        max_replays=args.max_replays,
+    )
+    if args.watch:
+        interval = args.interval or config.memory.dream.interval_seconds
+        dreamer.watch(interval_seconds=interval, max_cycles=args.max_cycles)
+        return 0
+    report = dreamer.run_once()
+    print(json.dumps(report.to_dict(), indent=2))
+    return 1 if report.errors else 0
+
+
 def _memory_command(args: argparse.Namespace) -> int:
+    if args.beliefs or args.trials or args.stats or args.prompt:
+        return _unified_memory_command(args)
     layer = AgenticMemoryLayer()
     if args.patterns:
         patterns = layer.extract_patterns(
@@ -161,7 +224,26 @@ def build_parser() -> argparse.ArgumentParser:
     memory_parser.add_argument("--limit", type=int, default=25)
     memory_parser.add_argument("--patterns", action="store_true", help="Show learned strategy patterns")
     memory_parser.add_argument("--export", choices=["table", "markdown"], default="table")
+    memory_parser.add_argument("--beliefs", action="store_true",
+                               help="Show evidence-weighted beliefs from the unified memory layer")
+    memory_parser.add_argument("--trials", action="store_true", help="Show raw trials (episodic memory)")
+    memory_parser.add_argument("--stats", action="store_true", help="Show unified memory row counts")
+    memory_parser.add_argument("--prompt", action="store_true",
+                               help="Print the memory block an agent would receive")
+    memory_parser.add_argument("--asset", default="")
+    memory_parser.add_argument("--as-of", default=None,
+                               help="Only use evidence available on this market date (YYYY-MM-DD)")
     memory_parser.set_defaults(func=_memory_command)
+
+    dream_parser = subparsers.add_parser(
+        "dream", help="Offline memory consolidation (replay, consolidate, prune); run as a sidecar with --watch")
+    dream_parser.add_argument("--watch", action="store_true", help="Run forever, one cycle per interval")
+    dream_parser.add_argument("--interval", type=float, default=None,
+                              help="Seconds between cycles (default: memory.dream.interval_seconds)")
+    dream_parser.add_argument("--max-cycles", type=int, default=None, help="Stop after N cycles (with --watch)")
+    dream_parser.add_argument("--max-replays", type=int, default=None,
+                              help="Trials replayed out-of-sample per cycle (default: memory.dream.max_replays)")
+    dream_parser.set_defaults(func=_dream_command)
 
     card_parser = subparsers.add_parser("regime-card", help="Render the latest stored regime card")
     card_parser.set_defaults(func=_regime_card_command)

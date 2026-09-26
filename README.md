@@ -450,10 +450,15 @@ src/app/streamlit_app.py` directly also works once that extra is installed.
 - `tools/orchestrator.py` — Claude tool-use loop
 - `tools/evals.py` — Quality assessment benchmark
 
-### Memory (`src/research/`)
-- `alpha_store.py` — Persist alpha candidates with citations
-- `nla_memory.py` — Explicit NLA-style research narratives
-- `workspace.py` — Experiment registry + research memos
+### Memory (`src/memory/`)
+One read/write API for the agent loop and the swarm ([design](docs/MEMORY_LAYER_DESIGN.md)):
+- Every backtested proposal is stored as a trial (winners and losers). Holdout results are attached as out-of-sample evidence.
+- Reads are cut off at the last market bar the agent can see (`as_of`), so no future data leaks in through memory.
+- Beliefs rank out-of-sample evidence first. In-sample Sharpe is deflated by the number of configs tried, and evidence is weighted by regime similarity.
+- `agentquant memory --beliefs | --trials | --prompt | --stats` browses it.
+- **Dreaming mode** (`agentquant dream`, or `agentquant dream --watch` as a sidecar): replays in-sample-only trials on forward data, writes notes when a config's verdict changes, and prunes the read log. `docker compose up` starts it next to the app.
+
+Legacy stores (`src/agent/strategy_memory.py`, `src/research/alpha_store.py`, `nla_memory.py`) are still written for the dashboard and CLI regime card.
 
 ### Backtesting (`src/backtest/`)
 - `runner.py` — Unified backtest engine with look-ahead guards

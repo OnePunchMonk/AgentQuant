@@ -1,0 +1,47 @@
+# AgentQuant with the memory "dreaming" sidecar.
+#
+#   docker compose up -d
+#
+# `app` serves the dashboard and runs agents. `dreamer` shares the same
+# experiments/ (memory db) and data_store/ (market data) volumes and runs
+# offline consolidation every memory.dream.interval_seconds: it replays
+# in-sample-only trials on forward data, writes consolidation notes when a
+# config's verdict changes, and prunes the read audit log. SQLite runs in
+# WAL mode, so the agent and the dreamer can use the db concurrently.
+services:
+  app:
+    build: .
+    image: agentquant:latest
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "8501:8501"
+    volumes:
+      - experiments:/app/experiments
+      - data_store:/app/data_store
+
+  dreamer:
+    image: agentquant:latest
+    depends_on:
+      - app
+    command: ["python", "-m", "src.cli", "dream", "--watch"]
+    environment:
+      # The dreamer only backtests on locally cached data; it never needs an
+      # LLM key or network access.
+      AGENTQUANT_OFFLINE: "1"
+    volumes:
+      - experiments:/app/experiments
+      - data_store:/app/data_store
+    restart: unless-stopped
+    healthcheck:
+      # Healthy while the last cycle's heartbeat is fresher than 3 intervals.
+      test: ["CMD", "python", "-m", "src.memory.healthcheck"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+
+volumes:
+  experiments:
+  data_store:

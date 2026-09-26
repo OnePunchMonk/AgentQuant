@@ -118,6 +118,7 @@ class ProposalGenerator:
         strategy_type: str = "momentum",
         prior_results: Optional[List[Dict[str, Any]]] = None,
         prompt_prefix: str = "",
+        memory_pack: Optional[Any] = None,
     ) -> List[Proposal]:
         """
         Args:
@@ -129,8 +130,15 @@ class ProposalGenerator:
                 resolved harness config's prompt_template/prompt_context. This
                 is what makes "changing a prompt changes the actually
                 submitted prompt" demonstrable/testable.
+            memory_pack: A src.memory.MemoryPack from the unified memory
+                layer. When given, it replaces the legacy AlphaStore lookups:
+                seeds come only from out-of-sample "works" beliefs, avoided
+                configs from "avoid"/"decays" beliefs, and the pack's prompt
+                (already in context.memory_context) replaces the failure
+                section.
         """
         proposals: List[Proposal] = []
+        self._active_pack = memory_pack
 
         # Try LLM first
         if self.planner.is_available():
@@ -149,8 +157,13 @@ class ProposalGenerator:
             existing_params = {tuple(sorted(p.params.items())) for p in proposals}
             rejected_params = self._rejected_param_keys(context, strategy_type)
 
-            if self.use_alpha_memory:
+            if memory_pack is not None:
+                memory_proposals = self._pack_seed_proposals(memory_pack, strategy_type)
+            elif self.use_alpha_memory:
                 memory_proposals = self._memory_generate(context, strategy_type, needed)
+            else:
+                memory_proposals = []
+            if memory_proposals:
                 for mp in memory_proposals:
                     if len(proposals) >= n_proposals:
                         break
@@ -231,7 +244,29 @@ class ProposalGenerator:
             )
         return proposals
 
+    def _pack_seed_proposals(self, pack: Any, strategy_type: str) -> List[Proposal]:
+        grid_keys = {tuple(sorted(params.items())) for params in self.grid.get_grid(strategy_type)}
+        proposals = []
+        for belief in pack.seeds:
+            if belief.strategy_type != strategy_type:
+                continue
+            key = tuple(sorted(belief.params.items()))
+            if grid_keys and key not in grid_keys:
+                continue
+            proposals.append(Proposal(
+                params=dict(belief.params),
+                confidence=min(0.9, max(0.4, 0.5 + belief.shrunk / 4)),
+                regime_characteristic_used="memory",
+                reasoning=f"Memory belief [b:{belief.short_id}]: {belief.verdict}, "
+                          f"OOS Sharpe {belief.oos_mean or 0.0:.2f} over {belief.n_oos} window(s).",
+                generation_method="memory_seed",
+            ))
+        return proposals
+
     def _rejected_param_keys(self, context: RegimeContext, strategy_type: str) -> set:
+        pack = getattr(self, "_active_pack", None)
+        if pack is not None:
+            return pack.avoid_param_keys(strategy_type)
         if not self.use_alpha_memory:
             return set()
         rejected = self.alpha_store.recall(
@@ -256,8 +291,9 @@ class ProposalGenerator:
             param_grid_json=self.grid.to_json(strategy_type),
             n_proposals=n,
             prior_results_section=self._format_prior_results(prior_results),
-            failure_memory_section=self.failure_store.failures_to_prompt_context(
-                context.regime_label, strategy_type, n=5
+            failure_memory_section=(
+                "" if getattr(self, "_active_pack", None) is not None
+                else self.failure_store.failures_to_prompt_context(context.regime_label, strategy_type, n=5)
             ),
         )
         self.last_prompt = prompt  # exposed for tests asserting prompt changes

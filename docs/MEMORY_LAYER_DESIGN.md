@@ -1,6 +1,6 @@
 # AgentQuant Memory Layer: Design
 
-Status: proposal · Written against `9b7d20f`
+Status: implemented (`src/memory/`), first written against `9b7d20f`. Section 13 lists where the implementation differs from the original proposal and what is deferred.
 
 ## 1. What exists today
 
@@ -143,15 +143,17 @@ class MemoryQuery:
 Every SQL read in the service goes through one helper:
 
 ```sql
-WHERE data_end < :as_of
-  AND (oos_end IS NULL OR oos_end < :as_of)      -- OOS evidence counts only if its window closed before as_of
+WHERE data_end IS NOT NULL AND data_end <= :as_of
 ```
 
-A trial row stays visible when its OOS window has not yet closed. In that case its OOS fields are treated as NULL: a small wrapper blanks `oos_*` whenever `oos_end >= as_of`.
+OOS evidence counts only if its window closed on or before `as_of`. A trial row stays visible while its OOS window is still open, but its OOS fields are treated as NULL: the service blanks `oos_*` whenever `oos_end > as_of`, or when `oos_end` is unknown.
 
-- For benchmark episodes, `as_of = episode.dev_start`. This is stricter than "earlier episode", which is correct because it also blocks an earlier episode whose holdout overlaps the current dev window.
-- In live mode `as_of=None` and everything is visible.
-- Backfilled legacy rows have no market dates. They get `data_end = '9999-12-31'`, which makes them invisible to any dated query and visible in live mode. That is the only safe default.
+- `agent_graph.run_agent` sets `as_of` to the last bar of the **search window**, the data the hypothesize/backtest loop can see, and the visibility test is `data_end <= as_of`.
+  - A prior run on the same data is visible as in-sample evidence.
+  - That run's holdout result stays hidden, because its `oos_end` is after this run's search window. Memory therefore cannot leak this run's own holdout period.
+  - Benchmark episodes get the same guarantee without caller discipline.
+- Browsing (`agentquant memory`, the dreamer) uses `as_of=None`, and everything is visible.
+- Backfilled legacy rows have no market dates, so their `data_end` is NULL. They are invisible to dated queries unless `memory.include_undated: true`, and visible when browsing.
 
 `filter_visible_memory` stays as a test oracle. The property test asserts that `service.recall(as_of=X)` never returns an id that the oracle would drop.
 
@@ -167,7 +169,7 @@ REGIME_FEATURES = {            # (center, scale)
     "drawdown_from_peak": (-0.05, 0.08),
     "price_vs_sma200":  (0.0, 0.08),
 }
-sim(a, b) = exp(-||z(a) - z(b)||² / (2·τ²)),   τ = 1.0
+sim(a, b) = exp(-||z(a) - z(b)||² / (2·τ²)),   τ = 1.5 (memory.regime_tau)
 ```
 
 Retrieval uses the vector when it is present, and falls back to exact `regime_label` match only for legacy rows without a vector. The linear scan in Python costs O(n) and is fine up to about 10⁵ rows. Past that, pre-filter by `strategy_type` and the vol-bucket prefix of the label.
@@ -178,17 +180,21 @@ For each visible `config_key` (and each `strategy_type` as a family-level rollup
 
 ```
 w_i       = sim(regime_vec_i, query_vec) · 0.5^(Δt_market_i / H)     # H = 504 trading days half-life
-n_trials  = Σ 1 over trials in scope (all configs of this strategy_type)  → used for deflation
+n_configs = distinct config_keys tried in scope (this strategy_type)   → used for deflation
+            (re-running an identical config is not another independent look)
 oos_mean  = Σ w_i·oos_sharpe_i / Σ w_i       over trials with OOS evidence
 is_mean   = Σ w_i·is_sharpe_i  / Σ w_i
 
-deflation = sqrt(2·ln(max(n_trials, 2))) · se(SR),   se(SR) ≈ sqrt((1 + SR²/2) / years)
+deflation = sqrt(2·ln(max(n_configs, 2))) · se(SR),   se(SR) ≈ sqrt((1 + SR²/2) / years)
 evidence  = oos_mean                         if n_oos ≥ 1
           = is_mean − deflation − λ          otherwise  (λ = 0.25: in-sample-only penalty)
-shrunk    = evidence · n_eff / (n_eff + κ)   # κ = 3, n_eff = (Σw)² / Σw²
+shrunk    = evidence · n_eff / (n_eff + κ)   # κ = 1, n_eff = Σw (evidence mass)
+w_i      *= 0.5 when trial.asset ≠ query.asset (other assets count at half weight)
 ```
 
-The deflation term is the expected maximum Sharpe from pure noise across `n_trials` looks (Bailey & López de Prado, *The Deflated Sharpe Ratio*). It directly counters problem 1.
+`n_eff` is the sum of weights, not Kish's `(Σw)²/Σw²`. Kish's formula does not change when every weight is scaled by the same factor, so a lone dissimilar trial would count as a full trial.
+
+The deflation term is the expected maximum Sharpe from pure noise across `n_configs` looks (Bailey & López de Prado, *The Deflated Sharpe Ratio*). It directly counters problem 1.
 
 Verdicts replace `AgenticMemoryLayer._verdict`:
 
@@ -201,7 +207,7 @@ Verdicts replace `AgenticMemoryLayer._verdict`:
 | `avoid` | `n_oos ≥ 1` and `oos_mean < 0`, or ≥ 3 in-sample rejections with `n_eff ≥ 2` |
 | `unproven` | anything else |
 
-The parameter bucketing in `_bucket_params` is currently hard-coded for three strategies. It is replaced by neighbourhoods on the `ParameterGrid`: two configs are neighbours if they differ by one grid step in one parameter. Beliefs about a neighbourhood are aggregated the same way, which removes the per-strategy special cases.
+The legacy `AgenticMemoryLayer._bucket_params` is hard-coded for three strategies. Beliefs replace it at the level of exact configs. Aggregating across grid neighbourhoods is deferred (section 13).
 
 ### 5.4 MemoryPack (G5)
 
@@ -259,17 +265,39 @@ Writes are idempotent where it matters. `attach_oos` is an `UPDATE ... WHERE tri
 - **Harness**: add `HarnessConfig.memory = {mode: off|read|read_write, k_beliefs, token_budget, allow_seeds: bool}`. `frozen_agent` = `off`, `frozen_agent_memory` = `read_write` with `as_of=episode.dev_start`. This adds a third arm, `memory_no_seeds`, to test whether seeding helps or only adds overfitting.
 - **CLI / Streamlit**: `agentquant memory --beliefs --regime-like 2020-03-16` shows the verdict table, and `--trials` shows raw rows. Streamlit's Alpha/NLA panels read `beliefs`/`notes`.
 
+## 7b. Dreaming mode (offline consolidation sidecar)
+
+The agent loop should stay fast, and it should only ever read memory. The slow, whole-database work runs in a separate process, the **dreamer** (`src/memory/dream.py`). Each cycle runs four phases. A failure in one phase is recorded in the report and does not stop the others.
+
+1. **Backfill.** Import the legacy `strategy_runs`, `alpha_candidates` (non-agent rows only, because agent rows duplicate `strategy_runs`), `nla_records` and `hypotheses` tables. Deterministic ids make this idempotent.
+2. **Replay.** Select trials that have only in-sample evidence, with the highest in-sample Sharpe first, up to `memory.dream.max_replays`. For each one, check whether the local parquet store (`data_path`, never the network) now holds at least `min_oos_bars` bars after its `data_end`. If so, backtest the config on the next `oos_bars` bars and `attach_oos(..., source="dream_replay")`.
+   - This turns in-sample claims into out-of-sample evidence, so over time more of memory is OOS-backed and the in-sample penalty matters less.
+   - It never leaks. The window lies strictly after `data_end`, and the evidence becomes visible only to queries with `as_of >= oos_end`.
+   - Trials without enough forward data are rechecked after 24h.
+3. **Consolidate.** Recompute beliefs per `(strategy_type, asset, regime_label)`. Whenever a config's verdict changes (for example `promising → decays`), write a `consolidation` note. Its `data_end` is the latest market date its evidence used, so the note obeys the same `as_of` rule as trials. Agents see these notes in the NOTES section of the pack.
+4. **Prune.** Delete `mem_reads` rows older than `read_log_retention_days`.
+
+**Operating it**
+- Run one cycle with `agentquant dream`. It prints a JSON report and exits non-zero if a phase errored.
+- Run it as a sidecar with `agentquant dream --watch [--interval S]`, one cycle every `memory.dream.interval_seconds`.
+- An advisory `fcntl` lock (`<db>.dream.lock`) keeps a second dreamer from running against the same database. SQLite runs in WAL mode with a 30s busy timeout, so agents and the dreamer can share the file.
+- Each cycle writes a heartbeat (`<db>.dream.json`). `python -m src.memory.healthcheck` exits 0 while the heartbeat is fresher than 3 intervals.
+- `docker-compose.yml` runs `app` and `dreamer` from the same image, sharing the `experiments` and `data_store` volumes. The dreamer needs no LLM key.
+
 ## 8. Module layout
 
 ```
 src/memory/
-  __init__.py          # MemoryService, MemoryQuery, MemoryPack
-  schema.py            # DDL + migrations (PRAGMA user_version)
-  canonical.py         # canonical_params(), config_key(), regime_vec()
+  __init__.py          # MemoryService, MemoryQuery, MemoryPack, Trial, Note
+  models.py            # Trial, Note, MemoryQuery, Belief
+  schema.py            # DDL, WAL connection setup, PRAGMA user_version
+  canonical.py         # canonical_params(), config_key(), regime vectors + similarity
   service.py           # record_*/attach_oos/recall; owns the visibility helper
-  beliefs.py           # weighting, deflation, verdicts, grid neighbourhoods
-  pack.py              # MemoryPack + budgeted rendering
+  beliefs.py           # weighting, deflation, shrinkage, verdicts
+  pack.py              # MemoryPack + budgeted prompt rendering
   backfill.py          # legacy tables → mem_trials/mem_notes
+  dream.py             # Dreamer: backfill, replay, consolidate, prune
+  healthcheck.py       # sidecar heartbeat check
 ```
 
 Legacy classes stay as thin deprecation shims for one release: `StrategyMemory`, `AlphaStore`, `NLAMemoryStore`, `HypothesisMemory`, and `AgenticMemoryLayer`. Their `store()` forwards to `record_trial`/`record_note`, and their `to_prompt_context()` forwards to `recall().to_prompt()`.
@@ -308,3 +336,31 @@ Use the existing `scripts/fair_search_benchmark.py` episodes with paired compari
 - **Per-asset or pooled:** should `config_key` include `asset`? Proposal: yes for trials, but beliefs roll up across assets at 0.5 weight so SPY evidence can inform QQQ.
 - **Half-life `H`:** 2y is a guess. It should be tuned on the benchmark rather than chosen by hand.
 - **Walk-forward folds:** should swarm results with walk-forward folds count as `n` OOS observations or as one? Proposal: count them as one trial with `oos_sharpe` set to the fold mean and the fold std kept in metadata, to avoid inflating `n_eff`.
+
+## 13. Implementation notes and deferred items
+
+**Shipped**
+- Everything in sections 3–7b is shipped. Tests are in `tests/test_memory_service.py` and `tests/test_dream.py`.
+- `agent_graph`:
+  - `backtest_node` records every trial, including errors.
+  - `holdout_eval_node` attaches the holdout result as OOS evidence.
+  - `analyze_node` makes one `recall()` per run.
+  - `store_node` records the winning narrative as a note, unless it is grid/random boilerplate.
+  - `run_id` and `memory_snapshot_id` flow into `RunManifest`.
+- The swarm `MemoryAgent` recalls through the same service and records walk-forward rankings as in-sample trials. Specialists receive the pack.
+- `ProposalGenerator.generate(memory_pack=...)`: seeds come only from out-of-sample `works` beliefs of the same strategy type (`memory_seed`). Avoided configs come from `avoid`/`decays` beliefs. Without a pack, the legacy `AlphaStore` path is unchanged.
+
+**Differs from the original proposal**
+- `as_of` is the end of the search window, not `episode.dev_start`, and visibility is `<=` (section 5.1).
+- `n_eff = Σw` and κ = 1 (section 5.3). Deflation counts distinct configs.
+- Notes are ranked by regime-label match and quality. SQLite FTS5 is not used, because its availability varies across Python builds.
+- Legacy tables are still written alongside the new ones (dual-write) for the Streamlit dashboard and `agentquant regime-card`. Agent-side reads no longer use them.
+- `reflect_node` no longer writes `failure_records`.
+
+**Deferred**
+- Beliefs aggregated over grid neighbourhoods.
+- A `memory_no_seeds` benchmark arm, and a harness-level `memory` knob. Today the switch is `config.yaml` `memory.mode`.
+- `search_arms._grade_on_holdout` does not record its grading into memory. The agent's internal holdout and the dreamer provide the OOS evidence.
+- Streamlit panels still read the legacy stores.
+- The legacy classes are not yet thin shims over `MemoryService`.
+- LLM-written consolidation notes. The dreamer's notes are deterministic templates.

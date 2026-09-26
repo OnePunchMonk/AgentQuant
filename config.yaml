@@ -50,6 +50,21 @@ backtest:
   market_impact_bps: 5.0      # square-root market impact basis points
   min_warmup_periods: 252
 
+# Unified memory layer (docs/MEMORY_LAYER_DESIGN.md)
+memory:
+  mode: "read_write"          # off | read | read_write
+  k_beliefs: 6
+  token_budget: 1200          # approx. tokens of memory injected into prompts
+  allow_seeds: true           # re-propose configs with out-of-sample "works" verdicts
+  max_seeds: 2
+  include_undated: false      # show backfilled legacy rows (no market dates) to dated queries
+  dream:                      # offline consolidation sidecar: `agentquant dream --watch`
+    interval_seconds: 900
+    max_replays: 50
+    oos_bars: 126
+    min_oos_bars: 42
+    read_log_retention_days: 30
+
 # Strategy definitions with parameter grids
 strategies:
   - name: "momentum"

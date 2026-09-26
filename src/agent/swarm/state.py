@@ -29,6 +29,8 @@ class SwarmState(TypedDict, total=False):
     best_result: Optional[Dict[str, Any]]
     memory_patterns: List[str]
     memory_context: str
+    memory_pack: Optional[Any]
+    run_id: str
     run_log: List[str]
 
 

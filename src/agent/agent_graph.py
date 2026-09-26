@@ -11,6 +11,7 @@ based on backtest results.
 
 import json
 import logging
+import uuid
 from typing import Any, Dict, List, Optional, TypedDict
 
 import pandas as pd
@@ -22,7 +23,9 @@ from src.agent.strategy_memory import PastResult, StrategyMemory
 from src.agent.tools import get_default_registry
 from src.agent.tools.orchestrator import ToolOrchestrator
 from src.agent.trace import TraceRecorder, emit_trace
-from src.research.alpha_store import AlphaStore, FailureRecord
+from src.memory import MemoryQuery, MemoryService, Note, Trial, regime_vec_from_context
+from src.memory.canonical import to_date
+from src.research.alpha_store import AlphaStore
 from src.research.nla_memory import NLAMemoryStore
 from src.utils.config import config
 
@@ -58,6 +61,10 @@ class AgentState(TypedDict, total=False):
     trace: Optional[TraceRecorder]
     harness_config: Optional[EffectiveHarnessConfig]
     run_status: Optional[str]
+    run_id: str
+    as_of: Optional[str]
+    memory_pack: Optional[Any]
+    memory_snapshot_id: Optional[str]
 
 
 def _split_search_and_holdout(
@@ -119,20 +126,10 @@ def analyze_node(state: AgentState) -> AgentState:
     regime_label = detect_regime(features_df)
     context.regime_label = regime_label
 
-    # Get memory context
-    memory = StrategyMemory()
-    memory_ctx = memory.to_prompt_context(regime_label, state.get("strategy_type", "momentum"))
-    alpha_memory = AlphaStore()
-    alpha_ctx = alpha_memory.to_prompt_context(regime_label, state.get("strategy_type", "momentum"))
-    nla_memory = NLAMemoryStore()
-    nla_ctx = nla_memory.to_prompt_context(regime_label, state.get("strategy_type", "momentum"))
-    context.alpha_memory_context = alpha_ctx
-    context.nla_memory_context = nla_ctx
-
     state["features_df"] = features_df
     state["context"] = context
-    state["memory_context"] = f"{memory_ctx}\n\n{alpha_ctx}\n\n{nla_ctx}"
     state["run_log"] = state.get("run_log", [])
+    _recall_memory(state, context)
     state["run_log"].append(f"Regime: {regime_label} (confidence: {context.regime_confidence:.0%})")
     emit_trace(
         state.get("trace"),
@@ -144,6 +141,112 @@ def analyze_node(state: AgentState) -> AgentState:
 
     logger.info("Regime: %s, Confidence: %.0f%%", regime_label, context.regime_confidence * 100)
     return state
+
+
+def _min_sharpe(state: AgentState) -> float:
+    harness: Optional[EffectiveHarnessConfig] = state.get("harness_config")
+    return harness.min_acceptable_sharpe if harness is not None else config.agent.min_acceptable_sharpe
+
+
+def _data_window(ohlcv: Dict[str, pd.DataFrame], asset: str) -> tuple:
+    df = (ohlcv or {}).get(asset)
+    if df is None or df.empty:
+        return None, None, 0
+    return to_date(df.index.min()), to_date(df.index.max()), len(df)
+
+
+def _recall_memory(state: AgentState, context: RegimeContext) -> None:
+    """One unified memory read per run, cut off at the last bar the search loop sees."""
+    service = MemoryService()
+    if not service.can_read:
+        context.memory_context = ""
+        state["memory_pack"] = None
+        state["memory_context"] = ""
+        return
+    query = MemoryQuery(
+        as_of=state.get("as_of"),
+        strategy_types=(state.get("strategy_type", "momentum"),),
+        asset=state.get("asset"),
+        regime_label=context.regime_label,
+        regime_vec=regime_vec_from_context(context),
+        exclude_run_id=state.get("run_id"),
+        k_beliefs=config.memory.k_beliefs,
+        token_budget=config.memory.token_budget,
+        min_acceptable_sharpe=_min_sharpe(state),
+    )
+    pack = service.recall(query, run_id=state.get("run_id"), iteration=state.get("iteration", 0))
+    context.memory_context = pack.to_prompt()
+    state["memory_pack"] = pack
+    state["memory_snapshot_id"] = pack.snapshot_id
+    state["memory_context"] = context.memory_context
+    state["run_log"].append(
+        f"Memory: {pack.n_visible_trials} visible trials as of {query.as_of}; "
+        f"{len(pack.beliefs)} beliefs, {len(pack.avoid)} to avoid, {len(pack.seeds)} seeds "
+        f"(snapshot {pack.snapshot_id})."
+    )
+
+
+def _classify_outcome(result: Dict[str, Any], min_sharpe: float) -> tuple:
+    sharpe = float(result.get("sharpe", 0.0) or 0.0)
+    drawdown = abs(float(result.get("max_drawdown", 0.0) or 0.0))
+    if sharpe < 0:
+        return "rejected", "negative_sharpe"
+    if sharpe < min_sharpe:
+        return "watch", "below_threshold"
+    if drawdown > config.agent.risk.max_drawdown:
+        return "watch", "drawdown"
+    return "accepted", None
+
+
+def _record_trials(state: AgentState, results: List[Dict[str, Any]], errors: List[Dict[str, Any]]) -> None:
+    """Persist every backtested proposal, winners and losers, as episodic memory."""
+    service = MemoryService()
+    if not service.can_write:
+        return
+    asset = state.get("asset", config.reference_asset)
+    strategy_type = state.get("strategy_type", "momentum")
+    data_start, data_end, n_days = _data_window(state.get("ohlcv_data"), asset)
+    context = state.get("context")
+    common = dict(
+        run_id=state.get("run_id", ""),
+        iteration=state.get("iteration", 0),
+        asset=asset,
+        strategy_type=strategy_type,
+        data_start=data_start,
+        data_end=data_end,
+        regime_label=context.regime_label if context else "Unknown",
+        regime_vec=regime_vec_from_context(context),
+        source="agent_graph",
+    )
+    min_sharpe = _min_sharpe(state)
+    for result in results:
+        outcome, failure_mode = _classify_outcome(result, min_sharpe)
+        trial = Trial(
+            params=dict(result.get("params") or {}),
+            generation_method=result.get("generation_method", ""),
+            is_sharpe=result.get("sharpe"),
+            is_return=result.get("total_return"),
+            is_max_dd=result.get("max_drawdown"),
+            is_trades=result.get("num_trades"),
+            is_sortino=result.get("sortino"),
+            is_calmar=result.get("calmar"),
+            is_boot_p5=result.get("bootstrap_sharpe_p5"),
+            is_n_days=n_days,
+            outcome=outcome,
+            failure_mode=failure_mode,
+            reasoning=result.get("reasoning", "") or "",
+            **common,
+        )
+        result["trial_id"] = service.record_trial(trial)
+    for error in errors:
+        service.record_trial(Trial(
+            params=dict(error.get("params") or {}),
+            generation_method=error.get("generation_method", ""),
+            outcome="error",
+            failure_mode="error",
+            reasoning=error.get("error", ""),
+            **common,
+        ))
 
 
 def _prompt_prefix_for(harness: Optional[EffectiveHarnessConfig]) -> str:
@@ -192,6 +295,7 @@ def hypothesize_node(state: AgentState) -> AgentState:
             strategy_type=strategy_type,
             prior_results=state.get("all_results"),
             prompt_prefix=prompt_prefix,
+            memory_pack=state.get("memory_pack"),
         )
 
     state["proposals"] = proposals
@@ -224,6 +328,7 @@ def backtest_node(state: AgentState) -> AgentState:
     strategy_type = state.get("strategy_type", "momentum")
 
     results = []
+    errors = []
     for i, proposal in enumerate(state["proposals"]):
         try:
             bt_result = run_backtest(ohlcv, [asset], strategy_type, proposal.params)
@@ -247,6 +352,13 @@ def backtest_node(state: AgentState) -> AgentState:
                 })
         except Exception as e:
             logger.warning("Backtest failed for proposal %d: %s", i, e)
+            errors.append({"params": proposal.params, "generation_method": proposal.generation_method,
+                           "error": repr(e)})
+
+    try:
+        _record_trials(state, results, errors)
+    except Exception:
+        logger.warning("Failed to record trials in memory", exc_info=True)
 
     # Sort by Sharpe
     results.sort(key=lambda x: x.get("sharpe", 0.0), reverse=True)
@@ -291,23 +403,9 @@ def reflect_node(state: AgentState) -> AgentState:
     harness: Optional[EffectiveHarnessConfig] = state.get("harness_config")
     min_sharpe = harness.min_acceptable_sharpe if harness is not None else config.agent.min_acceptable_sharpe
 
-    # Persist structured negative evidence so later iterations and runs can
-    # avoid repeating the same regime/strategy mistake.
-    alpha_store = AlphaStore()
-    regime = state.get("context").regime_label if state.get("context") else "Unknown"
-    for result in state.get("results", []):
-        result_sharpe = float(result.get("sharpe", 0.0))
-        if result_sharpe < min_sharpe:
-            gap = result_sharpe - min_sharpe
-            mode = "negative_sharpe" if result_sharpe < 0 else "below_sharpe_threshold"
-            alpha_store.store_failure(FailureRecord(
-                regime=regime, strategy_type=state.get("strategy_type", ""),
-                params=result.get("params", {}), failure_mode=mode, metric_gap=gap,
-                counterfactual_hypothesis=(
-                    "Try shorter horizons or a different strategy family; this configuration "
-                    "did not clear the out-of-sample Sharpe gate in this regime."
-                ),
-            ))
+    # Negative evidence is persisted by backtest_node: every trial row carries
+    # its outcome/failure_mode, so repeated failures of one config collapse
+    # into one belief instead of one failure row per result per iteration.
 
     if best is None:
         state["should_continue"] = iteration < max_iter
@@ -422,6 +520,21 @@ def holdout_eval_node(state: AgentState) -> AgentState:
     best["holdout_total_return"] = bt_result["metrics"].get("total_return", 0.0)
     best["iterations_used"] = state.get("iteration", 1)
 
+    try:
+        _, full_end, _ = _data_window(full_ohlcv, asset)
+        MemoryService().attach_oos(
+            best.get("trial_id", ""),
+            oos_sharpe=holdout_sharpe,
+            oos_return=best["holdout_total_return"],
+            oos_max_dd=bt_result["metrics"].get("max_drawdown"),
+            oos_start=to_date(holdout_start),
+            oos_end=full_end,
+            source="holdout",
+            min_acceptable_sharpe=_min_sharpe(state),
+        )
+    except Exception:
+        logger.warning("Failed to attach holdout evidence to memory", exc_info=True)
+
     gap = best.get("sharpe", 0.0) - holdout_sharpe
     state["run_log"].append(
         f"Holdout: Sharpe={holdout_sharpe:.2f} on unseen window "
@@ -505,6 +618,27 @@ def store_node(state: AgentState) -> AgentState:
         alpha_id=alpha.alpha_id,
         tags=("agent_graph", best.get("generation_method", "")),
     )
+    narrative = best.get("reasoning", "")
+    # Grid/random fallbacks carry boilerplate, not a thesis worth recalling.
+    if narrative and best.get("generation_method") not in ("grid_search", "random"):
+        try:
+            _, data_end, _ = _data_window(state.get("ohlcv_data"), state.get("asset", config.reference_asset))
+            if best.get("holdout_sharpe") is not None:
+                _, data_end, _ = _data_window(state.get("full_ohlcv_data"), state.get("asset", config.reference_asset))
+            trial = Trial(asset=state.get("asset", config.reference_asset),
+                          strategy_type=state.get("strategy_type", "momentum"), params=best["params"])
+            MemoryService().record_note(Note(
+                kind="nla", body=narrative, data_end=data_end,
+                strategy_type=trial.strategy_type, asset=trial.asset, regime_label=regime,
+                config_key=trial.config_key,
+                meta={"params": best["params"], "trial_id": best.get("trial_id"),
+                      "holdout_sharpe": best.get("holdout_sharpe")},
+                quality=float(best.get("holdout_sharpe", best.get("sharpe", 0.0)) or 0.0)
+                - abs(float(best.get("max_drawdown", 0.0) or 0.0)),
+                source="agent_graph",
+            ))
+        except Exception:
+            logger.warning("Failed to record run narrative in memory", exc_info=True)
     state["run_log"].append(
         f"Store: Persisted result {run_id}, alpha {alpha.alpha_id}, NLA note {nla.record_id}."
     )
@@ -631,6 +765,9 @@ def run_agent(
     search_ohlcv, holdout_start = _split_search_and_holdout(
         ohlcv_data, resolved_asset, config.agent.holdout_fraction
     )
+    # Memory is cut off at the last bar the search loop can see, so neither
+    # future data nor this run's own holdout window leaks in via memory.
+    _, as_of, _ = _data_window(search_ohlcv, resolved_asset)
 
     state: AgentState = {
         "ohlcv_data": search_ohlcv,
@@ -651,6 +788,10 @@ def run_agent(
         "trace": trace,
         "harness_config": effective_harness,
         "run_status": None,
+        "run_id": uuid.uuid4().hex[:12],
+        "as_of": as_of,
+        "memory_pack": None,
+        "memory_snapshot_id": None,
     }
     if holdout_start is not None:
         state["run_log"].append(
@@ -703,7 +844,9 @@ def run_agent(
         try:
             from src.agent.run_manifest import build_manifest_from_state
 
-            manifest = build_manifest_from_state(state)
+            manifest = build_manifest_from_state(
+                state, memory_snapshot_id=state.get("memory_snapshot_id")
+            )
             state["run_manifest"] = manifest.to_dict()
             manifest.save()
         except Exception:

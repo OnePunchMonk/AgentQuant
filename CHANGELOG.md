@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Unified memory layer (`src/memory/`, [design](docs/MEMORY_LAYER_DESIGN.md)).
+  - Every backtested proposal is recorded as a trial, and holdout results are attached as out-of-sample evidence.
+  - Reads use a point-in-time `as_of` cutoff enforced in SQL. Beliefs are evidence-weighted: OOS first, in-sample deflated for the number of configs tried, weighted by regime similarity.
+  - Recall returns a token-budgeted `MemoryPack` used by `agent_graph`, the swarm and `ProposalGenerator`. Its snapshot id is written to `RunManifest.memory_snapshot_id`.
+- Dreaming mode: `agentquant dream [--watch]`. It backfills legacy memory, replays in-sample-only trials on forward data, writes consolidation notes when verdicts change, and prunes the read log. Heartbeat healthcheck: `python -m src.memory.healthcheck`.
+- `docker-compose.yml` runs the app with the dreamer sidecar on shared volumes.
+- `memory:` section in `config.yaml` (`mode: off | read | read_write`, budgets, seeding, dream settings).
+- `agentquant memory --beliefs | --trials | --prompt | --stats [--as-of DATE]`.
+
+### Changed
+- Memory seeds (`generation_method="memory_seed"`) now come only from configs with out-of-sample "works" beliefs. Previously they were re-proposed in-sample winners from `AlphaStore`.
+- `reflect_node` no longer writes one `failure_records` row per sub-threshold result per iteration. Failures live on the trial rows.
+
 ## [0.3.0] — 2026-09-20
 
 First tagged, installable release (issue #30). Ships as a built
