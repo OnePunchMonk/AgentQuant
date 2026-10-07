@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Shadow idea-generation sidecar (`src/agent/idea_sidecar.py`, issue #43), behind `AGENTQUANT_IDEA_SIDECAR=1`. Non-learning: it replays a fixed heuristic or seeded random policy over the canonical parameter grid and logs a versioned observation/action/reward trajectory. No new dependencies; the default demo never imports it.
 - Unified memory layer (`src/memory/`, [design](docs/MEMORY_LAYER_DESIGN.md)).
   - Every backtested proposal is recorded as a trial, and holdout results are attached as out-of-sample evidence.
   - Reads use a point-in-time `as_of` cutoff enforced in SQL. Beliefs are evidence-weighted: OOS first, in-sample deflated for the number of configs tried, weighted by regime similarity.
