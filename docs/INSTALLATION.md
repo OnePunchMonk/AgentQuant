@@ -1,4 +1,4 @@
-# 🚀 AgentQuant Installation & Setup Guide
+# 🚀 AgentQuant Setup Guide
 
 ## 📋 Prerequisites
 
