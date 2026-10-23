@@ -19,29 +19,9 @@ We propose **AgentQuant**, a system that bridges the gap between quantitative fi
 
 The AgentQuant system is composed of four modular layers:
 
-```mermaid
-graph TD
-    subgraph "Data Layer"
-        Ingest[Data Ingestion<br/>(yfinance)] --> Features[Feature Engine]
-        Features --> Regime[Regime Detection]
-    end
+![AgentQuant high-level design](diagrams/hld.png)
 
-    subgraph "Reasoning Layer (Gemini 2.5 Flash)"
-        Regime --> Context[Market Context]
-        Features --> Context
-        Context --> Planner[LLM Planner]
-    end
-
-    subgraph "Execution Layer"
-        Planner -->|JSON Params| Strategy[Strategy Registry]
-        Strategy --> Backtest[Vectorized Backtest]
-    end
-
-    subgraph "Validation Layer"
-        Backtest --> WalkForward[Walk-Forward Validation]
-        Backtest --> Ablation[Ablation Study]
-    end
-```
+<sub>Source: [`hld.excalidraw`](diagrams/hld.excalidraw), open at excalidraw.com to edit.</sub>
 
 ### 2.2 Regime Detection
 We employ a heuristic-based classification system (`src/features/regime.py`) that categorizes the market into one of six states based on VIX levels and Momentum:

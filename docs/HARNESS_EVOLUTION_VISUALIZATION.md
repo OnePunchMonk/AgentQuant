@@ -6,33 +6,14 @@ Visual representation of how the harness improves through one evolution cycle.
 
 ### Before: Baseline Harness (v1_base)
 
-```mermaid
-graph LR
-    A["📊 Analyze"] -->|regime + features| B["🎲 Hypothesize"]
-    B -->|proposals grid-based| C["⚙️ Backtest"]
-    C -->|results| D["🤔 Reflect"]
-    D -->|accept/reject| E{Decision}
-    E -->|accepted| F["💾 Store"]
-    E -->|retry| B
-    
-    style A fill:#e1f5ff
-    style B fill:#fff3e0
-    style C fill:#f3e5f5
-    style D fill:#e8f5e9
-    style F fill:#fce4ec
-```
+![Agent loop call sequence](diagrams/lld-agent-loop.png)
+
+<sub>Source: [`lld-agent-loop.excalidraw`](diagrams/lld-agent-loop.excalidraw), open at excalidraw.com to edit.</sub>
 
 **Proposal Generation (v1_base):**
-```mermaid
-graph TD
-    Context["Market Context"]
-    Context -->|regime_label| GridSearch["Grid Search"]
-    GridSearch -->|sample from fixed grid| Proposals["Proposals"]
-    Proposals -->|→ backtest| Results["Results"]
-    
-    style GridSearch fill:#fff9c4
-    style Proposals fill:#ffe0b2
-```
+![Proposal paths: grid cascade vs tool loop](diagrams/proposal-paths.png)
+
+<sub>Source: [`proposal-paths.excalidraw`](diagrams/proposal-paths.excalidraw), open at excalidraw.com to edit.</sub>
 
 **v1 Characteristics:**
 - ❌ No web context (only historical data)
@@ -54,74 +35,15 @@ Proposals:           5 (from grid)
 
 ## Harness Evolution Step
 
-```mermaid
-graph TD
-    CP1["✓ Epoch 1 Complete"]
-    CP1 -->|Analyze Results| Analysis["What Worked?"]
-    
-    Analysis -->|tool_calls > 0?| Check1{3+ Tool Calls?}
-    Check1 -->|Yes| Decision["Promote Tool-Based Proposals"]
-    Check1 -->|No| Decision2["Enhance Market Context"]
-    
-    Analysis -->|Sharpe > threshold?| Check2{0.3+ Sharpe?}
-    Check2 -->|Yes| Confirmed["→ Hypothesis Confirmed"]
-    Check2 -->|No| Retry["→ Retry with More Data"]
-    
-    Decision --> Evolution["🧬 Harness Evolution"]
-    Decision2 --> Evolution
-    
-    Evolution -->|v1_base → v2_tool_aware| NewHarness["Evolved Harness v2"]
-    
-    style CP1 fill:#c8e6c9
-    style Evolution fill:#ffccbc
-    style NewHarness fill:#b3e5fc
-```
+![Harness evolution](diagrams/harness-evolution.png)
+
+<sub>Source: [`harness-evolution.excalidraw`](diagrams/harness-evolution.excalidraw), open at excalidraw.com to edit.</sub>
 
 ---
 
 ## After: Evolved Harness (v2_tool_aware)
 
-```mermaid
-graph LR
-    A["📊 Analyze"] -->|regime + web context| B["🎲 Hypothesize"]
-    B -->|tool-aware proposals| C["⚙️ Backtest"]
-    C -->|results| D["🤔 Reflect"]
-    D -->|claim scoring| DS["📊 Score"]
-    DS -->|accept/reject| E{Decision}
-    E -->|accepted| F["💾 Store"]
-    E -->|retry| B
-    
-    style A fill:#e1f5ff
-    style B fill:#fff3e0
-    style C fill:#f3e5f5
-    style D fill:#e8f5e9
-    style DS fill:#f1f8e9
-    style F fill:#fce4ec
-```
-
 **Proposal Generation (v2_tool_aware):**
-```mermaid
-graph TD
-    Tools["🔧 Tool Registry"]
-    Context["Market Context"]
-    
-    Tools -->|get_regime_context| MarketData["Prior Knowledge"]
-    Tools -->|search_market_sentiment| WebSearch["Tavily Web Search"]
-    Tools -->|extract_parameters| GridAccess["Parameter Space"]
-    
-    Context --> Claude["Claude Reasoning"]
-    MarketData --> Claude
-    WebSearch --> Claude
-    GridAccess --> Claude
-    
-    Claude -->|JSON output| Parser["Proposal Parser"]
-    Parser -->|structured proposals| Proposals["Proposals with Claims"]
-    Proposals -->|→ backtest| Results["Results"]
-    
-    style Tools fill:#b3e5fc
-    style Claude fill:#c5e1a5
-    style Proposals fill:#ffe0b2
-```
 
 **v2 Characteristics:**
 - ✅ Web search integration (Tavily)
@@ -167,54 +89,11 @@ Output: Parameter proposals with reasoning & claims
 
 ### Decision Points
 
-```mermaid
-graph TD
-    Input["Market Conditions"]
-    
-    Input -->|v1| V1["Regime Detection<br/>Grid Sampling<br/>Fixed Params"]
-    Input -->|v2| V2["Regime Detection +<br/>Tool Orchestration<br/>Claude Reasoning"]
-    
-    V1 --> Gen1["Generic Proposals<br/>No Adaptation"]
-    V2 --> Gen2["Context-Aware Proposals<br/>Web-Informed"]
-    
-    Gen1 --> Results1["Baseline Sharpe: 0.45"]
-    Gen2 --> Results2["Improved Sharpe: 0.52"]
-    
-    Results1 --> Accept1["Simple Accept/Reject"]
-    Results2 --> Accept2["Accept + Score Claims"]
-    
-    style V1 fill:#ffcccc
-    style V2 fill:#ccffcc
-    style Results1 fill:#ffcccc
-    style Results2 fill:#ccffcc
-```
+See the [harness evolution diagram](diagrams/harness-evolution.png) above (sections 1 and 3).
 
 ### Evaluation Metrics Progression
 
-```mermaid
-graph LR
-    Sharpe["Sharpe Ratio"]
-    Gap["Generalization Gap"]
-    Tools["Tool Efficiency"]
-    Claims["Claim Accuracy"]
-    
-    Sharpe -->|v1: 0.45| S1["Baseline"]
-    Sharpe -->|v2: 0.52| S2["Improved +15.6%"]
-    
-    Gap -->|v1: 0.12| G1["Overfitting Risk"]
-    Gap -->|v2: 0.08| G2["Better Generalization"]
-    
-    Tools -->|v1: 0| T1["No Tools"]
-    Tools -->|v2: 4| T2["Tool-Aware"]
-    
-    Claims -->|v1: —| C1["Not Tracked"]
-    Claims -->|v2: 80%| C2["Tracked & Scored"]
-    
-    style S2 fill:#c8e6c9
-    style G2 fill:#c8e6c9
-    style T2 fill:#c8e6c9
-    style C2 fill:#c8e6c9
-```
+See the [harness evolution diagram](diagrams/harness-evolution.png) above (sections 1 and 3).
 
 ---
 
@@ -222,46 +101,11 @@ graph LR
 
 ### Single Evolution Cycle
 
-```mermaid
-graph LR
-    E0["Epoch 0<br/>Baseline<br/>Sharpe: 0.45<br/>Gap: 0.12"]
-    
-    E0 -->|Analyze Results| Evo["🧬 Evolution<br/>Promote Tools"]
-    
-    Evo -->|Deploy| E1["Epoch 1<br/>Evolved<br/>Sharpe: 0.52<br/>Gap: 0.08"]
-    
-    E1 -->|Continue...| E2["Epoch N<br/>Refined<br/>Sharpe: 0.55+<br/>Gap: 0.05-"]
-    
-    style E0 fill:#ffcccc
-    style E1 fill:#ffffcc
-    style E2 fill:#ccffcc
-```
+See the [harness evolution diagram](diagrams/harness-evolution.png) above (sections 1 and 3).
 
 ### Long-term Harness Improvement
 
-```mermaid
-graph LR
-    A["Start<br/>Fixed Grid"] -->
-    B["+ Web Search"] -->
-    C["+ Tool Orchestration"] -->
-    D["+ Claim Tracking"] -->
-    E["+ Multi-Agent"] -->
-    F["+ Research Agent"]
-    
-    A -->|0.40| SharpeA["Sharpe"]
-    B -->|0.45| SharpeB["Sharpe"]
-    C -->|0.52| SharpeC["Sharpe"]
-    D -->|0.55| SharpeD["Sharpe"]
-    E -->|0.60| SharpeE["Sharpe"]
-    F -->|0.65+| SharpeF["Sharpe"]
-    
-    style A fill:#ffcccc
-    style B fill:#ffe0b2
-    style C fill:#ffffcc
-    style D fill:#c8e6c9
-    style E fill:#b3e5fc
-    style F fill:#ce93d8
-```
+See the [harness evolution diagram](diagrams/harness-evolution.png) above (sections 1 and 3).
 
 ---
 
