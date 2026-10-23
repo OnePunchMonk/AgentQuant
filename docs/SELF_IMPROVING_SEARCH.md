@@ -1,5 +1,13 @@
 # How AgentQuant Evolves Its Search Process
 
+![Self-improving search](diagrams/self-improving-search.png)
+
+<sub>Source: [`self-improving-search.excalidraw`](diagrams/self-improving-search.excalidraw)</sub>
+
+![Fair search benchmark](diagrams/fair-search-benchmark.png)
+
+<sub>Source: [`fair-search-benchmark.excalidraw`](diagrams/fair-search-benchmark.excalidraw)</sub>
+
 Most projects described as “AI trading agents” ask whether a language model can
 choose profitable parameters. That framing misses the more interesting systems
 question: can an agent improve the process it uses to search?

@@ -1,5 +1,11 @@
 # Evolutionary Harness Optimization
 
+![How the harness evolves](diagrams/evolving-harness.png)
+
+<sub>Source: [`evolving-harness.excalidraw`](diagrams/evolving-harness.excalidraw)</sub>
+
+Per-version diagrams: [v1](diagrams/harness-v1-base.png) · [v2](diagrams/harness-v2-tool-aware.png) · [v3](diagrams/harness-v3-prompt-tuned.png) · [v4](diagrams/harness-v4-grid-evolved.png) · [v5](diagrams/harness-v5-multi-agent.png) · [v6](diagrams/harness-v6-research.png)
+
 Complete framework for optimizing harness evolution using genetic algorithms and differential evolution.
 
 ## Overview

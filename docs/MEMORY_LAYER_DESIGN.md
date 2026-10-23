@@ -1,5 +1,13 @@
 # AgentQuant Memory Layer: Design
 
+![Memory layer](diagrams/memory-layer.png)
+
+<sub>Source: [`memory-layer.excalidraw`](diagrams/memory-layer.excalidraw)</sub>
+
+![Belief scoring](diagrams/belief-scoring.png)
+
+<sub>Source: [`belief-scoring.excalidraw`](diagrams/belief-scoring.excalidraw)</sub>
+
 Status: implemented (`src/memory/`), first written against `9b7d20f`. Section 13 lists where the implementation differs from the original proposal and what is deferred.
 
 ## 1. What exists today
