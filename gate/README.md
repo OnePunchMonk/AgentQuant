@@ -1,5 +1,10 @@
 # agentquant-gate (foundation)
 
+![Search-aware evaluation architecture](docs/architecture.svg)
+
+[Edit this diagram in Excalidraw](docs/architecture.excalidraw). The diagram distinguishes existing capabilities from planned integrations.
+
+
 Standalone, numpy-only, tamper-evident JSONL experiment ledger and conservative search-aware promotion gate.
 
 This is a **partial implementation** of AgentQuant issue #45 (Milestone 1). It is **not yet wired into AgentQuant's promotion paths**. Sharpe comparisons deliberately return `insufficient_evidence` until a validated Deflated Sharpe Ratio implementation is added.
