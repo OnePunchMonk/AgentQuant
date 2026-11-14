@@ -26,6 +26,8 @@ This zero-key demo uses deterministic synthetic prices and a grid/random fallbac
 - **Policy improvement:** an outer loop can propose changes to the research process. A candidate must clear protected and statistical evaluation before promotion. The standalone search-aware gate is a foundation; validated Sharpe inference and full application integration remain [open work](https://github.com/OnePunchMonk/AgentQuant/issues/48).
 - **Replay:** manifests, episode bundles, traces, and research memos make decisions inspectable. See the [architecture and implementation handoff](docs/AGENTQUANT_HARNESS_ARCHITECTURE.md) for current wiring and remaining work.
 
+The [assistant tool contract](docs/ASSISTANT_TOOL_CONTRACT.md) explains how idea, hypothesis, and memory sidecars expose bounded, auditable calls.
+
 ## Reproduce development comparisons
 
 ```bash

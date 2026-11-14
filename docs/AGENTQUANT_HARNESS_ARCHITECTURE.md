@@ -35,6 +35,7 @@ Use three evidence tiers consistently:
 - Memory is primarily relational/episodic today: trials and notes are keyed and queried in SQLite. `src/memory/graph.py` provides a deterministic, rebuildable **in-memory projection** (`EvidenceGraph`) with typed nodes/edges, record provenance, contradiction links, and separate market/knowledge cutoffs. `MemoryService.graph_search` exposes an opt-in search view; the default prompt pack is still the existing belief retrieval. Existing links such as `hypothesis_id`, `run_id`, `config_key`, and read snapshots remain the durable source records.
 - `src/agent/idea_sidecar.py` (issue #43 milestone 1) defines versioned Observation, Candidate/Action, Budget and Reward schemas; candidate actions are canonical-grid points; dev-only observations filter failures by decision time; holdout reward is attached only after trajectory closure. Its policies are fixed heuristic/seeded-random replay policies. The module explicitly has no RL/model and no new dependency. Feature flag: `AGENTQUANT_IDEA_SIDECAR`.
 - The sidecar ranks/selects from a candidate space; canonical search/backtest code still owns evaluation. It does not emit code, bypass quality gates, or establish the value of learning.
+- `src/agent/sidecar_tools.py` is an assistant-facing, allowlisted registry for bounded advisory calls. `src/agent/memory_tool.py` is a read-only graph-memory tool with explicit market cutoff and knowledge cutoff; `src/agent/hyde_retrieval.py` is a small offline #23 prototype with injected generation, temporal evidence retrieval, and canonical-grid mapping. Its lexical fallback and fixture tests do not satisfy #23's embedding, literature, or comparative-performance criteria. These adapters are not yet the default agent orchestrator.
 
 ### 2.3 Promotion gate
 
@@ -49,6 +50,7 @@ Use three evidence tiers consistently:
 - #32 asks for portable, rerunnable experiment bundles. Current memo generation supports fresh runs; replay from a manifest is deferred because episode-level results are not yet persisted as a stable standalone artifact.
 - #38/#41 work has shipped meaningful memory and consolidation foundations, but docs identify remaining memory benchmark arms/config wiring, store cleanup, broader OOS ingestion and empirical memory benefit as incomplete.
 - #43 is an interface/shadow milestone, not an RL implementation or efficacy result.
+- The RRSI-inspired edit-descriptor preflight in `src/agent/evolution_regularizer.py` does not edit or promote a harness. Its sparsity, novelty, leakage-marker, and cost/noise rules require ablation and out-of-domain evaluation before use as a selection policy.
 - #45/#48 gate work is partial. Bounded policy promotion records its candidate family in a durable ledger and abstains for Sharpe; the core agent's `reflect_node` quality threshold and legacy memory writes remain distinct, and the final holdout guard is still a resettable file. Do not call this full gate integration.
 
 ## 3. Target high-level design
@@ -120,6 +122,8 @@ For every claimed improvement, publish `(parent_policy_hash, candidate_policy_ha
 These are architecture analogies. Do not import image quality losses, diffusion samplers, or GPU batching code into finance evaluation. In particular, cached outcomes must never let a historical run retrieve a result that was unavailable at its decision point.
 
 ## 4. Low-level contracts
+
+The assistant-facing tool registry, HyDE retrieval prototype, and graph-memory adapter are documented in [ASSISTANT_TOOL_CONTRACT.md](ASSISTANT_TOOL_CONTRACT.md), [HYDE_RETRIEVAL.md](HYDE_RETRIEVAL.md), and [RRSI_INTEGRATION.md](RRSI_INTEGRATION.md). Their presence does not complete issue #23's embedding, literature, or comparative validation criteria, nor #43's learned RL policy.
 
 The following are target contracts. Preserve backward compatibility where feasible; version persisted schemas and report clear migrations.
 
@@ -232,6 +236,12 @@ Current limitation: the offline fallback does not read the mutated prompt, so it
 
 ## 5. Benchmark and validation plan
 
+### Evolving the benchmark itself
+
+Version the episode manifest, evaluator, metric definitions, data cutoff, tool inventory, and communication schema together. Keep an immutable core for longitudinal comparison and add challenge sets from observed failures only in the next benchmark version; a newly added case is never retroactively part of an earlier claim. Partition by chronology and task family, with development, selection, sealed final, and later prospective cohorts. Report paired episode-level outcomes and confidence intervals, search count, token/tool/wall budgets, replay fidelity, and protected-regression slices. Repeated seeds on one market path are not independent markets.
+
+For each new sidecar/tool, use a factorial ablation: fixed tool set versus learned selection; memory graph versus flat retrieval versus no memory; HyDE versus literature/grid controls; full action-state messages versus compact typed envelopes; and regularized versus unrestricted harness edits. Freeze the protocol before seeing final outcomes. Add planted-signal and null controls, counterfactual/shuffled evidence, stale/contradictory memory, malformed tool output, provider drift, and out-of-domain episodes. Promote a benchmark revision after review, then treat its final set as sealed for the next method comparison. See the [assistant tool contract](ASSISTANT_TOOL_CONTRACT.md) and [RRSI integration](RRSI_INTEGRATION.md) for the individual experiments.
+
 ### Phase A: invariant tests (no utility claims)
 
 - temporal leakage property tests for observation, memory, graph edges and sealed holdout;
@@ -274,12 +284,14 @@ Packages are intentionally serial where contracts or storage schemas are shared.
 | 0 | Freeze architecture/API and record current baseline limitations | This doc, issue tracker | None | Versioned plan and explicit limitations; initial draft present |
 | 1 | Persist stable run/episode outcomes and manifest-complete artifacts for replay | `src/agent/episode_bundle.py`, `episode_report.py`, `run_manifest.py`, scripts | 0 | Bundle export/load contract and fresh-run parity |
 | 2 | Wire sidecar capability interfaces and trajectory metadata without learning | `src/agent/capabilities.py`, `idea_sidecar.py`, runner, tests | 0 | Typed contracts are present; real provider adapter, effective config and replay parity still needed |
+| 2a | Register assistant-facing advisory tools for idea, #23 hypothesis retrieval and graph memory | `src/agent/sidecar_tools.py`, `hyde_retrieval.py`, `memory_tool.py`, tests | 2, 3 for durable memory | Bounded adapters present; live assistant routing, embedding/literature retrieval and outcome comparison still needed |
 | 3 | Expand graph memory retrieval and persisted lineage | `src/memory/graph.py`, `service.py`, models, tests | 0 | Opt-in temporal graph search present; lineage and retrieval benchmark still needed |
 | 4 | Implement bundle replay and memo regeneration from persisted artifacts | `src/agent/research_memo.py`, `scripts/export_research_memo.py` | 1 | Replay command verifies hashes; no hidden model/network dependency |
 | 5 | Gate validation: DSR reference implementation and null/power suite | `gate/`, `gate/tests/` | 0 | Correct known-vector scoring; calibrated tri-state abstention |
 | 6 | Complete gate integration across promotion paths | `policy_mutation.py`, `agent_graph.py`, scripts, tests | 1, 5 | Bounded path now fails closed via gate and writes a family ledger; full ledger authority, validated Sharpe gate and remaining paths still needed |
 | 7 | Controlled synthetic benchmark for self-improvement mechanism | `scripts/fair_search_benchmark.py`, fixtures/tests | 2, 6 | Null/planted signal controls behave as expected; diagnostic report |
 | 8 | Frozen historical benchmark and memory ablations | benchmark scripts, protocol/results artifacts | 3, 6, 7 | Preregistered reproducible report; conclusions bounded to dataset |
+| 8a | Compare compact communication, tool selection and RRSI edit regularization | `docs/ASSISTANT_TOOL_CONTRACT.md`, `docs/RRSI_INTEGRATION.md`, frozen benchmark artifacts | 2a, 8 | Paired cost/quality and out-of-domain ablations before integrating a learned selector or preflight gate |
 | 9 | Prospective commitment/reveal workflow | `gate/`, integration, CLI/docs | 4, 5, 6, 8 and #28 review | Time-stamped ledger and first prospective scored cohort |
 
 For each work package, assign one file owner and a review owner. The coordinator checks independent tests, full suite, lint, wheel/install and final diff, then makes one focused commit on the intended branch and pushes the expected `main` head. Avoid simultaneous edits to `src/memory/schema.py`, sidecar schema, or gate API until the preceding contract has landed. If `main` advances during work, fetch and integrate safely; never force-push.

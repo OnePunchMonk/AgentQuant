@@ -237,6 +237,8 @@ class MemoryService:
         text: str = "",
         knowledge_as_of: Optional[str] = None,
         limit: int = 10,
+        regime_label: Optional[str] = None,
+        config_key: Optional[str] = None,
     ):
         """Search a rebuildable evidence graph under the same market-time cutoff.
 
@@ -263,6 +265,8 @@ class MemoryService:
             knowledge_as_of=knowledge_as_of,
             strategy_type=query.strategy_types[0] if len(query.strategy_types) == 1 else None,
             asset=query.asset,
+            regime_label=regime_label,
+            config_key=config_key,
             query=text,
             limit=limit,
             include_undated=self.include_undated,
