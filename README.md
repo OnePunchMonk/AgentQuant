@@ -52,6 +52,7 @@ These default to synthetic fixtures. In offline fallback mode, prompt mutation d
 - [Architecture and agent implementation handoff](docs/AGENTQUANT_HARNESS_ARCHITECTURE.md)
 - [Worked research loop](docs/SELF_IMPROVING_SEARCH.md) and [memory design](docs/MEMORY_LAYER_DESIGN.md)
 - [Experimental details](docs/EXPERIMENTAL_DETAILS.md) and [research memo design](https://github.com/OnePunchMonk/AgentQuant/issues/32)
+- [Assistant tool demo](docs/ASSISTANT_TOOL_RUNNER.md), [communication experiment](docs/COMMUNICATION_EXPERIMENT.md), and [benchmark evolution](docs/BENCHMARK_EVOLUTION.md)
 - [Harnesskit trace integration](https://github.com/OnePunchMonk/harnesskit) and [Peek leakage auditor](https://github.com/OnePunchMonk/peek)
 - [Contributing](CONTRIBUTING.md), [roadmap](ROADMAP.md), and [open issues](https://github.com/OnePunchMonk/AgentQuant/issues)
 

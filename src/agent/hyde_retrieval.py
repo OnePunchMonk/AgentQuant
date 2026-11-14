@@ -37,6 +37,13 @@ class HypothesisRequest:
             raise ValueError(f"max_evidence must be between 0 and {MAX_EVIDENCE}")
         if self.knowledge_as_of is not None and not self.knowledge_as_of.strip():
             raise ValueError("knowledge_as_of must be non-empty when provided")
+        try:
+            market_day = date.fromisoformat(self.as_of[:10])
+            knowledge_day = date.fromisoformat((self.knowledge_as_of or self.as_of)[:10])
+        except ValueError as exc:
+            raise ValueError("cutoffs must begin with ISO dates") from exc
+        if knowledge_day > market_day:
+            raise ValueError("knowledge_as_of cannot exceed market as_of for a decision")
 
 
 @dataclass(frozen=True)

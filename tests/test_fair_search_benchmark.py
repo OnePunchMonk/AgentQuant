@@ -359,7 +359,8 @@ def test_paired_comparison_matches_by_episode_and_seed_not_position():
     assert result["n_paired"] == 2
     # deltas: ep00 0.12-0.10=0.02, ep01 0.25-0.20=0.05 -> mean 0.035
     assert abs(result["mean_delta"] - 0.035) < 1e-9
-    assert result["ci95_low"] <= result["mean_delta"] <= result["ci95_high"]
+    assert result["n_episodes"] == 2
+    assert result["ci95_low"] is None
 
 
 def test_paired_comparison_drops_cells_missing_on_either_side():
@@ -394,3 +395,36 @@ def test_paired_comparison_deterministic_ci_across_runs():
     r1 = fair_search_benchmark._paired_comparison(rows_a, rows_b)
     r2 = fair_search_benchmark._paired_comparison(rows_a, rows_b)
     assert r1 == r2
+
+
+def test_paired_comparison_clusters_seeds_by_episode():
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import fair_search_benchmark
+
+    rows_a = [
+        {"episode_id": episode, "seed": seed, "status": "ok", "holdout_net_return": 0.0}
+        for episode in ("ep0", "ep1") for seed in range(10)
+    ]
+    rows_b = [
+        {**row, "holdout_net_return": 1.0 if row["episode_id"] == "ep0" else -1.0}
+        for row in rows_a
+    ]
+    result = fair_search_benchmark._paired_comparison(rows_a, rows_b)
+    assert result["n_paired"] == 20
+    assert result["n_episodes"] == 2
+    assert result["ci_method"] == "episode_cluster_bootstrap"
+    assert result["ci95_low"] is None
+    assert result["ci95_high"] is None
+
+    one_episode = fair_search_benchmark._paired_comparison(rows_a[:10], rows_b[:10])
+    assert one_episode["n_episodes"] == 1
+    assert one_episode["ci95_low"] is None
+
+    five_a = [dict(row, episode_id=f"ep{i}") for i in range(5) for row in rows_a[:2]]
+    five_b = [dict(row, episode_id=f"ep{i}", holdout_net_return=float(i))
+              for i in range(5) for row in rows_a[:2]]
+    five = fair_search_benchmark._paired_comparison(five_a, five_b)
+    assert five["n_episodes"] == 5
+    assert five["ci95_low"] is not None

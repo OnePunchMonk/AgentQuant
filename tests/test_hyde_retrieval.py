@@ -66,6 +66,9 @@ def test_request_budgets_are_validated():
         HypothesisRequest("regime", ("momentum",), "2024-01-01", max_hypotheses=-1)
     with pytest.raises(ValueError):
         HypothesisRequest("regime", ("momentum",), "2024-01-01", max_evidence=65)
+    with pytest.raises(ValueError, match="knowledge_as_of cannot exceed"):
+        HypothesisRequest("regime", ("momentum",), "2024-01-01",
+                          knowledge_as_of="2024-01-02")
 
 
 def test_future_known_at_evidence_is_excluded_even_if_market_period_is_past():

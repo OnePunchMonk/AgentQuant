@@ -31,12 +31,18 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.agent.episode_splits import (  # noqa: E402
-    DEFAULT_COST_BPS, get_or_build_episodes, synthetic_ohlcv,
+    DEFAULT_COST_BPS,
+    get_or_build_episodes,
+    synthetic_ohlcv,
 )
 from src.agent.harness_config import harness_v1_base  # noqa: E402
 from src.agent.search_arms import (  # noqa: E402
-    run_fixed_arm, run_frozen_agent_arm, run_frozen_agent_memory_arm,
-    run_grid_search_arm, run_mutation_agent_arm, run_random_search_arm,
+    run_fixed_arm,
+    run_frozen_agent_arm,
+    run_frozen_agent_memory_arm,
+    run_grid_search_arm,
+    run_mutation_agent_arm,
+    run_random_search_arm,
 )
 
 ASSET = "SIM"
@@ -54,9 +60,10 @@ def _paired_comparison(rows_a: List[dict], rows_b: List[dict], metric: str = "ho
     Cells missing (status != 'ok') on either side are excluded from the
     pairing and reported separately, not imputed.
 
-    Returns mean paired delta (b - a), its std, a percentile bootstrap 95%
-    CI (fixed seed, deterministic), and how many (episode, seed) cells were
-    actually paired vs. dropped for missing coverage on either side.
+    Returns mean paired delta (b - a), its descriptive std, and a percentile
+    bootstrap interval resampling whole episodes (not correlated seeds within
+    an episode). At least five distinct paired episodes are required for an
+    interval. Missing cells are reported rather than imputed.
     """
     import random as _random
 
@@ -65,44 +72,56 @@ def _paired_comparison(rows_a: List[dict], rows_b: List[dict], metric: str = "ho
     all_keys = sorted(set(by_key_a) | set(by_key_b))
 
     deltas = []
+    by_episode = {}
     dropped_missing = 0
     for key in all_keys:
         ra, rb = by_key_a.get(key), by_key_b.get(key)
         if ra is None or rb is None or ra["status"] != "ok" or rb["status"] != "ok":
             dropped_missing += 1
             continue
-        deltas.append(rb[metric] - ra[metric])
+        delta = rb[metric] - ra[metric]
+        deltas.append(delta)
+        by_episode.setdefault(key[0], []).append(delta)
 
     if not deltas:
         return {
             "metric": metric, "n_paired": 0, "n_dropped_missing_coverage": dropped_missing,
-            "mean_delta": None, "std_delta": None, "ci95_low": None, "ci95_high": None,
+            "n_episodes": 0, "mean_delta": None, "std_delta": None,
+            "ci95_low": None, "ci95_high": None,
+            "ci_method": "episode_cluster_bootstrap",
         }
 
     mean_delta = sum(deltas) / len(deltas)
     var = sum((d - mean_delta) ** 2 for d in deltas) / len(deltas)
     std_delta = var ** 0.5
 
-    rng = _random.Random(_BOOTSTRAP_SEED)
-    boot_means = []
-    n = len(deltas)
-    for _ in range(_BOOTSTRAP_RESAMPLES):
-        sample = [deltas[rng.randrange(n)] for _ in range(n)]
-        boot_means.append(sum(sample) / n)
-    boot_means.sort()
-    lo_idx = int(0.025 * len(boot_means))
-    hi_idx = int(0.975 * len(boot_means))
+    episodes = sorted(by_episode)
+    low = high = None
+    if len(episodes) >= 5:
+        rng = _random.Random(_BOOTSTRAP_SEED)
+        boot_means = []
+        for _ in range(_BOOTSTRAP_RESAMPLES):
+            sampled = [by_episode[episodes[rng.randrange(len(episodes))]]
+                       for _ in episodes]
+            values = [value for block in sampled for value in block]
+            boot_means.append(sum(values) / len(values))
+        boot_means.sort()
+        low = boot_means[int(0.025 * len(boot_means))]
+        high = boot_means[int(0.975 * len(boot_means))]
 
     return {
         "metric": metric,
         "n_paired": len(deltas),
+        "n_episodes": len(episodes),
         "n_dropped_missing_coverage": dropped_missing,
         "mean_delta": mean_delta,
         "std_delta": std_delta,
-        "ci95_low": boot_means[lo_idx],
-        "ci95_high": boot_means[hi_idx],
+        "ci95_low": low,
+        "ci95_high": high,
+        "ci_method": "episode_cluster_bootstrap",
         "note": "delta = arm_b - arm_a on matched (episode_id, seed) cells; "
-                "CI excludes zero => the difference is not attributable to noise at 95%.",
+                "interval resamples episodes; fewer than five episodes yield no interval. "
+                "A favorable interval alone does not establish a causal or prospective gain.",
     }
 
 

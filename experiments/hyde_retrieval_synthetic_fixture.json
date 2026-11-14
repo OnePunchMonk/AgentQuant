@@ -1,0 +1,181 @@
+{
+  "benchmark": "hyde_retrieval_synthetic_fixture_v1",
+  "claim_scope": "retrieval ranking and candidate novelty only; no backtest utility measured",
+  "results": [
+    {
+      "as_of": "2024-12-31",
+      "candidate_budget_ceiling": 5,
+      "candidate_novelty_vs_canonical_grid": 0,
+      "evidence_budget_per_candidate": 5,
+      "evidence_tier": "fixture_relevance_label",
+      "fixture": true,
+      "grid_candidates": [
+        {
+          "fast_window": 5,
+          "slow_window": 20
+        },
+        {
+          "fast_window": 10,
+          "slow_window": 30
+        },
+        {
+          "fast_window": 10,
+          "slow_window": 50
+        },
+        {
+          "fast_window": 15,
+          "slow_window": 80
+        },
+        {
+          "fast_window": 17,
+          "slow_window": 91
+        }
+      ],
+      "hyde_candidate": {
+        "evaluation_status": "unevaluated",
+        "evidence_ids": [
+          "trend-00",
+          "trend-01",
+          "trend-02",
+          "trend-03",
+          "trend-04"
+        ],
+        "params": {
+          "fast_window": 10,
+          "slow_window": 50
+        },
+        "retrieval_score": 0.966092
+      },
+      "metrics": {
+        "grid_order": {
+          "candidate_count": 5,
+          "novel_candidates": 0,
+          "precision_at_k": 1.0,
+          "reciprocal_rank": 1.0,
+          "relevant_retrieved": 5
+        },
+        "hyde": {
+          "candidate_count": 1,
+          "novel_candidates": 0,
+          "precision_at_k": 1.0,
+          "reciprocal_rank": 1.0,
+          "relevant_retrieved": 5
+        },
+        "literature_keyword": {
+          "candidate_count": 5,
+          "novel_candidates": 0,
+          "precision_at_k": 1.0,
+          "reciprocal_rank": 1.0,
+          "relevant_retrieved": 5
+        },
+        "no_memory": {
+          "candidate_count": 1,
+          "novel_candidates": 0,
+          "precision_at_k": 0.0,
+          "reciprocal_rank": 0.0,
+          "relevant_retrieved": 0
+        },
+        "shuffled_evidence": {
+          "candidate_count": 5,
+          "novel_candidates": 0,
+          "precision_at_k": 0.2,
+          "reciprocal_rank": 0.25,
+          "relevant_retrieved": 1
+        }
+      },
+      "regime": "trend",
+      "time_cutoff_excluded_relevant": [
+        "trend-05",
+        "trend-late-known"
+      ]
+    },
+    {
+      "as_of": "2024-12-31",
+      "candidate_budget_ceiling": 5,
+      "candidate_novelty_vs_canonical_grid": 0,
+      "evidence_budget_per_candidate": 5,
+      "evidence_tier": "fixture_relevance_label",
+      "fixture": true,
+      "grid_candidates": [
+        {
+          "num_std": 1.5,
+          "window": 10
+        },
+        {
+          "num_std": 2.0,
+          "window": 15
+        },
+        {
+          "num_std": 2.0,
+          "window": 20
+        },
+        {
+          "num_std": 2.5,
+          "window": 20
+        },
+        {
+          "num_std": 3.0,
+          "window": 30
+        }
+      ],
+      "hyde_candidate": {
+        "evaluation_status": "unevaluated",
+        "evidence_ids": [
+          "reversion-00",
+          "reversion-01",
+          "reversion-02",
+          "reversion-03",
+          "reversion-04"
+        ],
+        "params": {
+          "num_std": 2.0,
+          "window": 20
+        },
+        "retrieval_score": 0.966092
+      },
+      "metrics": {
+        "grid_order": {
+          "candidate_count": 5,
+          "novel_candidates": 0,
+          "precision_at_k": 1.0,
+          "reciprocal_rank": 1.0,
+          "relevant_retrieved": 5
+        },
+        "hyde": {
+          "candidate_count": 1,
+          "novel_candidates": 0,
+          "precision_at_k": 1.0,
+          "reciprocal_rank": 1.0,
+          "relevant_retrieved": 5
+        },
+        "literature_keyword": {
+          "candidate_count": 5,
+          "novel_candidates": 0,
+          "precision_at_k": 1.0,
+          "reciprocal_rank": 1.0,
+          "relevant_retrieved": 5
+        },
+        "no_memory": {
+          "candidate_count": 1,
+          "novel_candidates": 0,
+          "precision_at_k": 0.0,
+          "reciprocal_rank": 0.0,
+          "relevant_retrieved": 0
+        },
+        "shuffled_evidence": {
+          "candidate_count": 5,
+          "novel_candidates": 0,
+          "precision_at_k": 0.2,
+          "reciprocal_rank": 0.25,
+          "relevant_retrieved": 1
+        }
+      },
+      "regime": "reversion",
+      "time_cutoff_excluded_relevant": [
+        "reversion-05",
+        "reversion-late-known"
+      ]
+    }
+  ],
+  "seed": 23
+}

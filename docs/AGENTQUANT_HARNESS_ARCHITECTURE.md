@@ -125,6 +125,8 @@ These are architecture analogies. Do not import image quality losses, diffusion 
 
 The assistant-facing tool registry, HyDE retrieval prototype, and graph-memory adapter are documented in [ASSISTANT_TOOL_CONTRACT.md](ASSISTANT_TOOL_CONTRACT.md), [HYDE_RETRIEVAL.md](HYDE_RETRIEVAL.md), and [RRSI_INTEGRATION.md](RRSI_INTEGRATION.md). Their presence does not complete issue #23's embedding, literature, or comparative validation criteria, nor #43's learned RL policy.
 
+The next offline slice adds an [assistant tool runner](ASSISTANT_TOOL_RUNNER.md), a [non-learning RL shadow advisory tool](RL_SHADOW_TOOL.md), a [synthetic #23 retrieval comparison](HYDE_BENCHMARK.md), a [versioned benchmark suite contract](BENCHMARK_EVOLUTION.md), a [communication-format experiment](COMMUNICATION_EXPERIMENT.md), and a [diffusion-inspired proposal-refinement toy](PROPOSAL_REFINEMENT.md). These are integration and mechanism checks. The communication microbenchmark uses a token proxy and local serialization latency, not model tokens or end-to-end task quality. The #23 comparison scores fixture relevance without backtesting; the refinement toy's equal-call baseline reaches the same score. None is evidence of market benefit or automatic self-improvement.
+
 The following are target contracts. Preserve backward compatibility where feasible; version persisted schemas and report clear migrations.
 
 ### 4.1 Sidecar proposal contract (#43)
@@ -241,6 +243,8 @@ Current limitation: the offline fallback does not read the mutated prompt, so it
 Version the episode manifest, evaluator, metric definitions, data cutoff, tool inventory, and communication schema together. Keep an immutable core for longitudinal comparison and add challenge sets from observed failures only in the next benchmark version; a newly added case is never retroactively part of an earlier claim. Partition by chronology and task family, with development, selection, sealed final, and later prospective cohorts. Report paired episode-level outcomes and confidence intervals, search count, token/tool/wall budgets, replay fidelity, and protected-regression slices. Repeated seeds on one market path are not independent markets.
 
 For each new sidecar/tool, use a factorial ablation: fixed tool set versus learned selection; memory graph versus flat retrieval versus no memory; HyDE versus literature/grid controls; full action-state messages versus compact typed envelopes; and regularized versus unrestricted harness edits. Freeze the protocol before seeing final outcomes. Add planted-signal and null controls, counterfactual/shuffled evidence, stale/contradictory memory, malformed tool output, provider drift, and out-of-domain episodes. Promote a benchmark revision after review, then treat its final set as sealed for the next method comparison. See the [assistant tool contract](ASSISTANT_TOOL_CONTRACT.md) and [RRSI integration](RRSI_INTEGRATION.md) for the individual experiments.
+
+The current [suite contract](BENCHMARK_EVOLUTION.md) hashes manifests, appends new episodes under a parent hash, and checks declared budgets and partitions. It does not enforce sealed data access at runtime. The fair-search development report now resamples whole episodes for paired confidence intervals, since seeds on the same episode are correlated; fewer than five paired episodes yield no interval.
 
 ### Phase A: invariant tests (no utility claims)
 
