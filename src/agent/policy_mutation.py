@@ -10,7 +10,7 @@ between episodes. The single mutation family implemented here is
 prompt_template / prompt_context mutation (the simplest knob
 resolve_effective_config already wires all the way through).
 
-Promotion is gated on a fixed, predeclared improvement threshold plus a
+Promotion is gated by the standalone search-aware evidence gate plus a
 protected-episode regression check -- persisting a new config is NOT itself
 self-improvement. A random-mutation baseline runs under the identical
 budget for comparison.
@@ -22,25 +22,23 @@ import hashlib
 import json
 import logging
 import random
+import tempfile
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from agentquant_gate import Gate, Ledger
+
 from src.agent.episode_splits import Episode
 from src.agent.harness_config import HarnessConfig
 
 logger = logging.getLogger(__name__)
 
-# Predeclared, fixed, practically-meaningful promotion threshold. A candidate
-# must beat the incumbent's mean validation holdout Sharpe by more than this
-# to be promoted. Documented here so it cannot be tuned post-hoc per result.
-PROMOTION_EPSILON = 0.10
-
 # Regression check: performance on this episode must not drop by more than
-# this fraction relative to the incumbent, or the candidate is rejected even
-# if it clears PROMOTION_EPSILON on average.
+# this fraction relative to the incumbent, or the candidate is rejected by
+# the statistical gate.
 PROTECTED_EPISODE_ID = "ep00"
 MAX_PROTECTED_REGRESSION = 0.25
 
@@ -232,12 +230,15 @@ def evaluate_promotion(
     candidate_val_scores: List[float],
     incumbent_protected_score: Optional[float],
     candidate_protected_score: Optional[float],
-    epsilon: float = PROMOTION_EPSILON,
     max_protected_regression: float = MAX_PROTECTED_REGRESSION,
     coverage_mismatch: bool = False,
+    gate_ledger: Optional[Ledger] = None,
+    gate_family: str = "bounded-policy-promotion",
+    candidate_trial_id: str = "candidate",
+    incumbent_trial_id: str = "incumbent",
 ) -> PromotionDecision:
     """Only promote a candidate policy over the incumbent if it clears a
-    fixed, predeclared improvement threshold on validation episodes AND does
+    standalone search-corrected gate on paired validation episodes AND does
     not regress badly on the protected episode. Ties/inconclusive results
     keep the incumbent.
 
@@ -249,48 +250,82 @@ def evaluate_promotion(
       - either protected-episode score is missing -- the regression check
         cannot be verified, so promotion must not proceed as if it passed.
     """
+    def stop(reason: str, candidate_mean: Optional[float] = None,
+             incumbent_mean: Optional[float] = None,
+             protected_delta: Optional[float] = None,
+             outcome: str = "insufficient_evidence") -> PromotionDecision:
+        if gate_ledger is not None:
+            gate_ledger.append(
+                "decision", family=gate_family, metric="validation_sharpe",
+                candidate_id=candidate_trial_id, incumbent_id=incumbent_trial_id,
+                outcome=outcome, reason=reason,
+                raw_delta=(candidate_mean - incumbent_mean)
+                if candidate_mean is not None and incumbent_mean is not None else None,
+            )
+        return PromotionDecision(False, reason, candidate_mean, incumbent_mean, protected_delta)
+
     if coverage_mismatch:
-        return PromotionDecision(
-            False,
+        return stop(
             "incumbent and candidate were evaluated on mismatched validation "
             "episode/seed coverage; comparison is invalid, keeping incumbent",
-            None, None, None,
         )
 
     if not incumbent_val_scores or not candidate_val_scores:
-        return PromotionDecision(False, "missing validation scores; keeping incumbent", None, None, None)
+        return stop("missing validation scores; keeping incumbent")
 
     if incumbent_protected_score is None or candidate_protected_score is None:
-        return PromotionDecision(
-            False,
+        return stop(
             "protected-episode evaluation unavailable for incumbent and/or candidate; "
             "failing closed (cannot verify no regression), keeping incumbent",
-            None, None, None,
         )
+
+    if len(incumbent_val_scores) != len(candidate_val_scores):
+        return stop("mismatched validation score coverage; keeping incumbent")
 
     inc_mean = sum(incumbent_val_scores) / len(incumbent_val_scores)
     cand_mean = sum(candidate_val_scores) / len(candidate_val_scores)
-    delta = cand_mean - inc_mean
 
     protected_delta = candidate_protected_score - incumbent_protected_score
     if protected_delta < -abs(max_protected_regression):
-        return PromotionDecision(
-            False,
+        return stop(
             f"protected-episode regression {protected_delta:.3f} exceeds "
             f"-{max_protected_regression}; keeping incumbent",
-            cand_mean, inc_mean, protected_delta,
+            cand_mean, inc_mean, protected_delta, outcome="reject",
         )
 
-    if delta > epsilon:
-        return PromotionDecision(
-            True, f"candidate beats incumbent by {delta:.3f} > epsilon={epsilon}; promoting",
-            cand_mean, inc_mean, protected_delta,
+    # A run supplies one shared ledger containing the incumbent and every
+    # candidate considered from that mutation family. The fallback supports
+    # direct calls to this helper; the bounded runner always supplies its
+    # run-scoped ledger below.
+    if gate_ledger is not None:
+        gate_decision = Gate(gate_ledger, family=gate_family,
+                             metric="validation_sharpe").evaluate(
+            candidate_trial_id, incumbent_trial_id,
+            protected_candidate=candidate_protected_score,
+            protected_incumbent=incumbent_protected_score,
+            max_protected_regression=max_protected_regression,
         )
-
+    else:
+        with tempfile.TemporaryDirectory(prefix="agentquant-promotion-") as temp_dir:
+            ledger = Ledger(Path(temp_dir) / "ledger.jsonl")
+            with ledger.trial(config={"role": "incumbent"}, family=gate_family,
+                              metric="validation_sharpe", trial_id=incumbent_trial_id) as trial:
+                trial.record(scores=incumbent_val_scores)
+            with ledger.trial(config={"role": "candidate"}, parent=incumbent_trial_id,
+                              family=gate_family, metric="validation_sharpe",
+                              trial_id=candidate_trial_id) as trial:
+                trial.record(scores=candidate_val_scores)
+            gate_decision = Gate(ledger, family=gate_family,
+                                 metric="validation_sharpe").evaluate(
+                candidate_trial_id, incumbent_trial_id,
+                protected_candidate=candidate_protected_score,
+                protected_incumbent=incumbent_protected_score,
+                max_protected_regression=max_protected_regression,
+            )
     return PromotionDecision(
-        False,
-        f"candidate delta {delta:.3f} does not clear epsilon={epsilon} (inconclusive/tie/loss); "
-        "keeping incumbent",
+        gate_decision.outcome == "promote",
+        f"gate outcome={gate_decision.outcome}: {gate_decision.reason}; keeping incumbent"
+        if gate_decision.outcome != "promote" else gate_decision.reason,
         cand_mean, inc_mean, protected_delta,
     )
 
@@ -337,6 +372,7 @@ def run_bounded_self_improvement(
     use_random_baseline: bool = False,
     rng_seed: int = 0,
     structured_failures: Optional[List["StructuredFailure"]] = None,
+    gate_ledger_path: Path = Path("experiments/policy_promotion_ledger.jsonl"),
 ) -> Dict[str, Any]:
     """Ties inner (eval_fn) and outer (mutation/promotion) loops together.
 
@@ -350,6 +386,9 @@ def run_bounded_self_improvement(
     without using the evidence -- that's the whole point of the control.
     """
     rng = random.Random(rng_seed)
+    run_id = uuid.uuid4().hex
+    gate_family = f"bounded-policy-promotion:{run_id}"
+    gate_ledger = Ledger(gate_ledger_path)
 
     mutation_records = []
     candidates: List[HarnessConfig] = []
@@ -363,8 +402,12 @@ def run_bounded_self_improvement(
 
     # Evaluate each candidate on dev episodes (search/selection data).
     dev_scores: Dict[str, List[float]] = {}
+    dev_observations: Dict[str, List[Tuple[str, int, Optional[float]]]] = {}
     for cand in candidates:
-        scores = [eval_fn(cand, ep, seed) for ep in dev_episodes for seed in seeds]
+        observations = [(ep.episode_id, seed, eval_fn(cand, ep, seed))
+                        for ep in dev_episodes for seed in seeds]
+        dev_observations[cand.version] = observations
+        scores = [score for _, _, score in observations]
         dev_scores[cand.version] = [s for s in scores if s is not None]
 
     def _mean(xs: List[float]) -> float:
@@ -379,26 +422,82 @@ def run_bounded_self_improvement(
     # compare unequal sample sets, which is not a valid comparison.
     val_keys = [(ep.episode_id, seed) for ep in val_episodes for seed in seeds]
     incumbent_val_raw = {}
-    candidate_val_raw = {}
+    candidate_val_raw = {cand.version: {} for cand in candidates}
     for ep in val_episodes:
         for seed in seeds:
             key = (ep.episode_id, seed)
             incumbent_val_raw[key] = eval_fn(incumbent, ep, seed)
-            candidate_val_raw[key] = eval_fn(best_candidate, ep, seed)
+            for cand in candidates:
+                candidate_val_raw[cand.version][key] = eval_fn(cand, ep, seed)
 
     coverage_mismatch = any(
-        (incumbent_val_raw[k] is None) != (candidate_val_raw[k] is None) for k in val_keys
+        any(incumbent_val_raw[k] is None or candidate_val_raw[c.version][k] is None
+            for k in val_keys)
+        for c in candidates
     )
     matched_keys = [k for k in val_keys
-                    if incumbent_val_raw[k] is not None and candidate_val_raw[k] is not None]
+                    if incumbent_val_raw[k] is not None and
+                    candidate_val_raw[best_candidate.version][k] is not None]
     incumbent_val = [incumbent_val_raw[k] for k in matched_keys]
-    candidate_val = [candidate_val_raw[k] for k in matched_keys]
+    best_candidate_val = [candidate_val_raw[best_candidate.version][k] for k in matched_keys
+                          if candidate_val_raw[best_candidate.version][k] is not None]
+
+    incumbent_trial_id = f"{run_id}:incumbent"
+    incumbent_scores_full = [incumbent_val_raw[k] for k in val_keys]
+    if all(score is not None for score in incumbent_scores_full) and incumbent_scores_full:
+        with gate_ledger.trial(
+            config=incumbent.to_dict(), family=gate_family, metric="validation_sharpe",
+            trial_id=incumbent_trial_id, generation_method="incumbent",
+        ) as trial:
+            trial.record(scores=incumbent_scores_full,
+                         validation_keys=[list(k) for k in val_keys])
+    else:
+        gate_ledger.append(
+            "error", trial_id=incumbent_trial_id, parent_id=None, family=gate_family,
+            metric="validation_sharpe", direction="max",
+            error="incomplete validation episode/seed coverage",
+            validation_observations=[[*k, incumbent_val_raw[k]] for k in val_keys],
+        )
+
+    candidate_trial_ids = {}
+    for index, cand in enumerate(candidates):
+        trial_id = f"{run_id}:candidate:{index}"
+        candidate_trial_ids[cand.version] = trial_id
+        scores_full = [candidate_val_raw[cand.version][k] for k in val_keys]
+        if all(score is not None for score in scores_full) and scores_full:
+            with gate_ledger.trial(
+                config=cand.to_dict(), parent=incumbent_trial_id, family=gate_family,
+                metric="validation_sharpe", trial_id=trial_id, generation_method="mutation",
+            ) as trial:
+                trial.record(
+                    scores=scores_full, validation_keys=[list(k) for k in val_keys],
+                    dev_observations=[list(row) for row in dev_observations[cand.version]],
+                    selected_by_dev=cand.version == best_candidate.version,
+                )
+        else:
+            gate_ledger.append(
+                "error", trial_id=trial_id, parent_id=incumbent_trial_id,
+                family=gate_family, metric="validation_sharpe", direction="max",
+                error="incomplete validation episode/seed coverage",
+                validation_observations=[
+                    [*k, candidate_val_raw[cand.version][k]] for k in val_keys
+                ], dev_observations=[list(row) for row in dev_observations[cand.version]],
+                selected_by_dev=cand.version == best_candidate.version,
+            )
+
+    incumbent_val = [incumbent_val_raw[k] for k in matched_keys]
+    candidate_val = best_candidate_val
 
     incumbent_protected = eval_fn(incumbent, protected_episode, seeds[0])
     candidate_protected = eval_fn(best_candidate, protected_episode, seeds[0])
 
-    decision = evaluate_promotion(incumbent_val, candidate_val, incumbent_protected, candidate_protected,
-                                   coverage_mismatch=coverage_mismatch)
+    decision = evaluate_promotion(
+        incumbent_val, candidate_val, incumbent_protected, candidate_protected,
+        coverage_mismatch=coverage_mismatch, gate_ledger=gate_ledger,
+        gate_family=gate_family,
+        candidate_trial_id=candidate_trial_ids[best_candidate.version],
+        incumbent_trial_id=incumbent_trial_id,
+    )
     selected_policy = best_candidate if decision.promote else incumbent
 
     # ONE final frozen evaluation of the SELECTED policy on held-out final
@@ -429,6 +528,8 @@ def run_bounded_self_improvement(
         "final_holdout_scores": final_scores,
         "final_holdout_mean": _mean(final_scores) if final_scores else None,
         "used_random_baseline": use_random_baseline,
+        "promotion_ledger_path": str(gate_ledger_path),
+        "promotion_family": gate_family,
         # Additive (P3 research-workspace consumers): full config dicts and
         # hashes for every policy touched in this episode, so a caller can
         # build a config diff / narrative without re-deriving policy_id

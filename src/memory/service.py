@@ -230,6 +230,48 @@ class MemoryService:
                 )
         return pack
 
+    def graph_search(
+        self,
+        query: MemoryQuery,
+        *,
+        text: str = "",
+        knowledge_as_of: Optional[str] = None,
+        limit: int = 10,
+    ):
+        """Search a rebuildable evidence graph under the same market-time cutoff.
+
+        This is an opt-in research view, not another store or a replacement for
+        the compact prompt pack. ``knowledge_as_of`` separately bounds when an
+        experiment was recorded, which matters for retrospective replay.
+        """
+        from src.memory.graph import EvidenceGraph
+
+        if not self.can_read or limit <= 0:
+            return []
+        trials = self.visible_trials(query)
+        sql = "SELECT * FROM mem_notes WHERE 1=1"
+        args: List[Any] = []
+        if query.strategy_types:
+            sql += f" AND strategy_type IN ('',{','.join('?' for _ in query.strategy_types)})"
+            args.extend(query.strategy_types)
+        sql, args = self._visibility(sql, args, query.as_of, "data_end")
+        with self._conn() as conn:
+            notes = [Note.from_row(row) for row in conn.execute(sql, args).fetchall()]
+        graph = EvidenceGraph.rebuild(trials, notes)
+        hits = graph.retrieve(
+            market_as_of=query.as_of,
+            knowledge_as_of=knowledge_as_of,
+            strategy_type=query.strategy_types[0] if len(query.strategy_types) == 1 else None,
+            asset=query.asset,
+            query=text,
+            limit=limit,
+            include_undated=self.include_undated,
+        )
+        if query.strategy_types and len(query.strategy_types) > 1:
+            allowed = set(query.strategy_types)
+            hits = [hit for hit in hits if hit.node.attributes.get("strategy_type") in allowed]
+        return hits
+
     def _gaps(self, query: MemoryQuery, trials: List[Trial], limit: int = 3) -> List[Dict[str, Any]]:
         from src.agent.parameter_grid import ParameterGrid
 

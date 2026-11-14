@@ -32,7 +32,7 @@ import json
 import os
 import random
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import date
 from enum import Enum
 from pathlib import Path
@@ -40,9 +40,9 @@ from typing import Any, Dict, List, Optional, Protocol, Sequence, Tuple
 
 import pandas as pd
 
+from src.agent import search_arms
 from src.agent.episode_splits import Episode, slice_dev, slice_holdout
 from src.agent.parameter_grid import ParameterGrid
-from src.agent import search_arms
 
 SCHEMA_VERSION = "1.0.0"
 FEATURE_FLAG_ENV = "AGENTQUANT_IDEA_SIDECAR"

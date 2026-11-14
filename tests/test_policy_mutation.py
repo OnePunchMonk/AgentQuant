@@ -3,6 +3,7 @@
 running under an identical budget, the final-holdout reuse guard, and the
 future-dated-memory filter."""
 
+import json
 import random
 
 import pytest
@@ -10,7 +11,6 @@ import pytest
 from src.agent.episode_splits import Episode
 from src.agent.harness_config import harness_v1_base
 from src.agent.policy_mutation import (
-    PROMOTION_EPSILON,
     FinalHoldoutGuard,
     StructuredFailure,
     evaluate_promotion,
@@ -30,7 +30,7 @@ def _episode(i: int) -> Episode:
 # Promotion gating
 # ---------------------------------------------------------------------------
 
-def test_promotion_requires_clearing_epsilon_not_just_beating_incumbent():
+def test_promotion_fails_closed_when_gate_lacks_sharpe_dsr():
     decision = evaluate_promotion(
         incumbent_val_scores=[0.50, 0.52],
         candidate_val_scores=[0.53, 0.55],  # beats incumbent, but by < epsilon
@@ -38,7 +38,7 @@ def test_promotion_requires_clearing_epsilon_not_just_beating_incumbent():
         candidate_protected_score=0.5,
     )
     assert decision.promote is False
-    assert "inconclusive" in decision.reason or "does not clear" in decision.reason
+    assert "insufficient_evidence" in decision.reason
 
 
 def test_promotion_tie_keeps_incumbent():
@@ -61,20 +61,21 @@ def test_promotion_loss_keeps_incumbent():
     assert decision.promote is False
 
 
-def test_promotion_clears_threshold_and_promotes():
+def test_large_sharpe_gain_still_fails_closed_without_validated_dsr():
     decision = evaluate_promotion(
-        incumbent_val_scores=[0.2, 0.2],
-        candidate_val_scores=[0.2 + PROMOTION_EPSILON + 0.05] * 2,
+        incumbent_val_scores=[0.2, 0.2, 0.2],
+        candidate_val_scores=[1.0, 1.2, 1.4],
         incumbent_protected_score=0.2,
         candidate_protected_score=0.2,
     )
-    assert decision.promote is True
+    assert decision.promote is False
+    assert "insufficient_evidence" in decision.reason
 
 
-def test_promotion_blocked_by_protected_regression_even_if_epsilon_cleared():
+def test_promotion_blocked_by_protected_regression_even_with_large_validation_gain():
     decision = evaluate_promotion(
-        incumbent_val_scores=[0.2, 0.2],
-        candidate_val_scores=[0.2 + PROMOTION_EPSILON + 0.2] * 2,
+        incumbent_val_scores=[0.2, 0.2, 0.2],
+        candidate_val_scores=[0.6, 0.7, 0.8],
         incumbent_protected_score=1.0,
         candidate_protected_score=0.1,  # catastrophic regression on protected episode
     )
@@ -84,12 +85,12 @@ def test_promotion_blocked_by_protected_regression_even_if_epsilon_cleared():
 
 def test_promotion_rejected_when_both_protected_scores_missing():
     """Promotion must fail closed (never promote) when protected-episode
-    evaluation is unavailable, even if the candidate clears epsilon on
+    evaluation is unavailable, even if the candidate posts a large gain on
     validation -- previously the regression check was silently skipped and
     promotion proceeded as if it had passed."""
     decision = evaluate_promotion(
         incumbent_val_scores=[0.2, 0.2],
-        candidate_val_scores=[0.2 + PROMOTION_EPSILON + 0.2] * 2,
+        candidate_val_scores=[0.6, 0.7, 0.8],
         incumbent_protected_score=None,
         candidate_protected_score=None,
     )
@@ -100,7 +101,7 @@ def test_promotion_rejected_when_both_protected_scores_missing():
 def test_promotion_rejected_when_one_protected_score_missing():
     decision = evaluate_promotion(
         incumbent_val_scores=[0.2, 0.2],
-        candidate_val_scores=[0.2 + PROMOTION_EPSILON + 0.2] * 2,
+        candidate_val_scores=[0.6, 0.7, 0.8],
         incumbent_protected_score=0.5,
         candidate_protected_score=None,
     )
@@ -140,7 +141,7 @@ def test_run_bounded_self_improvement_blocks_promotion_on_mismatched_coverage(tm
     result = run_bounded_self_improvement(
         incumbent, dev, val, final, protected, eval_fn, seeds=[1, 2],
         n_mutations=3, holdout_guard=FinalHoldoutGuard(tmp_path / "guard.json"),
-        use_random_baseline=False, rng_seed=3,
+        use_random_baseline=False, rng_seed=3, gate_ledger_path=tmp_path / "gate.jsonl",
     )
     assert result["promotion_decision"]["promote"] is False
     assert result["selected_policy_version"] == incumbent.version
@@ -180,12 +181,12 @@ def test_random_baseline_runs_under_identical_budget(tmp_path):
     diagnosed = run_bounded_self_improvement(
         incumbent, dev, val, final, protected, eval_fn, seeds=[1, 2],
         n_mutations=3, holdout_guard=FinalHoldoutGuard(tmp_path / "guard_a.json"),
-        use_random_baseline=False, rng_seed=1,
+        use_random_baseline=False, rng_seed=1, gate_ledger_path=tmp_path / "gate_a.jsonl",
     )
     random_baseline = run_bounded_self_improvement(
         incumbent, dev, val, final, protected, eval_fn, seeds=[1, 2],
         n_mutations=3, holdout_guard=FinalHoldoutGuard(tmp_path / "guard_b.json"),
-        use_random_baseline=True, rng_seed=1,
+        use_random_baseline=True, rng_seed=1, gate_ledger_path=tmp_path / "gate_b.jsonl",
     )
     # Identical budget: same number of mutation candidates tried, same episode allocation.
     assert len(diagnosed["mutation_records"]) == len(random_baseline["mutation_records"]) == 3
@@ -214,10 +215,58 @@ def test_inconclusive_outer_loop_keeps_incumbent_selected(tmp_path):
     result = run_bounded_self_improvement(
         incumbent, dev, val, final, protected, eval_fn, seeds=[1, 2, 3],
         n_mutations=3, holdout_guard=FinalHoldoutGuard(tmp_path / "guard.json"),
-        use_random_baseline=False, rng_seed=2,
+        use_random_baseline=False, rng_seed=2, gate_ledger_path=tmp_path / "gate.jsonl",
     )
     assert result["promotion_decision"]["promote"] is False
     assert result["selected_policy_version"] == incumbent.version
+
+
+def test_run_ledger_records_incumbent_and_every_candidate_with_dev_observations(tmp_path):
+    incumbent = harness_v1_base()
+    episodes = [_episode(i) for i in range(4)]
+    dev, val, final, protected = episodes[:2], [episodes[2]], [episodes[3]], episodes[1]
+    ledger_path = tmp_path / "gate.jsonl"
+    result = run_bounded_self_improvement(
+        incumbent, dev, val, final, protected,
+        lambda policy, episode, seed: 0.4 + seed / 100,
+        seeds=[1, 2, 3], n_mutations=3,
+        holdout_guard=FinalHoldoutGuard(tmp_path / "guard.json"),
+        gate_ledger_path=ledger_path,
+    )
+
+    entries = [json.loads(line) for line in ledger_path.read_text().splitlines()]
+    trials = [e for e in entries if e["type"] == "trial"]
+    family_trials = [e for e in trials if e["family"] == result["promotion_family"]]
+    assert len(family_trials) == 4  # incumbent plus every attempted mutation
+    candidates = [e for e in family_trials if e["generation_method"] == "mutation"]
+    assert len(candidates) == 3
+    assert all(len(e["dev_observations"]) == len(dev) * 3 for e in candidates)
+    assert sum(e["selected_by_dev"] for e in candidates) == 1
+    assert any(e["type"] == "decision" and e["family"] == result["promotion_family"]
+               for e in entries)
+
+
+def test_incomplete_validation_records_abstention_in_ledger(tmp_path):
+    incumbent = harness_v1_base()
+    episodes = [_episode(i) for i in range(4)]
+    path = tmp_path / "gate.jsonl"
+
+    def incomplete(policy, episode, seed):
+        if episode.episode_id == episodes[2].episode_id and seed == 2:
+            return None
+        return 0.4
+
+    result = run_bounded_self_improvement(
+        incumbent, episodes[:2], [episodes[2]], [episodes[3]], episodes[1],
+        incomplete, seeds=[1, 2, 3], n_mutations=1,
+        holdout_guard=FinalHoldoutGuard(tmp_path / "guard.json"), gate_ledger_path=path,
+    )
+    entries = [json.loads(line) for line in path.read_text().splitlines()]
+    decisions = [entry for entry in entries if entry["type"] == "decision"
+                 and entry["family"] == result["promotion_family"]]
+    assert result["promotion_decision"]["promote"] is False
+    assert decisions[-1]["outcome"] == "insufficient_evidence"
+    assert "mismatched" in decisions[-1]["reason"]
 
 
 # ---------------------------------------------------------------------------
@@ -294,11 +343,13 @@ def test_random_baseline_ignores_structured_failures(tmp_path):
         incumbent, dev, val, final, protected, eval_fn, seeds=[1],
         n_mutations=3, holdout_guard=FinalHoldoutGuard(tmp_path / "g1.json"),
         use_random_baseline=True, rng_seed=7, structured_failures=failures,
+        gate_ledger_path=tmp_path / "gate1.jsonl",
     )
     without_failures = run_bounded_self_improvement(
         incumbent, dev, val, final, protected, eval_fn, seeds=[1],
         n_mutations=3, holdout_guard=FinalHoldoutGuard(tmp_path / "g2.json"),
         use_random_baseline=True, rng_seed=7, structured_failures=None,
+        gate_ledger_path=tmp_path / "gate2.jsonl",
     )
     templates_a = [r["patch"]["prompt_template"] for r in with_failures["mutation_records"]]
     templates_b = [r["patch"]["prompt_template"] for r in without_failures["mutation_records"]]
@@ -316,6 +367,7 @@ def test_evidence_conditioned_run_diagnosis_traces_to_supplied_evidence(tmp_path
         incumbent, dev, val, final, protected, eval_fn, seeds=[1],
         n_mutations=2, holdout_guard=FinalHoldoutGuard(tmp_path / "g.json"),
         use_random_baseline=False, rng_seed=0, structured_failures=failures,
+        gate_ledger_path=tmp_path / "gate.jsonl",
     )
     for rec in result["mutation_records"]:
         assert "high_drawdown" in rec["diagnosis"]

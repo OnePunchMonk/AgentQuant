@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agentquant"
 version = "0.3.0"
-description = "Autonomous quantitative trading research platform with LLM regime-aware strategy optimization."
+description = "A failure-aware harness for reproducible, self-improving research, using quantitative strategies as its first testbed."
 authors = [{ name = "Avaya Aggarwal", email = "aggarwal.avaya27@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -19,7 +19,7 @@ dependencies = [
     "pydantic>=2.0,<3.0",
     "yfinance>=0.2.28",
     "scipy>=1.12",
-    "pyarrow>=16.0",
+    "pyarrow>=16.0,<20.0",
     "tabulate>=0.9",
     "rich>=13.7",
     "statsmodels>=0.14",
@@ -82,5 +82,5 @@ select = ["E", "F", "W", "I"]
 ignore = ["E501"]
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["src*"]
+where = [".", "gate"]
+include = ["src*", "agentquant_gate*"]

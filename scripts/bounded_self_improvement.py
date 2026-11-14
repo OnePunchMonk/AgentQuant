@@ -4,8 +4,8 @@
 Ties the inner loop (src.agent.agent_graph.run_agent, invoked per-episode
 under a given policy) to the outer loop (src.agent.policy_mutation): propose
 N candidate policy mutations, evaluate them on development episodes, select
-the best on a separate validation episode slice, gate promotion on a fixed
-threshold + protected-episode regression check, then do ONE final frozen
+the best, attempt gate evaluation on a separate validation slice with a
+protected-episode regression check, then do ONE final frozen
 evaluation of the selected policy on held-out final episodes.
 
 Also runs a random-mutation baseline under the identical budget, plus
@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -30,6 +31,10 @@ from src.agent.policy_eval import make_p2_eval_fn  # noqa: E402
 from src.agent.policy_mutation import FinalHoldoutGuard, run_bounded_self_improvement  # noqa: E402
 
 ASSET = "SIM"
+
+
+def _stable_seed(label: str) -> int:
+    return int.from_bytes(hashlib.sha256(label.encode("utf-8")).digest()[:4], "big")
 
 
 def run_condition(label: str, ohlcv, episodes, args, use_random_baseline: bool, memory_mode: str) -> dict:
@@ -46,7 +51,7 @@ def run_condition(label: str, ohlcv, episodes, args, use_random_baseline: bool, 
     eval_fn = make_p2_eval_fn(
         ohlcv, episodes, memory_mode=memory_mode, cost_bps=args.cost_bps,
         max_iterations=args.max_iterations, canonical_seed=args.seeds[0],
-        canonical_policy=harness_v1_base(), shuffle_rng_seed=hash(label) % (2 ** 31),
+        canonical_policy=harness_v1_base(), shuffle_rng_seed=_stable_seed(label),
     )
     guard = FinalHoldoutGuard(path=Path(args.results_dir) / f"final_holdout_used_{label}.json")
 
@@ -61,7 +66,8 @@ def run_condition(label: str, ohlcv, episodes, args, use_random_baseline: bool, 
         n_mutations=args.n_mutations,
         holdout_guard=guard,
         use_random_baseline=use_random_baseline,
-        rng_seed=hash(label) % (2 ** 31),
+        rng_seed=_stable_seed(label),
+        gate_ledger_path=Path(args.results_dir) / "policy_promotion_ledger.jsonl",
     )
     result["label"] = label
     print(f"[{label}] promote={result['promotion_decision']['promote']} "
@@ -97,9 +103,10 @@ def main() -> None:
         "shuffled_memory_ablation": run_condition("shuffled_memory", ohlcv, episodes, args,
                                                     use_random_baseline=False, memory_mode="shuffled"),
     }
-    report["promotion_epsilon_and_protected_check"] = (
-        "See src/agent/policy_mutation.py: PROMOTION_EPSILON, MAX_PROTECTED_REGRESSION. "
-        "Inconclusive/tied/losing candidates keep the incumbent."
+    report["promotion_gate_status"] = (
+        "Bounded promotion uses the standalone gate and a protected-episode check. "
+        "Sharpe promotion currently returns insufficient_evidence pending validated DSR; "
+        "the incumbent is retained."
     )
 
     out_path = ROOT / args.output
