@@ -69,10 +69,43 @@ def test_bundle_rejects_unknown_version(tmp_path):
         EpisodeBundle.load(path)
 
 
+def test_v2_bundle_detects_tampering_and_hashes_all_provenance_inputs(tmp_path):
+    bundle = EpisodeBundle(
+        run_id="integrity",
+        episode_result={**_minimal_episode_result(), "policy_configs": {"p": {"risk": 0.2}}},
+        run_manifest={"run_id": "integrity", "config_hash": "cfg", "attempted_candidates": [{"id": "c1"}]},
+        dataset_identity={"data_hash": "data", "splits_path": "split.json"},
+        software_identity={"git_sha": "abc", "packages": {"numpy": "1"}},
+        memory_entries_visible=[{"id": "m1"}],
+    )
+    path = bundle.save(tmp_path)
+    raw = json.loads(path.read_text())
+    assert raw["bundle_version"] == "2"
+    assert set(raw["hash_manifest"]["references"]) == {
+        "attempted_candidates", "config", "memory", "dataset", "splits", "software"
+    }
+    raw["run_manifest"]["attempted_candidates"][0]["id"] = "changed"
+    path.write_text(json.dumps(raw))
+    with pytest.raises(ValueError, match="payload hash mismatch"):
+        EpisodeBundle.load(path)
+
+
+def test_v1_bundle_remains_readable(tmp_path):
+    path = tmp_path / "legacy.json"
+    path.write_text(json.dumps({
+        "bundle_version": "1",
+        "run_id": "legacy",
+        "episode_result": _minimal_episode_result(),
+    }))
+    loaded = EpisodeBundle.load(path)
+    assert loaded.run_id == "legacy"
+    assert loaded.bundle_version == "1"
+
+
 def test_bundle_defaults_missing_optional_fields_to_unavailable_or_none(tmp_path):
     path = tmp_path / "minimal.json"
     path.write_text(json.dumps({
-        "bundle_version": BUNDLE_VERSION,
+        "bundle_version": "1",
         "run_id": "run456",
         "episode_result": _minimal_episode_result(),
     }))

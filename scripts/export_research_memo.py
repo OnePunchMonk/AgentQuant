@@ -26,6 +26,8 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
+import shlex
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -77,10 +79,88 @@ def _replay(args: argparse.Namespace) -> None:
         incumbent_config=incumbent_config,
         candidate_config=candidate_config,
         data_access_requirements=bundle.data_access_requirements,
+        generated_at=(bundle.run_manifest or {}).get("started_at"),
     )
     print(f"Replayed bundle: {args.replay} (run_id={bundle.run_id}, bundle_version={bundle.bundle_version})")
     print("No agent execution or model/network calls were made in this mode.")
     _write_outputs(memo, args.output)
+
+
+def _fresh_replay(args: argparse.Namespace) -> None:
+    """Rerun a saved experiment only after reproducing its recorded data hash.
+
+    The stored rerun string is parsed as arguments, never passed to a shell.
+    This makes the bundle a data artifact rather than executable code.
+    """
+    from src.agent.episode_bundle import EpisodeBundle
+    from src.agent.episode_splits import synthetic_ohlcv
+    from src.agent.run_manifest import hash_ohlcv
+
+    bundle = EpisodeBundle.load(args.fresh_replay)
+    if not bundle.rerun_command:
+        raise SystemExit("Bundle has no rerun_command; cannot fresh-replay this episode.")
+    identity = bundle.dataset_identity or {}
+    expected_hash = identity.get("data_hash")
+    if not expected_hash or expected_hash in ("synthetic-offline", "unavailable: not captured for this run"):
+        raise SystemExit("Bundle has no verifiable dataset content hash; use --replay for report-only replay.")
+
+    # Parse only the known command flags; reject anything outside the CLI
+    # allowlist and never invoke the persisted command itself.
+    tokens = shlex.split(bundle.rerun_command)
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--episodes", type=int, default=6)
+    parser.add_argument("--seeds", type=int, nargs="+", default=[7, 11, 19])
+    parser.add_argument("--n-mutations", type=int, default=3)
+    parser.add_argument("--cost-bps", type=float, default=5.0)
+    parser.add_argument("--max-iterations", type=int, default=2)
+    parser.add_argument("--splits-path", default="experiments/research_memo_splits.json")
+    parser.add_argument("--user-data")
+    parser.add_argument("--user-data-ticker")
+    try:
+        run_args, unknown = parser.parse_known_args(tokens[2:] if tokens[:2] == ["python", "scripts/export_research_memo.py"] else tokens)
+    except SystemExit as exc:
+        raise SystemExit("Bundle rerun parameters could not be parsed safely.") from exc
+    if unknown:
+        raise SystemExit(f"Bundle rerun_command contains unsupported arguments: {unknown!r}")
+    if identity.get("splits_path"):
+        run_args.splits_path = identity["splits_path"]
+
+    split_hash = identity.get("splits_sha256")
+    if split_hash:
+        split_path = Path(run_args.splits_path)
+        if not split_path.exists():
+            raise SystemExit(f"Episode split file required for fresh replay is missing: {split_path}")
+        if hashlib.sha256(split_path.read_bytes()).hexdigest() != split_hash:
+            raise SystemExit("Episode split identity mismatch: fresh replay stopped before research execution.")
+
+    if run_args.user_data:
+        source_path = Path(run_args.user_data)
+        if not source_path.exists():
+            raise SystemExit(
+                f"Private OHLCV data required for fresh replay is missing: {source_path}. "
+                "Restore the original CSV at that path, or use --replay to regenerate the memo "
+                "without raw data or agent execution."
+            )
+        from src.data.user_ingest import load_user_ohlcv
+        data = load_user_ohlcv(str(source_path), cost_bps=run_args.cost_bps, ticker=run_args.user_data_ticker)
+        observed_hash = hash_ohlcv(data.ohlcv)
+    else:
+        data = synthetic_ohlcv(seed=run_args.seeds[0], n_days=3200, asset=ASSET)
+        observed_hash = hash_ohlcv(data)
+    if observed_hash != expected_hash:
+        raise SystemExit(
+            "Dataset identity mismatch: fresh replay stopped before research execution. "
+            f"Bundle expects {expected_hash}, supplied data hashes to {observed_hash}. "
+            "Restore the original dataset or use --replay for report-only replay."
+        )
+
+    print(f"Validated dataset identity ({observed_hash}); starting fresh execution.")
+    run_args.user_data = str(source_path) if run_args.user_data else None
+    run_args.user_data_ticker = run_args.user_data_ticker
+    run_args.evidence_tier = bundle.evidence_tier
+    run_args.output = args.output
+    run_args.holdout_guard_path = args.holdout_guard_path
+    _run_fresh(run_args)
 
 
 def _run_fresh(args: argparse.Namespace) -> None:
@@ -115,8 +195,9 @@ def _run_fresh(args: argparse.Namespace) -> None:
             "offline FallbackPlanner runs instead (see issue #31)."
         )
 
+    asset = args.user_data_ticker if args.user_data else ASSET
     episodes = get_or_build_episodes(
-        ohlcv, ASSET, path=Path(args.splits_path),
+        ohlcv, asset, path=Path(args.splits_path),
         n_episodes=args.episodes, dev_days=320, holdout_days=50,
     )
     n = len(episodes)
@@ -155,7 +236,7 @@ def _run_fresh(args: argparse.Namespace) -> None:
     manifest = RunManifest(
         run_id=f"memo-{result['selected_policy_version']}",
         parent_policy=incumbent.version,
-        data_hash=hash_ohlcv(ohlcv) if args.user_data else "synthetic-offline",
+        data_hash=hash_ohlcv(ohlcv),
         time_boundary=None,
         config_hash=result["incumbent_policy_id"],
         memory_snapshot_id=None,
@@ -189,6 +270,7 @@ def _run_fresh(args: argparse.Namespace) -> None:
         incumbent_config=incumbent_config,
         candidate_config=candidate_config,
         data_access_requirements=data_access_requirements,
+        generated_at=manifest.started_at,
     )
 
     bundle = EpisodeBundle(
@@ -197,8 +279,9 @@ def _run_fresh(args: argparse.Namespace) -> None:
         run_manifest=manifest.to_dict(),
         dataset_identity={
             "data_hash": manifest.data_hash,
-            "asset": ASSET,
+            "asset": asset,
             "splits_path": args.splits_path,
+            "splits_sha256": hashlib.sha256(Path(args.splits_path).read_bytes()).hexdigest(),
             "n_episodes": n,
             "source": data_source,
         },
@@ -254,9 +337,15 @@ def main() -> None:
              "When given, regenerates the memo from that bundle with no agent execution and no "
              "model/network calls; all other run-configuration flags are ignored.",
     )
+    p.add_argument("--fresh-replay", default=None,
+                   help="Rerun a bundle after validating that its original dataset is present and has the recorded content hash.")
     args = p.parse_args()
 
-    if args.replay:
+    if args.replay and args.fresh_replay:
+        p.error("--replay and --fresh-replay are mutually exclusive")
+    if args.fresh_replay:
+        _fresh_replay(args)
+    elif args.replay:
         _replay(args)
     else:
         _run_fresh(args)

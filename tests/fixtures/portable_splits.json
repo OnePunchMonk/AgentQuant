@@ -1,0 +1,34 @@
+[
+  {
+    "episode_id": "ep00",
+    "asset": "SIM",
+    "dev_start": "2015-01-01",
+    "dev_end": "2016-03-23",
+    "holdout_start": "2016-03-24",
+    "holdout_end": "2016-06-01"
+  },
+  {
+    "episode_id": "ep01",
+    "asset": "SIM",
+    "dev_start": "2016-06-02",
+    "dev_end": "2017-08-23",
+    "holdout_start": "2017-08-24",
+    "holdout_end": "2017-11-01"
+  },
+  {
+    "episode_id": "ep02",
+    "asset": "SIM",
+    "dev_start": "2017-11-02",
+    "dev_end": "2019-01-23",
+    "holdout_start": "2019-01-24",
+    "holdout_end": "2019-04-03"
+  },
+  {
+    "episode_id": "ep03",
+    "asset": "SIM",
+    "dev_start": "2019-04-04",
+    "dev_end": "2020-06-24",
+    "holdout_start": "2020-06-25",
+    "holdout_end": "2020-09-02"
+  }
+]

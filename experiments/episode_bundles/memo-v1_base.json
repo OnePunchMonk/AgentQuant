@@ -1,0 +1,185 @@
+{
+  "bundle_version": "2",
+  "run_id": "memo-v1_base",
+  "created_at": "2026-11-14T19:26:06.503556+00:00",
+  "episode_result": {
+    "mutation_records": [
+      {
+        "mutation_id": "mut_00fe7e86",
+        "parent_policy_id": "d429b4e9c51a",
+        "patch": {
+          "prompt_template": "tool_aware_default",
+          "prompt_context": {
+            "emphasis": [
+              "momentum in bull markets"
+            ]
+          }
+        },
+        "diagnosis": "no structured failure evidence supplied; using unspecified-failure patch 'tool_aware_default'",
+        "expected_benefit": "untested; evaluated empirically on dev episodes",
+        "evaluation_budget": 2,
+        "rollback_ref": "d429b4e9c51a",
+        "created": "2026-11-14T19:26:05.016106+00:00"
+      }
+    ],
+    "dev_scores": {
+      "mut_00fe7e86": [
+        0.7820454214338967,
+        -1.1008699549824281
+      ]
+    },
+    "best_candidate_version": "mut_00fe7e86",
+    "incumbent_val_scores": [
+      -2.244994432064365
+    ],
+    "candidate_val_scores": [
+      -2.244994432064365
+    ],
+    "protected_episode_id": "ep01",
+    "incumbent_protected_score": -1.1008699549824281,
+    "candidate_protected_score": -1.1008699549824281,
+    "promotion_decision": {
+      "promote": false,
+      "reason": "gate outcome=insufficient_evidence: insufficient paired evidence; keeping incumbent",
+      "candidate_mean": -2.244994432064365,
+      "incumbent_mean": -2.244994432064365,
+      "protected_delta": 0.0
+    },
+    "selected_policy_version": "v1_base",
+    "final_holdout_scores": [
+      0.0
+    ],
+    "final_holdout_mean": 0.0,
+    "used_random_baseline": false,
+    "promotion_ledger_path": "experiments/policy_promotion_ledger.jsonl",
+    "promotion_family": "bounded-policy-promotion:711d15c39ef94900bf892c0d6e890d7b",
+    "policy_configs": {
+      "d429b4e9c51a": {
+        "version": "v1_base",
+        "epoch": 1,
+        "created": "2026-11-14T19:26:05.015961",
+        "use_tools": false,
+        "use_web_search": false,
+        "use_ensemble": false,
+        "tool_weight": 0.5,
+        "prompt_template": "grid_search_default",
+        "prompt_context": {},
+        "temperature": 0.2,
+        "max_retries": 2,
+        "grid_adaptation_strategy": null,
+        "grid_params": {},
+        "grid_focus_regions": [],
+        "track_falsifiable_claims": false,
+        "claim_weighting": 0.5,
+        "min_acceptable_sharpe": 0.3,
+        "max_acceptable_drawdown": 0.2,
+        "required_win_rate": 0.0,
+        "description": "Baseline grid search (no tools)",
+        "reasoning": "Establish baseline performance with grid sampling",
+        "expected_improvement": "Reference point (0%)"
+      },
+      "193dcf2ce6a9": {
+        "version": "mut_00fe7e86",
+        "epoch": 2,
+        "created": "2026-11-14T19:26:05.016048+00:00",
+        "use_tools": false,
+        "use_web_search": false,
+        "use_ensemble": false,
+        "tool_weight": 0.5,
+        "prompt_template": "tool_aware_default",
+        "prompt_context": {
+          "emphasis": [
+            "momentum in bull markets"
+          ]
+        },
+        "temperature": 0.2,
+        "max_retries": 2,
+        "grid_adaptation_strategy": null,
+        "grid_params": {},
+        "grid_focus_regions": [],
+        "track_falsifiable_claims": false,
+        "claim_weighting": 0.5,
+        "min_acceptable_sharpe": 0.3,
+        "max_acceptable_drawdown": 0.2,
+        "required_win_rate": 0.0,
+        "description": "Baseline grid search (no tools)",
+        "reasoning": "Establish baseline performance with grid sampling",
+        "expected_improvement": "Reference point (0%)"
+      }
+    },
+    "incumbent_policy_id": "d429b4e9c51a",
+    "policy_id_by_version": {
+      "v1_base": "d429b4e9c51a",
+      "mut_00fe7e86": "193dcf2ce6a9"
+    }
+  },
+  "run_manifest": {
+    "run_id": "memo-v1_base",
+    "parent_policy": "v1_base",
+    "data_hash": "efdcc5418f726b7e",
+    "time_boundary": null,
+    "config_hash": "d429b4e9c51a",
+    "memory_snapshot_id": null,
+    "seeds": {
+      "seed_0": 7
+    },
+    "attempted_candidates": [
+      {
+        "mutation_id": "mut_00fe7e86",
+        "parent_policy_id": "d429b4e9c51a",
+        "patch": {
+          "prompt_template": "tool_aware_default",
+          "prompt_context": {
+            "emphasis": [
+              "momentum in bull markets"
+            ]
+          }
+        },
+        "diagnosis": "no structured failure evidence supplied; using unspecified-failure patch 'tool_aware_default'",
+        "expected_benefit": "untested; evaluated empirically on dev episodes",
+        "evaluation_budget": 2,
+        "rollback_ref": "d429b4e9c51a",
+        "created": "2026-11-14T19:26:05.016106+00:00"
+      }
+    ],
+    "fallback_path": [],
+    "failures": [],
+    "costs": {},
+    "run_status": "ok",
+    "started_at": "2026-11-14T19:26:06.493425+00:00"
+  },
+  "dataset_identity": {
+    "data_hash": "efdcc5418f726b7e",
+    "asset": "SIM",
+    "splits_path": "tests/fixtures/portable_splits.json",
+    "splits_sha256": "3b42dbf4844e0f3a9e1625bfc5fa6feb52e5ba1fd309f593eecb65eb4e161b37",
+    "n_episodes": 4,
+    "source": "synthetic"
+  },
+  "software_identity": {
+    "git_sha": "c5908c2829c2a03a99265e05eeffb903392f8959",
+    "python_version": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "packages": {
+      "pandas": "2.2.3",
+      "numpy": "2.3.5",
+      "vectorbt": "unavailable: not captured for this run"
+    }
+  },
+  "memory_entries_visible": null,
+  "used_final_holdout": true,
+  "evidence_tier": "fixture_demo",
+  "rerun_command": "python scripts/export_research_memo.py --episodes 4 --seeds 7 --n-mutations 1 --cost-bps 5.0 --max-iterations 1",
+  "data_access_requirements": "Fresh execution regenerates deterministic synthetic OHLCV data offline -- no network or data file access required. LLM calls, if any, require ANTHROPIC_API_KEY/OPENAI_API_KEY etc. to be set -- otherwise the agent's offline FallbackPlanner runs instead (see issue #31).",
+  "hash_manifest": {
+    "algorithm": "sha256",
+    "payload_sha256": "fd9059e8bdf4c8b4868454c4ece65bcaf62012b2a209bcfa98daa86c3ae619e0",
+    "references": {
+      "attempted_candidates": "3a139af2796396ee682ce8a811b0637a9690352cdf98ef491a2a8e4ad08f618d",
+      "config": "746638ea38a686579b7f1a1f2d0bd787bf7d685c8ead992da0cbc63474e20923",
+      "memory": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "dataset": "586b089976b0563ec38734524c62a47be1f341399eb8a429817457ba6150dde2",
+      "splits": "d1c8cfa62235ec4ea874c123e3dd90290f2d2784a328473b2005796c1a1779b7",
+      "software": "c51eeebb1eaf2a792b27f67d1fb854fdb592394d8adb5eb562d3e4c1a212351f"
+    }
+  }
+}

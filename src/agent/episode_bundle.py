@@ -16,6 +16,7 @@ without leaking whatever private/raw data the run actually saw.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import subprocess
@@ -29,7 +30,8 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-BUNDLE_VERSION = "1"
+BUNDLE_VERSION = "2"
+SUPPORTED_BUNDLE_VERSIONS = {"1", BUNDLE_VERSION}
 DEFAULT_BUNDLE_DIR = Path("experiments/episode_bundles")
 UNAVAILABLE = "unavailable: not captured for this run"
 
@@ -97,8 +99,14 @@ class EpisodeBundle:
     data_access_requirements: Optional[str] = None
     bundle_version: str = BUNDLE_VERSION
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    hash_manifest: Optional[Dict[str, Any]] = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    @staticmethod
+    def _canonical_hash(value: Any) -> str:
+        encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    def _payload(self) -> Dict[str, Any]:
         return {
             "bundle_version": self.bundle_version,
             "run_id": self.run_id,
@@ -114,6 +122,35 @@ class EpisodeBundle:
             "data_access_requirements": self.data_access_requirements,
         }
 
+    def _build_hash_manifest(self) -> Dict[str, Any]:
+        payload = self._payload()
+        # Component hashes make the provenance inputs independently inspectable;
+        # the payload hash additionally detects edits to any bundle field.
+        refs = {
+            "attempted_candidates": self.run_manifest.get("attempted_candidates") if self.run_manifest else None,
+            "config": {
+                "run_config_hash": self.run_manifest.get("config_hash") if self.run_manifest else None,
+                "policy_configs": self.episode_result.get("policy_configs"),
+            },
+            "memory": self.memory_entries_visible,
+            "dataset": self.dataset_identity,
+            "splits": self.dataset_identity.get("splits_path"),
+            "software": self.software_identity,
+        }
+        return {
+            "algorithm": "sha256",
+            "payload_sha256": self._canonical_hash(payload),
+            "references": {key: self._canonical_hash(value) for key, value in refs.items()},
+        }
+
+    def to_dict(self) -> Dict[str, Any]:
+        payload = self._payload()
+        if self.bundle_version == BUNDLE_VERSION:
+            payload["hash_manifest"] = self._build_hash_manifest()
+        elif self.hash_manifest is not None:
+            payload["hash_manifest"] = self.hash_manifest
+        return payload
+
     def save(self, directory: Path = DEFAULT_BUNDLE_DIR) -> Path:
         directory.mkdir(parents=True, exist_ok=True)
         path = directory / f"{self.run_id}.json"
@@ -125,14 +162,22 @@ class EpisodeBundle:
     def load(cls, path: "Path | str") -> "EpisodeBundle":
         raw = json.loads(Path(path).read_text())
         version = raw.get("bundle_version")
-        if version != BUNDLE_VERSION:
+        if version not in SUPPORTED_BUNDLE_VERSIONS:
             raise ValueError(
                 f"Unsupported episode bundle version {version!r} at {path} "
-                f"(this code reads version {BUNDLE_VERSION!r}). Regenerate the bundle "
+                f"(this code reads versions {sorted(SUPPORTED_BUNDLE_VERSIONS)!r}). Regenerate the bundle "
                 "with a matching checkout, or update this reader to handle the old format "
                 "-- never silently reinterpret an unknown bundle shape."
             )
-        return cls(
+        if version == BUNDLE_VERSION:
+            manifest = raw.get("hash_manifest")
+            if not isinstance(manifest, dict) or manifest.get("algorithm") != "sha256":
+                raise ValueError("Episode bundle integrity manifest is missing or malformed")
+            payload = {key: value for key, value in raw.items() if key != "hash_manifest"}
+            expected = cls._canonical_hash(payload)
+            if manifest.get("payload_sha256") != expected:
+                raise ValueError("Episode bundle integrity check failed: payload hash mismatch")
+        bundle = cls(
             run_id=raw["run_id"],
             episode_result=raw["episode_result"],
             run_manifest=raw.get("run_manifest"),
@@ -145,4 +190,8 @@ class EpisodeBundle:
             data_access_requirements=raw.get("data_access_requirements"),
             bundle_version=version,
             created_at=raw.get("created_at", UNAVAILABLE),
+            hash_manifest=raw.get("hash_manifest"),
         )
+        if version == BUNDLE_VERSION and bundle._build_hash_manifest().get("references") != manifest.get("references"):
+            raise ValueError("Episode bundle integrity check failed: provenance reference mismatch")
+        return bundle

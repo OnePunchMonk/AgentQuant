@@ -15,6 +15,7 @@ inherit a silent default.
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, Union
@@ -97,6 +98,12 @@ def load_user_ohlcv(
     """
     if cost_bps is None:
         raise UserDataValidationError("cost_bps must be supplied explicitly; no default is assumed")
+    try:
+        cost_bps = float(cost_bps)
+    except (TypeError, ValueError) as exc:
+        raise UserDataValidationError("cost_bps must be a finite, non-negative number") from exc
+    if not math.isfinite(cost_bps) or cost_bps < 0:
+        raise UserDataValidationError("cost_bps must be a finite, non-negative number")
 
     if isinstance(source, dict):
         ohlcv = source
@@ -119,7 +126,9 @@ def load_user_ohlcv(
         df[ts_col] = pd.to_datetime(df[ts_col], errors="coerce")
         if df[ts_col].isna().any():
             raise UserDataValidationError(f"{path}: unparseable timestamp value(s) in column {ts_col!r}")
-        df = df.set_index(ts_col).sort_index()
+        # Preserve file row order so malformed chronology is rejected rather
+        # than silently repaired during ingestion.
+        df = df.set_index(ts_col)
         df.index.name = None
         ohlcv = {ticker: df}
         source_label = str(path)

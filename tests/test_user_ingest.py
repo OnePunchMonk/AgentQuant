@@ -1,9 +1,54 @@
 """Tests for src.data.user_ingest (P3 user-data ingestion recipe)."""
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
 from src.data.user_ingest import UserDataValidationError, load_user_ohlcv
+
+FIXTURE_DIR = Path(__file__).parent / "fixtures" / "user_data"
+
+
+@pytest.mark.parametrize(
+    "filename,timestamp_column,cost_bps",
+    [
+        ("synthetic_equity_daily.csv", "Date", 5.0),
+        ("synthetic_fx_hourly.csv", "timestamp", 8.0),
+    ],
+)
+def test_distinct_synthetic_user_owned_csv_corpora_validate(filename, timestamp_column, cost_bps):
+    path = FIXTURE_DIR / filename
+    result = load_user_ohlcv(path, ticker="FIXTURE", cost_bps=cost_bps)
+    frame = result.ohlcv["FIXTURE"]
+
+    assert result.source == str(path)
+    assert result.n_rows == {"FIXTURE": 3}
+    assert result.cost_bps == cost_bps  # explicitly supplied and retained
+    assert isinstance(frame.index, pd.DatetimeIndex)
+    assert frame.index.is_monotonic_increasing
+    assert frame.index.is_unique
+    assert list(frame.columns) == ["Open", "High", "Low", "Close", "Volume"]
+    assert frame.notna().all().all()
+    assert frame.index.name is None
+    assert timestamp_column not in frame.columns
+
+
+def test_csv_ingestion_rejects_out_of_order_source_rows(tmp_path):
+    path = tmp_path / "unordered.csv"
+    path.write_text(
+        "Date,Open,High,Low,Close,Volume\n"
+        "2024-01-03,2,3,1,2.5,20\n"
+        "2024-01-02,1,2,0.5,1.5,10\n"
+    )
+    with pytest.raises(UserDataValidationError, match="ascending order"):
+        load_user_ohlcv(path, ticker="DEMO", cost_bps=5)
+
+
+@pytest.mark.parametrize("cost", [-0.1, float("nan"), float("inf"), "not-a-number"])
+def test_invalid_cost_assumption_rejected(cost):
+    with pytest.raises(UserDataValidationError, match="finite, non-negative"):
+        load_user_ohlcv({"DEMO": _good_frame()}, cost_bps=cost)
 
 
 def _good_frame(n=5) -> pd.DataFrame:

@@ -77,6 +77,7 @@ def build_research_memo(
     incumbent_config: Optional[Dict[str, Any]] = None,
     candidate_config: Optional[Dict[str, Any]] = None,
     data_access_requirements: Optional[str] = None,
+    generated_at: Optional[str] = None,
 ) -> Dict[str, str]:
     """Build the memo. Returns {"markdown": str, "json": str, "html": str}.
 
@@ -106,7 +107,7 @@ def build_research_memo(
     elif not narrative.policy_change.get("promoted"):
         policy_diff = "not applicable: no candidate was promoted this episode"
 
-    generated_at = datetime.now(timezone.utc).isoformat()
+    generated_at = generated_at or datetime.now(timezone.utc).isoformat()
 
     structured: Dict[str, Any] = {
         "generated_at": generated_at,
