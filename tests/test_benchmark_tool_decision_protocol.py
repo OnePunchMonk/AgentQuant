@@ -27,7 +27,11 @@ def test_tool_communication_benchmark_is_deterministic_and_exercises_all_modes()
     assert any(not row["selected_tool_valid"] for row in one_shot)
     unverified = [r for r in first["rows"] if r["fixture_id"] == "eval_05" and r["mode"].endswith("refined")]
     assert all(not row["verified"] and row["registry_calls"] == 0 for row in unverified)
-    assert all(row["token_count"] is None for row in first["rows"])
+    if first["token_counts_available"]:
+        assert first["tokenizer"] == "tiktoken:cl100k_base"
+        assert all(isinstance(row["token_count"], int) for row in first["rows"])
+    else:
+        assert all(row["token_count"] is None for row in first["rows"])
     assert first["summaries"]["compact_one_shot"]["mean_total_bytes"] > 0
     assert first["summaries"]["json_one_shot"]["mean_total_bytes"] > 0
     assert [r["fixture_id"] for r in first["rows"]] == [r["fixture_id"] for r in second["rows"]]
