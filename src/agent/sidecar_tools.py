@@ -9,6 +9,7 @@ services without importing a particular storage or model backend.
 from __future__ import annotations
 
 import json
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping
@@ -27,9 +28,16 @@ class ToolBudget:
     max_wall_seconds: float = 5.0
     max_input_bytes: int = 32_000
     max_output_bytes: int = 64_000
+    # Per-run cumulative limits. The existing payload limits remain per call.
+    max_total_input_bytes: int = 128_000
+    max_total_output_bytes: int = 256_000
+    # Opt in for handlers that must be forcibly stopped on timeout. Requires
+    # a POSIX fork context; default in-process mode cannot kill Python code.
+    isolate_process: bool = False
 
     def __post_init__(self) -> None:
-        if min(self.max_calls, self.max_input_bytes, self.max_output_bytes) < 0:
+        if min(self.max_calls, self.max_input_bytes, self.max_output_bytes,
+               self.max_total_input_bytes, self.max_total_output_bytes) < 0:
             raise ValueError("integer tool limits must be non-negative")
         if self.max_wall_seconds < 0:
             raise ValueError("max_wall_seconds must be non-negative")
@@ -84,6 +92,9 @@ class SidecarToolRegistry:
         self._tools: dict[str, AssistantTool] = {}
         self._calls = 0
         self._started = time.monotonic()
+        self._input_bytes = 0
+        self._output_bytes = 0
+        self._lock = threading.Lock()
 
     def register(self, tool: AssistantTool) -> None:
         if not tool.name or tool.name in self._tools:
@@ -104,6 +115,8 @@ class SidecarToolRegistry:
         tool = self._tools.get(request.tool_name)
         if tool is None:
             return self._error(request, "unknown_tool")
+        if request.capabilities & self.FORBIDDEN_CAPABILITIES:
+            return self._error(request, "forbidden_capability")
         if self._calls >= self.budget.max_calls:
             return self._error(request, "call_budget_exceeded")
         if time.monotonic() - self._started > self.budget.max_wall_seconds:
@@ -112,33 +125,53 @@ class SidecarToolRegistry:
             return self._error(request, "missing_capability")
         try:
             self._validate_object(request.arguments, tool.request_schema, "request")
-            encoded = json.dumps(dict(request.arguments), default=str).encode("utf-8")
+            encoded = _encode_json(dict(request.arguments))
             if len(encoded) > self.budget.max_input_bytes:
                 raise ToolContractError("input_budget_exceeded")
+            if self._input_bytes + len(encoded) > self.budget.max_total_input_bytes:
+                raise ToolContractError("total_input_budget_exceeded")
         except (TypeError, ValueError) as exc:
             return self._error(request, str(exc))
 
-        self._calls += 1
+        with self._lock:
+            if self._calls >= self.budget.max_calls:
+                return self._error(request, "call_budget_exceeded")
+            if time.monotonic() - self._started >= self.budget.max_wall_seconds:
+                return self._error(request, "wall_budget_exceeded")
+            if self._input_bytes + len(encoded) > self.budget.max_total_input_bytes:
+                return self._error(request, "total_input_budget_exceeded")
+            self._calls += 1
+            self._input_bytes += len(encoded)
         start = time.monotonic()
         try:
-            data = tool.handler(request.arguments)
+            remaining = max(0.0, self.budget.max_wall_seconds - (start - self._started))
+            if self.budget.isolate_process:
+                data = _run_isolated(tool.handler, request.arguments, remaining)
+            else:
+                data = tool.handler(request.arguments)
             self._validate_object(data, tool.result_schema, "result")
-            encoded = json.dumps(data, default=str).encode("utf-8")
+            encoded = _encode_json(data)
             if len(encoded) > self.budget.max_output_bytes:
                 raise ToolContractError("output_budget_exceeded")
             elapsed = time.monotonic() - start
-            if elapsed > self.budget.max_wall_seconds:
+            if elapsed > remaining or time.monotonic() - self._started > self.budget.max_wall_seconds:
                 raise ToolContractError("wall_budget_exceeded")
+            with self._lock:
+                if self._output_bytes + len(encoded) > self.budget.max_total_output_bytes:
+                    raise ToolContractError("total_output_budget_exceeded")
+                self._output_bytes += len(encoded)
             return ToolResult(request.request_id, tool.name, True, data=data,
                               provenance={"source": tool.provenance_source,
                                           "elapsed_seconds": round(elapsed, 6),
                                           "capabilities_used": sorted(tool.required_capabilities)})
         except Exception as exc:  # isolation: a broken sidecar is a result, not a loop failure
-            return self._error(request, f"tool_failed: {type(exc).__name__}: {exc}")
+            message = str(exc)[:256]
+            return self._error(request, f"tool_failed: {type(exc).__name__}: {message}")
 
     @staticmethod
     def _error(request: ToolRequest, message: str) -> ToolResult:
-        return ToolResult(request.request_id, request.tool_name, False, error=message,
+        return ToolResult(str(request.request_id)[:128], str(request.tool_name)[:128], False,
+                          error=str(message)[:320],
                           provenance={"source": "sidecar_tool_registry"})
 
     @classmethod
@@ -274,3 +307,50 @@ def register_memory_search(registry: SidecarToolRegistry, memory_tool: Any) -> N
 __all__ = ["AssistantTool", "SidecarToolRegistry", "ToolBudget", "ToolContractError",
            "ToolRequest", "ToolResult", "make_idea_sidecar_registry", "register_hyde_retrieval",
            "register_memory_search"]
+
+
+def _encode_json(value: Any) -> bytes:
+    """Strict bounded protocol encoding: never stringify unsupported objects."""
+    try:
+        return json.dumps(value, ensure_ascii=False, allow_nan=False,
+                          separators=(",", ":"), sort_keys=True).encode("utf-8")
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ToolContractError("non_json_value") from exc
+
+
+def _isolated_child(handler: Callable[[Mapping[str, Any]], Any], arguments: Mapping[str, Any], conn: Any) -> None:
+    try:
+        result = handler(arguments)
+        conn.send_bytes(_encode_json({"ok": True, "data": result}))
+    except BaseException as exc:
+        # Do not serialize exception values or traces across the boundary.
+        conn.send_bytes(_encode_json({"ok": False, "error": type(exc).__name__[:80]}))
+    finally:
+        conn.close()
+
+
+def _run_isolated(handler: Callable[[Mapping[str, Any]], Any], arguments: Mapping[str, Any],
+                  timeout: float) -> Any:
+    import multiprocessing
+
+    if "fork" not in multiprocessing.get_all_start_methods():
+        raise ToolContractError("process_isolation_unavailable")
+    ctx = multiprocessing.get_context("fork")
+    parent, child = ctx.Pipe(duplex=False)
+    process = ctx.Process(target=_isolated_child, args=(handler, dict(arguments), child), daemon=True)
+    process.start()
+    child.close()
+    try:
+        if timeout <= 0 or not parent.poll(timeout):
+            process.terminate()
+            process.join(timeout=0.2)
+            raise ToolContractError("wall_budget_exceeded")
+        payload = json.loads(parent.recv_bytes(1_000_000).decode("utf-8"))
+        if not payload.get("ok"):
+            raise RuntimeError(f"handler_error:{payload.get('error', 'Error')}")
+        return payload.get("data")
+    finally:
+        parent.close()
+        if process.is_alive():
+            process.terminate()
+        process.join(timeout=0.2)

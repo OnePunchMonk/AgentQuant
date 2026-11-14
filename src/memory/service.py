@@ -327,6 +327,22 @@ class MemoryService:
             row = conn.execute("SELECT * FROM mem_trials WHERE trial_id = ?", (trial_id,)).fetchone()
         return Trial.from_row(row) if row else None
 
+    def snapshot(self) -> tuple[List[Trial], List[Note]]:
+        """Read a complete memory snapshot for offline evaluation or archiving.
+
+        This is read-only and respects the service's memory mode. It deliberately
+        does not apply a temporal cutoff: the compaction evaluator needs the full
+        dataset in order to exercise each probe's independent cutoffs.
+        """
+        if not self.can_read:
+            return [], []
+        with self._conn() as conn:
+            trials = [Trial.from_row(row) for row in conn.execute(
+                "SELECT * FROM mem_trials ORDER BY trial_id").fetchall()]
+            notes = [Note.from_row(row) for row in conn.execute(
+                "SELECT * FROM mem_notes ORDER BY note_id").fetchall()]
+        return trials, notes
+
     def served_snapshots(self, run_id: str) -> List[str]:
         with self._conn() as conn:
             rows = conn.execute(

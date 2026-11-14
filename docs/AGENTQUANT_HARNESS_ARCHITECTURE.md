@@ -6,7 +6,7 @@
 
 ## 1. Scope and evidence discipline
 
-This handoff consolidates the work represented by issues #28, #31, #32, #38, #41, #43, #45 and #48. Read the current implementation and issue descriptions before changing behavior: the repository has moved beyond the original issue proposals in several places. In particular, #45 has a partial standalone foundation, #43 has a non-learning shadow sidecar, and #38/#41 have a functioning SQLite memory service and dream process. These are not reasons to treat integration or evaluation as finished.
+This handoff consolidates the work represented by issues #28, #31, #32, #38, #41, #43, #45, #48 and the living umbrella #49. Read the current implementation and issue descriptions before changing behavior: the repository has moved beyond the original issue proposals in several places. In particular, #45 has a partial standalone foundation, #43 has a non-learning shadow sidecar, and #38/#41 have a functioning SQLite memory service and dream process. These are not reasons to treat integration or evaluation as finished.
 
 Use three evidence tiers consistently:
 
@@ -35,7 +35,7 @@ Use three evidence tiers consistently:
 - Memory is primarily relational/episodic today: trials and notes are keyed and queried in SQLite. `src/memory/graph.py` provides a deterministic, rebuildable **in-memory projection** (`EvidenceGraph`) with typed nodes/edges, record provenance, contradiction links, and separate market/knowledge cutoffs. `MemoryService.graph_search` exposes an opt-in search view; the default prompt pack is still the existing belief retrieval. Existing links such as `hypothesis_id`, `run_id`, `config_key`, and read snapshots remain the durable source records.
 - `src/agent/idea_sidecar.py` (issue #43 milestone 1) defines versioned Observation, Candidate/Action, Budget and Reward schemas; candidate actions are canonical-grid points; dev-only observations filter failures by decision time; holdout reward is attached only after trajectory closure. Its policies are fixed heuristic/seeded-random replay policies. The module explicitly has no RL/model and no new dependency. Feature flag: `AGENTQUANT_IDEA_SIDECAR`.
 - The sidecar ranks/selects from a candidate space; canonical search/backtest code still owns evaluation. It does not emit code, bypass quality gates, or establish the value of learning.
-- `src/agent/sidecar_tools.py` is an assistant-facing, allowlisted registry for bounded advisory calls. `src/agent/memory_tool.py` is a read-only graph-memory tool with explicit market cutoff and knowledge cutoff; `src/agent/hyde_retrieval.py` is a small offline #23 prototype with injected generation, temporal evidence retrieval, and canonical-grid mapping. Its lexical fallback and fixture tests do not satisfy #23's embedding, literature, or comparative-performance criteria. These adapters are not yet the default agent orchestrator.
+- `src/agent/sidecar_tools.py` is an assistant-facing, allowlisted registry for bounded advisory calls. `src/agent/memory_tool.py` is a read-only graph-memory tool with explicit market cutoff and knowledge cutoff; `src/agent/hyde_retrieval.py` is a small offline #23 prototype with injected generation, temporal evidence retrieval, and canonical-grid mapping. Its lexical fallback and fixture tests do not satisfy #23's embedding, literature, or comparative-performance criteria. The optional `AssistantToolRunner` discovers registered adapters, scopes dates and records selection/attempt traces. `agent_graph.py` now offers an opt-in memory-context route under `AGENTQUANT_ASSISTANT_TOOLS`; the default path remains unchanged. This is one adapter integration, not a replacement of every legacy proposal path.
 
 ### 2.3 Promotion gate
 
@@ -47,7 +47,7 @@ Use three evidence tiers consistently:
 
 - #28 orders credible bounded research and sealed evaluation before prospective/live paper-trading work. Prospective operation remains out of scope until controls and protocol are stable.
 - #31 asks to prove diagnosis-driven mutation differs from random prompt search. Current offline arms necessarily collapse; live backend behavior and adequate paired evidence remain unproven.
-- #32 asks for portable, rerunnable experiment bundles. Current memo generation supports fresh runs; replay from a manifest is deferred because episode-level results are not yet persisted as a stable standalone artifact.
+- #32 portable episode bundles and integrity-checked memo replay are implemented in `episode_bundle.py` and `scripts/export_research_memo.py --replay` (issue #49 records #32 complete). This report replay must not be confused with complete assistant tool execution replay: discovery, routing, tool outputs and effective budgets need their own persisted contract.
 - #38/#41 work has shipped meaningful memory and consolidation foundations, but docs identify remaining memory benchmark arms/config wiring, store cleanup, broader OOS ingestion and empirical memory benefit as incomplete.
 - #43 is an interface/shadow milestone, not an RL implementation or efficacy result.
 - The RRSI-inspired edit-descriptor preflight in `src/agent/evolution_regularizer.py` does not edit or promote a harness. Its sparsity, novelty, leakage-marker, and cost/noise rules require ablation and out-of-domain evaluation before use as a selection policy.
@@ -89,13 +89,36 @@ Do not let each sidecar invent its own loop. The **control plane** resolves the 
 | Gate | Complete candidate family and paired validation/protected scores | Tri-state decision and reason | Sole authority for policy promotion; missing/unsupported evidence abstains | Finish #48 statistics and all call-site integration |
 | Observer/exporter | Immutable events and completed ledger | Trace, dashboard, Harnesskit trajectory, memo | Telemetry only; failure cannot alter experiment result | Route `trace.py`, bridge and report renderers to shared events |
 
-The current registry does not enforce OS-level isolation or a real runtime budget. Proposal counts in typed requests are validation hints, not a substitute for an orchestrator-owned counter. Treat those as implementation work, not existing guarantees.
+The registry accounts admitted calls and cumulative JSON payload bytes, and checks a shared wall-clock deadline. Optional POSIX fork execution permits terminating an over-deadline handler; default in-process execution checks elapsed time only after the handler returns. Neither mode confines filesystem, network, inherited credentials, process trees, memory or CPU. Use only trusted injected handlers. The registry lifetime is the budget lifetime, starting at construction; the request call limit can only lower that ceiling. A complete model/token/dollar/CPU budget and hostile-code sandbox remain pending.
 
 ### Ownership and sidecar lifecycle
 
 One owner controls each boundary: `EpisodeRunner` schedules, the common evaluator computes, the ledger records, `MemoryService` retrieves, and the gate promotes. Sidecars can be in-process adapters, sandboxed workers, or scheduled jobs; deployment is independent of their role. Each receives a versioned schema, an allowlist of inputs, a deadline/cost ceiling, and a failure policy. Their output enters the shared attempt record. Observers get immutable snapshots and cannot return decisions. Disable one sidecar without changing the experiment identity or silently substituting a different policy; record effective configuration and fallback explicitly.
 
-## 3A. What would actually make this self-improving?
+## 3A. One assistant, bounded tools, and explicit evolution boundaries (#49)
+
+The target has one user-facing assistant and one scheduling authority. Memory, HyDE, RL shadow and benchmark evolution are typed tools or offline jobs. They do not start competing assistant conversations or own independent backtest loops. An injected scorer ranks only registered tools for which the request has capabilities; a ranking score is routing information, never evidence of strategy quality. Current deterministic selection uses intent mappings and lexical relevance, records ranking/fallback reasons, and can abstain. The injected scorer is an extension point, not a trained selector.
+
+| Boundary | Present in source | Acceptance still required |
+|---|---|---|
+| Discovery and selection | Allowlisted tool descriptions, deterministic ranking, capability filtering, scorer fallback and selection trace | Frozen downstream tasks comparing fixed, selector, no-tool and single-tool arms at matched total budgets; actual handler/model outcomes, measured cost/latency and uncertainty |
+| Runtime routing | Opt-in graph-memory context in `agent_graph.py`; structured results and trace | Consistent routing across intended CLI/UI entry points, effective-config hash, complete temporal scope, explicit skip/error records, and feature-off parity |
+| Resource enforcement | Call limits, per-call/cumulative JSON-byte limits, elapsed-time checks; opt-in process deadline cancellation | Run-scoped accounting across retries/sidecars and model/token/cost ceilings; concurrency and cancellation regression coverage; external confinement for untrusted code |
+| Replay | Existing integrity-checked episode/memo bundles; deterministic fixture route reruns | Persist actual discovery/selection/tool request/result events; consume recorded results without handlers or model/network calls; tamper and missing-event rejection |
+| Benchmark evolution | `benchmark_sidecar.py` proposes additive metadata-only selection challenges from dev failures, with exact deduplication, quotas and review status | Trusted provenance, semantic contamination checks, independent reviewer verification, immutable released anchors, paired old/new reports on the unchanged anchor |
+| Memory lifecycle | SQLite source records, temporal graph projection and offline dream consolidation | Compaction plans, pre-delete evaluation, tombstones/restoration, replay retention and measured retrieval non-regression |
+
+A self-evolving benchmark is an append-only challenge proposal process, not permission to redefine success after seeing results. Freeze the anchor and primary endpoint before the candidate run; mine development failures only, preserve old/sealed episodes and rejected proposals, and label added cases as exposed selection challenges. `review()` currently records an identity string and decision; it does not authenticate reviewer independence or install an active suite. A trusted release process must enforce both. Exact hash conflicts do not establish semantic independence. Synthetic suite scores are wiring demonstrations and cannot support assistant improvement claims. See [BENCHMARK_SIDECAR.md](BENCHMARK_SIDECAR.md).
+
+### Graph memory autocompact: evaluate before deletion
+
+The memory owner proposes a versioned plan with source IDs/hashes, affected entities/edges, temporal cutoffs, contradiction groups, replacement summaries, retention reasons and expected byte/token savings. Execute compaction first as a new derived snapshot: source evidence and the last good snapshot remain addressable. Deduplication must preserve all provenance links and contradictory observations; a summary never becomes a new independent empirical observation.
+
+Before any source deletion, evaluate candidate versus incumbent snapshots on a frozen, time-scoped query suite. Report source/citation resolution, contradiction recall, temporal leakage, retrieval quality, replay parity, size and latency; use predeclared tolerances and count missing/error queries as failures. A failed, missing or underpowered evaluation blocks deletion. This is a separate memory acceptance gate, not the finance promotion gate. Current dream consolidation is not evidence that this lifecycle exists.
+
+After a passing retrieval/citation/downstream-decision evaluation, a trusted retention policy may atomically activate the candidate snapshot and archive or tombstone eligible derived/redundant objects, retaining the original bytes, rollback references and a lifecycle manifest. This milestone permits reversible archival only, with no irreversible deletion. Raw trial/forecast/ledger records, evidence referenced by retained bundles, source material required to interpret summaries, and externally retained audit records are pinned. Physical deletion remains pending and is a distinct later garbage-collection design requiring a declared retention window, explicit authorization and a reachability check across snapshots/bundles. Replay uses the original snapshot and sources, never today's compacted substitute. A rollback restores the prior active snapshot and tombstones; deleted bytes cannot be restored without an archived copy. No physical deletion is authorized by a compaction score alone.
+
+## 3B. What would actually make this self-improving?
 
 There are **four separate claims**; do not collapse them into one label:
 
@@ -125,7 +148,7 @@ These are architecture analogies. Do not import image quality losses, diffusion 
 
 The assistant-facing tool registry, HyDE retrieval prototype, and graph-memory adapter are documented in [ASSISTANT_TOOL_CONTRACT.md](ASSISTANT_TOOL_CONTRACT.md), [HYDE_RETRIEVAL.md](HYDE_RETRIEVAL.md), and [RRSI_INTEGRATION.md](RRSI_INTEGRATION.md). Their presence does not complete issue #23's embedding, literature, or comparative validation criteria, nor #43's learned RL policy.
 
-The next offline slice adds an [assistant tool runner](ASSISTANT_TOOL_RUNNER.md), a [non-learning RL shadow advisory tool](RL_SHADOW_TOOL.md), a [synthetic #23 retrieval comparison](HYDE_BENCHMARK.md), a [versioned benchmark suite contract](BENCHMARK_EVOLUTION.md), a [communication-format experiment](COMMUNICATION_EXPERIMENT.md), and a [diffusion-inspired proposal-refinement toy](PROPOSAL_REFINEMENT.md). These are integration and mechanism checks. The communication microbenchmark uses a token proxy and local serialization latency, not model tokens or end-to-end task quality. The #23 comparison scores fixture relevance without backtesting; the refinement toy's equal-call baseline reaches the same score. None is evidence of market benefit or automatic self-improvement.
+The repository also contains an [assistant tool runner](ASSISTANT_TOOL_RUNNER.md), a [non-learning RL shadow advisory tool](RL_SHADOW_TOOL.md), a [synthetic #23 retrieval comparison](HYDE_BENCHMARK.md), a [versioned benchmark suite contract](BENCHMARK_EVOLUTION.md), a [communication-format experiment](COMMUNICATION_EXPERIMENT.md), and a [diffusion-inspired proposal-refinement toy](PROPOSAL_REFINEMENT.md). These are integration and mechanism checks. The communication microbenchmark uses a token proxy and local serialization latency, not model tokens or end-to-end task quality. The #23 comparison scores fixture relevance without backtesting; the refinement toy's equal-call baseline reaches the same score. None is evidence of market benefit or automatic self-improvement.
 
 The following are target contracts. Preserve backward compatibility where feasible; version persisted schemas and report clear migrations.
 
@@ -286,11 +309,11 @@ Packages are intentionally serial where contracts or storage schemas are shared.
 | Order | Work package | Main files | Depends on | Exit artifact |
 |---|---|---|---|---|
 | 0 | Freeze architecture/API and record current baseline limitations | This doc, issue tracker | None | Versioned plan and explicit limitations; initial draft present |
-| 1 | Persist stable run/episode outcomes and manifest-complete artifacts for replay | `src/agent/episode_bundle.py`, `episode_report.py`, `run_manifest.py`, scripts | 0 | Bundle export/load contract and fresh-run parity |
+| 1 | Preserve shipped episode bundles and extend artifact completeness for tool replay | `src/agent/episode_bundle.py`, `episode_report.py`, `run_manifest.py`, scripts | 0 | Bundle export/load contract and fresh-run parity |
 | 2 | Wire sidecar capability interfaces and trajectory metadata without learning | `src/agent/capabilities.py`, `idea_sidecar.py`, runner, tests | 0 | Typed contracts are present; real provider adapter, effective config and replay parity still needed |
 | 2a | Register assistant-facing advisory tools for idea, #23 hypothesis retrieval and graph memory | `src/agent/sidecar_tools.py`, `hyde_retrieval.py`, `memory_tool.py`, tests | 2, 3 for durable memory | Bounded adapters present; live assistant routing, embedding/literature retrieval and outcome comparison still needed |
 | 3 | Expand graph memory retrieval and persisted lineage | `src/memory/graph.py`, `service.py`, models, tests | 0 | Opt-in temporal graph search present; lineage and retrieval benchmark still needed |
-| 4 | Implement bundle replay and memo regeneration from persisted artifacts | `src/agent/research_memo.py`, `scripts/export_research_memo.py` | 1 | Replay command verifies hashes; no hidden model/network dependency |
+| 4 | Extend existing bundle/memo replay to assistant tool events | `src/agent/research_memo.py`, `scripts/export_research_memo.py` | 1 | Replay command verifies hashes; no hidden model/network dependency |
 | 5 | Gate validation: DSR reference implementation and null/power suite | `gate/`, `gate/tests/` | 0 | Correct known-vector scoring; calibrated tri-state abstention |
 | 6 | Complete gate integration across promotion paths | `policy_mutation.py`, `agent_graph.py`, scripts, tests | 1, 5 | Bounded path now fails closed via gate and writes a family ledger; full ledger authority, validated Sharpe gate and remaining paths still needed |
 | 7 | Controlled synthetic benchmark for self-improvement mechanism | `scripts/fair_search_benchmark.py`, fixtures/tests | 2, 6 | Null/planted signal controls behave as expected; diagnostic report |

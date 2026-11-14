@@ -1,0 +1,58 @@
+{
+  "manifest": {
+    "version": "assistant-tool-heldout-v1",
+    "sha256": "a7aac3f0b72f9e49bbf6dfbe0a45ff3c6a81cdc8a06c3f9ea0c5f7044d9068cb"
+  },
+  "tool_costs": {
+    "memory": {
+      "latency_ms": 7,
+      "cost_units": 1
+    },
+    "hyde": {
+      "latency_ms": 13,
+      "cost_units": 2
+    },
+    "rl_shadow": {
+      "latency_ms": 5,
+      "cost_units": 1
+    }
+  },
+  "tasks": [
+    {
+      "id": "t01",
+      "query": "Find a prior result for this regime",
+      "required_tool": "memory",
+      "fixed_intent_tool": "memory"
+    },
+    {
+      "id": "t02",
+      "query": "Retrieve evidence behind a hypothesis",
+      "required_tool": "hyde",
+      "fixed_intent_tool": "hyde"
+    },
+    {
+      "id": "t03",
+      "query": "Suggest a candidate from available options",
+      "required_tool": "rl_shadow",
+      "fixed_intent_tool": "rl_shadow"
+    },
+    {
+      "id": "t04",
+      "query": "Find prior result evidence and candidate",
+      "required_tool": "memory",
+      "fixed_intent_tool": "memory"
+    },
+    {
+      "id": "t05",
+      "query": "Evidence needed for prior result trace",
+      "required_tool": "hyde",
+      "fixed_intent_tool": "hyde"
+    },
+    {
+      "id": "t06",
+      "query": "Candidate choice with supporting prior result",
+      "required_tool": "rl_shadow",
+      "fixed_intent_tool": "rl_shadow"
+    }
+  ]
+}

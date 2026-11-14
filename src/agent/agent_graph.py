@@ -11,6 +11,7 @@ based on backtest results.
 
 import json
 import logging
+import os
 import uuid
 from typing import Any, Dict, List, Optional, TypedDict
 
@@ -674,6 +675,9 @@ def _hypothesize_with_tools(
         List of Proposal objects (empty if orchestration fails)
     """
     try:
+        # The deterministic assistant runner is a separate, read-only path.
+        # Keep it opt-in so existing harnesses retain their exact behavior.
+        assistant_context = _run_assistant_sidecar_context(state, strategy_type, context, iteration)
         registry = get_default_registry()
         if harness is not None and not harness.use_web_search:
             registry = registry.without_tool("search_market_sentiment")
@@ -682,6 +686,7 @@ def _hypothesize_with_tools(
         prompt_prefix = _prompt_prefix_for(harness)
         result = orchestrator.run_tool_loop(
             user_prompt=f"""
+{assistant_context}
 {prompt_prefix}Generate 5 high-confidence {strategy_type} strategy proposals for the current market regime.
 
 For each proposal:
@@ -713,6 +718,20 @@ Return proposals with: params (dict), confidence (float), reasoning (string), fa
         # Parse proposals from Claude response and convert to Proposal objects
         parsed_proposals = result.get("proposals", [])
         if parsed_proposals:
+            if assistant_context:
+                source_names = []
+                for run in state.get("assistant_tool_results", []):
+                    source_names.extend(run.get("selected_tools", []))
+                    if run.get("tool_name"):
+                        source_names.append(run["tool_name"])
+                sources = sorted(set(source_names))
+                provenance_note = "Advisory context sources: " + ", ".join(sources) + "."
+                state["assistant_proposal_provenance"] = {
+                    "sources": sources, "decision_time": str(state.get("as_of")),
+                    "validated": False, "promotion_authority": False,
+                }
+                for proposal in parsed_proposals:
+                    proposal.reasoning = (proposal.reasoning + " " + provenance_note).strip()
             logger.info(f"Tool orchestration returned {len(parsed_proposals)} parsed proposals")
             return parsed_proposals
         else:
@@ -725,6 +744,132 @@ Return proposals with: params (dict), confidence (float), reasoning (string), fa
     except Exception as e:
         logger.warning(f"Tool orchestration failed: {e}; falling back to ProposalGenerator")
         return []
+
+
+def _run_assistant_sidecar_context(
+    state: AgentState, strategy_type: str, context: RegimeContext, iteration: int,
+) -> str:
+    """Optionally fetch bounded temporal-memory evidence for proposal context.
+
+    This tool path has no holdout or promotion capability. It is explicitly
+    gated by AGENTQUANT_ASSISTANT_TOOLS and defaults off for compatibility.
+    """
+    if os.getenv("AGENTQUANT_ASSISTANT_TOOLS", "0").strip().lower() not in {"1", "true", "yes", "on"}:
+        return ""
+    as_of = state.get("as_of")
+    if not as_of:
+        return ""
+    try:
+        from src.agent.assistant_tool_runner import AssistantToolRunner, AssistantToolRunRequest
+        from src.agent.memory_tool import MemorySearchTool
+        from src.agent.sidecar_tools import (
+            SidecarToolRegistry,
+            ToolBudget,
+            make_idea_sidecar_registry,
+            register_hyde_retrieval,
+            register_memory_search,
+        )
+        from src.memory import MemoryService
+
+        registry = SidecarToolRegistry(ToolBudget(max_calls=1, max_wall_seconds=2.0,
+                                                  max_input_bytes=4_000, max_output_bytes=16_000))
+        register_memory_search(registry, MemorySearchTool(MemoryService()))
+        # The deterministic generator is local and offline. Provider-backed
+        # HyDE is intentionally never constructed by this production path.
+        from src.agent.generators.hyde import HydeGenerator
+        from src.agent.hyde_retrieval import HydeRetrievalTool
+        from src.agent.idea_sidecar import Candidate as IdeaCandidate
+        from src.agent.idea_sidecar import Observation
+        from src.agent.parameter_grid import ParameterGrid
+        from src.agent.rl_shadow_tool import advise
+
+        grid = ParameterGrid().get_grid(strategy_type)
+        # Memory lookup is an independent request with an explicit point-in-time cutoff.
+        request_id = f"{state.get('run_id', 'run')}:{iteration}:memory"
+        memory_request = AssistantToolRunRequest(
+            request_id=request_id, intent="memory_lookup", decision_time=str(as_of),
+            arguments={"query": f"{strategy_type} {context.regime_label}",
+                       "strategy_type": strategy_type, "asset": state.get("asset"),
+                       "regime_label": context.regime_label, "top_k": 4},
+            capabilities=frozenset({"prior_results"}), max_tool_calls=1,
+        )
+        runner = AssistantToolRunner(registry)
+        memory_run = runner.run(memory_request)
+        # Expose only development-visible failures and prior parameter points.
+        prior_params = [r.get("params", {}) for r in state.get("all_results", []) if r.get("params")]
+        idea_registry = make_idea_sidecar_registry(budget=ToolBudget(
+            max_calls=2, max_wall_seconds=2.0, max_input_bytes=12_000, max_output_bytes=16_000))
+        idea_request = AssistantToolRunRequest(
+            request_id=f"{state.get('run_id', 'run')}:{iteration}:ideas",
+            intent="candidate_options", decision_time=str(as_of),
+            arguments={"grid": grid, "tried_grid_indices": [], "failures": [],
+                       "prior_params": prior_params},
+            capabilities=frozenset({"prior_results"}), max_tool_calls=1,
+        )
+        idea_run = AssistantToolRunner(idea_registry).run(idea_request)
+        # Run the fixed, non-learning shadow policy only over the validated
+        # canonical candidates returned above. It cannot select outside this menu.
+        if idea_run.results and idea_run.results[0].ok and idea_run.results[0].data:
+            from src.agent import idea_sidecar
+            raw_candidates = idea_run.results[0].data[:32]
+            candidates = [IdeaCandidate(idea_sidecar.ProposalSource(item["source"]),
+                                        int(item["grid_index"]), dict(item["params"]))
+                          for item in raw_candidates]
+            # Candidate serialization contract is validated in the adapter; RL
+            # policy output is advisory metadata and never enters backtest inputs.
+            observation = Observation(
+                schema_version=idea_sidecar.SCHEMA_VERSION,
+                episode_id=f"{state.get('run_id', 'run')}:{iteration}",
+                decision_time=str(as_of), step=iteration, asset=state.get("asset", ""),
+                regime=context.regime_label, strategy_family=strategy_type,
+                grid_size=len(grid), tried_grid_indices=(), visible_failures=(),
+                attempted=(), remaining_proposals=5, remaining_tool_calls=0,
+            )
+            rl_advisory = advise(observation, candidates).to_dict()
+        else:
+            rl_advisory = None
+        hyde_run = None
+        try:
+            retriever = HydeRetrievalTool(HydeGenerator(), evidence=[])
+            hyde_registry = SidecarToolRegistry(ToolBudget(max_calls=1, max_wall_seconds=2.0,
+                                                            max_input_bytes=2_000, max_output_bytes=8_000))
+            register_hyde_retrieval(hyde_registry, retriever)
+            hyde_run = AssistantToolRunner(hyde_registry).run(AssistantToolRunRequest(
+                request_id=f"{state.get('run_id', 'run')}:{iteration}:hyde",
+                intent="hypothesis_retrieval", decision_time=str(as_of),
+                arguments={"regime": context.regime_label,
+                           "strategy_types": [strategy_type], "max_hypotheses": 2,
+                           "max_evidence": 4}, capabilities=frozenset({"prior_results"}),
+                max_tool_calls=1))
+        except Exception:
+            logger.debug("Offline HyDE sidecar unavailable", exc_info=True)
+        payloads = [memory_run.to_dict(), idea_run.to_dict()]
+        if hyde_run is not None:
+            payloads.append(hyde_run.to_dict())
+        if rl_advisory is not None:
+            payloads.append({"tool_name": "rl_shadow_advisory", "ok": True,
+                             "data": rl_advisory,
+                             "provenance": {"source": "src.agent.rl_shadow_tool.advise",
+                                            "validated_canonical_menu": True}})
+        state.setdefault("assistant_tool_results", []).extend(payloads)
+        for item in payloads:
+            emit_trace(state.get("trace"), "assistant_tool_run",
+                       f"Assistant sidecar {item.get('intent', item.get('tool_name'))}: {item.get('status', 'ok' if item.get('ok') else 'error')}.",
+                       result=item)
+        # Include only bounded output from successful advisory calls.
+        snippets = []
+        for run in (memory_run, idea_run, hyde_run):
+            if run and run.status in {"ok", "partial"}:
+                snippets.extend(r.to_dict() for r in run.results if r.ok)
+        if rl_advisory is not None:
+            snippets.append({"tool_name": "rl_shadow_advisory", "data": rl_advisory,
+                             "provenance": {"source": "src.agent.rl_shadow_tool.advise",
+                                            "validated_canonical_menu": True}})
+        return ("Bounded read-only sidecar context (advisory only; unevaluated; cannot promote):\n"
+                + json.dumps(snippets, default=str)[:12_000] if snippets else "")
+    except Exception as exc:
+        logger.info("Assistant sidecar lookup unavailable: %s", exc)
+        return ""
 
 
 def run_agent(

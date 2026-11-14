@@ -78,3 +78,34 @@ def test_non_integer_tool_limit_is_rejected():
 
     with pytest.raises(ValueError, match="non-negative integer"):
         AssistantToolRunRequest("run-6", "failure_lookup", "2024-01-10", max_tool_calls=1.5)
+
+
+def test_selector_ranks_relevant_registered_tool_for_unmapped_intent():
+    registry = make_idea_sidecar_registry()
+    runner = AssistantToolRunner(registry)
+    result = runner.run(AssistantToolRunRequest(
+        "run-7", "candidate options", "2024-01-10",
+        {"grid": [], "tried_grid_indices": [], "failures": [], "prior_params": []},
+    ))
+    assert result.selected_tools == ("idea_candidate_options",)
+    assert result.selection_trace
+    assert result.selection_trace[0]["score"] > 0
+    assert "selection_trace" in result.to_dict()
+
+
+def test_selector_abstains_and_injected_scorer_failure_falls_back():
+    registry = make_idea_sidecar_registry()
+    unknown = AssistantToolRunner(registry).run(AssistantToolRunRequest(
+        "run-8", "weather forecast", "2024-01-10"))
+    assert unknown.status == "no_matching_tool"
+    assert not unknown.selected_tools
+
+    def broken_scorer(request, tool):
+        raise RuntimeError("scorer unavailable")
+
+    fallback = AssistantToolRunner(registry, scorer=broken_scorer,
+                                   scorer_version="local-test-v1").run(
+        AssistantToolRunRequest("run-9", "failure_lookup", "2024-01-10",
+                                {"failures": []}))
+    assert fallback.selected_tools == ("idea_visible_failures",)
+    assert "scorer_failure_fallback" in fallback.selection_trace[0]

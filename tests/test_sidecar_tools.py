@@ -118,3 +118,35 @@ def test_memory_search_registers_with_cutoffs_and_read_only_result():
     assert result.data["promoted_to_belief"] is False
     assert memory.calls[0][1]["knowledge_as_of"] == "2022-02-01"
     assert result.provenance["source"] == "src.agent.memory_tool.MemorySearchTool"
+
+
+def test_registry_uses_strict_json_and_cumulative_payload_limits():
+    registry = make_idea_sidecar_registry(budget=ToolBudget(max_total_input_bytes=60))
+    args = {"decision_time": "2024-01-10", "failures": []}
+    first = registry.call(ToolRequest("one", "idea_visible_failures", args,
+                                      frozenset({"prior_results"})))
+    second = registry.call(ToolRequest("two", "idea_visible_failures", args,
+                                       frozenset({"prior_results"})))
+    assert first.ok
+    assert not second.ok and second.error == "total_input_budget_exceeded"
+
+    unsafe = SidecarToolRegistry()
+    unsafe.register(AssistantTool("strict", "strict", {"type": "object"},
+                                  {"type": "object"}, frozenset(),
+                                  lambda _: {"bad": object()}, "fixture"))
+    result = unsafe.call(ToolRequest("x", "strict", {}))
+    assert not result.ok and "non_json_value" in result.error
+
+
+def test_opt_in_process_isolation_enforces_handler_deadline():
+    import time
+
+    def slow(_):
+        time.sleep(0.2)
+        return {}
+
+    registry = SidecarToolRegistry(ToolBudget(max_wall_seconds=0.03, isolate_process=True))
+    registry.register(AssistantTool("slow", "slow", {"type": "object"},
+                                    {"type": "object"}, frozenset(), slow, "fixture"))
+    result = registry.call(ToolRequest("x", "slow", {}))
+    assert not result.ok and "wall_budget_exceeded" in result.error

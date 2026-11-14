@@ -1,9 +1,4 @@
-"""A bounded, deterministic assistant-facing orchestrator for sidecar tools.
-
-The runner discovers registered tools, chooses only tools explicitly requested
-by an intent, and records every invocation. It is advisory and has no interface
-for strategy evaluation, promotion, or holdout data.
-"""
+"""A bounded assistant-facing orchestrator for advisory sidecar tools."""
 
 from __future__ import annotations
 
@@ -16,6 +11,7 @@ from src.agent.sidecar_tools import (
     ToolRequest,
     ToolResult,
 )
+from src.agent.tool_selection import DeterministicToolSelector
 
 
 @dataclass(frozen=True)
@@ -65,6 +61,7 @@ class AssistantToolRunResult:
     results: tuple[ToolResult, ...]
     discovery: tuple[Mapping[str, Any], ...]
     status: str
+    selection_trace: tuple[Mapping[str, Any], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -80,16 +77,17 @@ class AssistantToolRunResult:
             "results": [r.to_dict() for r in self.results],
             "discovery": [dict(item) for item in self.discovery],
             "status": self.status,
+            "selection_trace": [dict(item) for item in self.selection_trace],
             "authority": {"can_access_holdout": False, "can_promote": False,
                           "can_evaluate": False},
         }
 
 
 class AssistantToolRunner:
-    """Run fixed intent mappings against an injected sidecar registry.
+    """Select relevant registered tools with a bounded, auditable policy.
 
-    Tool selection is deterministic and deliberately non-learning. A caller may
-    replace the mapping for an application, but cannot select unregistered tools.
+    Optional scorer integrations are advisory only. Exceptions fall back to
+    deterministic scoring; scorers cannot expand the registered tool set.
     """
 
     DEFAULT_INTENTS = {
@@ -100,9 +98,14 @@ class AssistantToolRunner:
     }
 
     def __init__(self, registry: SidecarToolRegistry,
-                 intent_tools: Mapping[str, Sequence[str]] | None = None):
+                 intent_tools: Mapping[str, Sequence[str]] | None = None, *,
+                 scorer: Any = None, scorer_version: str | None = None,
+                 min_relevance: float = 1.0):
         self.registry = registry
         self.intent_tools = {k: tuple(v) for k, v in (intent_tools or self.DEFAULT_INTENTS).items()}
+        self.selector = DeterministicToolSelector(
+            self.intent_tools, scorer=scorer, scorer_version=scorer_version,
+            min_relevance=min_relevance)
 
     def discover(self) -> tuple[Mapping[str, Any], ...]:
         """Return available registered tool descriptions."""
@@ -110,9 +113,7 @@ class AssistantToolRunner:
 
     def run(self, request: AssistantToolRunRequest) -> AssistantToolRunResult:
         discovery = self.discover()
-        selected = self.intent_tools.get(request.intent, ())
-        registered = {str(item["name"]) for item in discovery}
-        selected = tuple(name for name in selected if name in registered)
+        selected, selection_trace = self.selector.select(request, discovery)
         selected = selected[:request.max_tool_calls]
         results: list[ToolResult] = []
         attempts: list[ToolAttempt] = []
@@ -149,6 +150,7 @@ class AssistantToolRunner:
             request_id=request.request_id, decision_time=request.decision_time,
             intent=request.intent, selected_tools=selected, attempts=tuple(attempts),
             results=tuple(results), discovery=discovery, status=status,
+            selection_trace=selection_trace,
         )
 
     @staticmethod
