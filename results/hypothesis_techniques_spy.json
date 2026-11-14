@@ -1,0 +1,2065 @@
+{
+  "benchmark": "hypothesis_techniques_public_historical_v1",
+  "candidate_budget": 4,
+  "claim_scope": "historical descriptive backtest; not a prospective or investment claim",
+  "data_label": "public_historical_daily_prices",
+  "provenance": {
+    "auto_adjust": true,
+    "end_exclusive": "2025-01-01",
+    "first_date": "2000-01-04",
+    "last_date": "2024-12-31",
+    "price_sha256": "56d216fd04f6d5817e8384cc973f6c773f44118e1c8a01c5884ca3683fb7bcd1",
+    "provider": "Yahoo Finance via yfinance",
+    "rows": 6288,
+    "start_inclusive": "2000-01-01",
+    "symbol": "SPY"
+  },
+  "regime_count": 8,
+  "regimes": {
+    "2023_recovery": {
+      "end": "2023-12-29",
+      "start": "2023-01-03"
+    },
+    "2024_expansion": {
+      "end": "2024-12-31",
+      "start": "2024-01-02"
+    },
+    "covid_crash_rebound": {
+      "end": "2020-12-31",
+      "start": "2020-02-19"
+    },
+    "dotcom_bear": {
+      "end": "2002-10-09",
+      "start": "2000-03-10"
+    },
+    "housing_credit_crisis": {
+      "end": "2009-03-09",
+      "start": "2007-10-09"
+    },
+    "inflation_rate_shock": {
+      "end": "2022-10-12",
+      "start": "2022-01-03"
+    },
+    "post_crisis_expansion": {
+      "end": "2015-12-31",
+      "start": "2010-01-04"
+    },
+    "volmageddon": {
+      "end": "2018-12-24",
+      "start": "2018-01-26"
+    }
+  },
+  "results": [
+    {
+      "date_end": "2002-10-09",
+      "date_start": "2000-03-10",
+      "holdout_observations": 260,
+      "metrics": {
+        "analytical": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 260,
+                "sharpe": -0.956313,
+                "total_return": -0.114605
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 388,
+                "sharpe": -1.088061,
+                "total_return": -0.159363
+              }
+            },
+            {
+              "holdout": {
+                "observations": 260,
+                "sharpe": 0.29188,
+                "total_return": 0.038823
+              },
+              "params": {
+                "num_std": 2.0,
+                "window": 20
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 388,
+                "sharpe": 0.292264,
+                "total_return": 0.057236
+              }
+            },
+            {
+              "holdout": {
+                "observations": 260,
+                "sharpe": -1.275957,
+                "total_return": -0.125666
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 388,
+                "sharpe": -1.716455,
+                "total_return": -0.316627
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 0.0,
+          "holdout_mean_sharpe": -0.646797
+        },
+        "ensemble": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 260,
+                "sharpe": -0.956313,
+                "total_return": -0.114605
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 388,
+                "sharpe": -1.088061,
+                "total_return": -0.159363
+              }
+            },
+            {
+              "holdout": {
+                "observations": 260,
+                "sharpe": 0.283201,
+                "total_return": 0.036989
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 388,
+                "sharpe": 0.399459,
+                "total_return": 0.086287
+              }
+            },
+            {
+              "holdout": {
+                "observations": 260,
+                "sharpe": -1.275957,
+                "total_return": -0.125666
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 388,
+                "sharpe": -1.716455,
+                "total_return": -0.316627
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 2.0,
+          "holdout_mean_sharpe": -0.64969
+        },
+        "hyde": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 260,
+                "sharpe": -0.956313,
+                "total_return": -0.114605
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 388,
+                "sharpe": -1.088061,
+                "total_return": -0.159363
+              }
+            },
+            {
+              "holdout": {
+                "observations": 260,
+                "sharpe": 0.283201,
+                "total_return": 0.036989
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 388,
+                "sharpe": 0.399459,
+                "total_return": 0.086287
+              }
+            },
+            {
+              "holdout": {
+                "observations": 260,
+                "sharpe": -1.275957,
+                "total_return": -0.125666
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 388,
+                "sharpe": -1.716455,
+                "total_return": -0.316627
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": -0.64969
+        },
+        "literature": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 260,
+                "sharpe": -0.956313,
+                "total_return": -0.114605
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 388,
+                "sharpe": -1.088061,
+                "total_return": -0.159363
+              }
+            },
+            {
+              "holdout": {
+                "observations": 260,
+                "sharpe": 0.283201,
+                "total_return": 0.036989
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 388,
+                "sharpe": 0.399459,
+                "total_return": 0.086287
+              }
+            },
+            {
+              "holdout": {
+                "observations": 260,
+                "sharpe": -1.275957,
+                "total_return": -0.125666
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 388,
+                "sharpe": -1.716455,
+                "total_return": -0.316627
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": -0.64969
+        }
+      },
+      "observations": 648,
+      "regime": "dotcom_bear",
+      "split_date": "2001-09-27",
+      "train_observations": 388
+    },
+    {
+      "date_end": "2009-03-09",
+      "date_start": "2007-10-09",
+      "holdout_observations": 143,
+      "metrics": {
+        "analytical": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 143,
+                "sharpe": -2.699254,
+                "total_return": -0.246645
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 213,
+                "sharpe": -1.016663,
+                "total_return": -0.098782
+              }
+            },
+            {
+              "holdout": {
+                "observations": 143,
+                "sharpe": 1.342556,
+                "total_return": 0.311278
+              },
+              "params": {
+                "num_std": 2.0,
+                "window": 20
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 213,
+                "sharpe": 0.23656,
+                "total_return": 0.020345
+              }
+            },
+            {
+              "holdout": {
+                "observations": 143,
+                "sharpe": -3.033196,
+                "total_return": -0.416685
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 213,
+                "sharpe": -1.603135,
+                "total_return": -0.180271
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 0.0,
+          "holdout_mean_sharpe": -1.463298
+        },
+        "ensemble": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 143,
+                "sharpe": -2.699254,
+                "total_return": -0.246645
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 213,
+                "sharpe": -1.016663,
+                "total_return": -0.098782
+              }
+            },
+            {
+              "holdout": {
+                "observations": 143,
+                "sharpe": 1.286067,
+                "total_return": 0.294303
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 213,
+                "sharpe": 2.087111,
+                "total_return": 0.277606
+              }
+            },
+            {
+              "holdout": {
+                "observations": 143,
+                "sharpe": -3.033196,
+                "total_return": -0.416685
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 213,
+                "sharpe": -1.603135,
+                "total_return": -0.180271
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 2.0,
+          "holdout_mean_sharpe": -1.482128
+        },
+        "hyde": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 143,
+                "sharpe": -2.699254,
+                "total_return": -0.246645
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 213,
+                "sharpe": -1.016663,
+                "total_return": -0.098782
+              }
+            },
+            {
+              "holdout": {
+                "observations": 143,
+                "sharpe": 1.286067,
+                "total_return": 0.294303
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 213,
+                "sharpe": 2.087111,
+                "total_return": 0.277606
+              }
+            },
+            {
+              "holdout": {
+                "observations": 143,
+                "sharpe": -3.033196,
+                "total_return": -0.416685
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 213,
+                "sharpe": -1.603135,
+                "total_return": -0.180271
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": -1.482128
+        },
+        "literature": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 143,
+                "sharpe": -2.699254,
+                "total_return": -0.246645
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 213,
+                "sharpe": -1.016663,
+                "total_return": -0.098782
+              }
+            },
+            {
+              "holdout": {
+                "observations": 143,
+                "sharpe": 1.286067,
+                "total_return": 0.294303
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 213,
+                "sharpe": 2.087111,
+                "total_return": 0.277606
+              }
+            },
+            {
+              "holdout": {
+                "observations": 143,
+                "sharpe": -3.033196,
+                "total_return": -0.416685
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 213,
+                "sharpe": -1.603135,
+                "total_return": -0.180271
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": -1.482128
+        }
+      },
+      "observations": 356,
+      "regime": "housing_credit_crisis",
+      "split_date": "2008-08-12",
+      "train_observations": 213
+    },
+    {
+      "date_end": "2015-12-31",
+      "date_start": "2010-01-04",
+      "holdout_observations": 604,
+      "metrics": {
+        "analytical": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 604,
+                "sharpe": -0.761365,
+                "total_return": -0.144509
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 906,
+                "sharpe": 0.613784,
+                "total_return": 0.245726
+              }
+            },
+            {
+              "holdout": {
+                "observations": 604,
+                "sharpe": 0.858935,
+                "total_return": 0.191923
+              },
+              "params": {
+                "num_std": 2.0,
+                "window": 20
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 906,
+                "sharpe": 0.083635,
+                "total_return": 0.009165
+              }
+            },
+            {
+              "holdout": {
+                "observations": 604,
+                "sharpe": -0.921739,
+                "total_return": -0.135526
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 906,
+                "sharpe": 1.0251,
+                "total_return": 0.409186
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 0.0,
+          "holdout_mean_sharpe": -0.274723
+        },
+        "ensemble": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 604,
+                "sharpe": -0.761365,
+                "total_return": -0.144509
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 906,
+                "sharpe": 0.613784,
+                "total_return": 0.245726
+              }
+            },
+            {
+              "holdout": {
+                "observations": 604,
+                "sharpe": -0.097035,
+                "total_return": -0.031471
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 906,
+                "sharpe": -0.301781,
+                "total_return": -0.151535
+              }
+            },
+            {
+              "holdout": {
+                "observations": 604,
+                "sharpe": -0.921739,
+                "total_return": -0.135526
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 906,
+                "sharpe": 1.0251,
+                "total_return": 0.409186
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 2.0,
+          "holdout_mean_sharpe": -0.59338
+        },
+        "hyde": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 604,
+                "sharpe": -0.761365,
+                "total_return": -0.144509
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 906,
+                "sharpe": 0.613784,
+                "total_return": 0.245726
+              }
+            },
+            {
+              "holdout": {
+                "observations": 604,
+                "sharpe": -0.097035,
+                "total_return": -0.031471
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 906,
+                "sharpe": -0.301781,
+                "total_return": -0.151535
+              }
+            },
+            {
+              "holdout": {
+                "observations": 604,
+                "sharpe": -0.921739,
+                "total_return": -0.135526
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 906,
+                "sharpe": 1.0251,
+                "total_return": 0.409186
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": -0.59338
+        },
+        "literature": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 604,
+                "sharpe": -0.761365,
+                "total_return": -0.144509
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 906,
+                "sharpe": 0.613784,
+                "total_return": 0.245726
+              }
+            },
+            {
+              "holdout": {
+                "observations": 604,
+                "sharpe": -0.097035,
+                "total_return": -0.031471
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 906,
+                "sharpe": -0.301781,
+                "total_return": -0.151535
+              }
+            },
+            {
+              "holdout": {
+                "observations": 604,
+                "sharpe": -0.921739,
+                "total_return": -0.135526
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 906,
+                "sharpe": 1.0251,
+                "total_return": 0.409186
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": -0.59338
+        }
+      },
+      "observations": 1510,
+      "regime": "post_crisis_expansion",
+      "split_date": "2013-08-08",
+      "train_observations": 906
+    },
+    {
+      "date_end": "2018-12-24",
+      "date_start": "2018-01-26",
+      "holdout_observations": 92,
+      "metrics": {
+        "analytical": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 92,
+                "sharpe": 0.0,
+                "total_return": 0.0
+              },
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 138,
+                "sharpe": 0.96455,
+                "total_return": 0.023445
+              }
+            },
+            {
+              "holdout": {
+                "observations": 92,
+                "sharpe": -1.450549,
+                "total_return": -0.078219
+              },
+              "params": {
+                "num_std": 2.0,
+                "window": 20
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 138,
+                "sharpe": 0.068832,
+                "total_return": 0.001275
+              }
+            },
+            {
+              "holdout": {
+                "observations": 92,
+                "sharpe": 0.0,
+                "total_return": 0.0
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 138,
+                "sharpe": 1.354031,
+                "total_return": 0.055626
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 0.0,
+          "holdout_mean_sharpe": -0.483516
+        },
+        "ensemble": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 92,
+                "sharpe": -2.77951,
+                "total_return": -0.081567
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 138,
+                "sharpe": -0.329729,
+                "total_return": -0.015791
+              }
+            },
+            {
+              "holdout": {
+                "observations": 92,
+                "sharpe": -2.17902,
+                "total_return": -0.113891
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 138,
+                "sharpe": 0.73018,
+                "total_return": 0.036983
+              }
+            },
+            {
+              "holdout": {
+                "observations": 92,
+                "sharpe": 0.0,
+                "total_return": 0.0
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 138,
+                "sharpe": 1.354031,
+                "total_return": 0.055626
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 2.0,
+          "holdout_mean_sharpe": -1.652843
+        },
+        "hyde": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 92,
+                "sharpe": -2.77951,
+                "total_return": -0.081567
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 138,
+                "sharpe": -0.329729,
+                "total_return": -0.015791
+              }
+            },
+            {
+              "holdout": {
+                "observations": 92,
+                "sharpe": -2.17902,
+                "total_return": -0.113891
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 138,
+                "sharpe": 0.73018,
+                "total_return": 0.036983
+              }
+            },
+            {
+              "holdout": {
+                "observations": 92,
+                "sharpe": 0.0,
+                "total_return": 0.0
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 138,
+                "sharpe": 1.354031,
+                "total_return": 0.055626
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": -1.652843
+        },
+        "literature": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 92,
+                "sharpe": -2.77951,
+                "total_return": -0.081567
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 138,
+                "sharpe": -0.329729,
+                "total_return": -0.015791
+              }
+            },
+            {
+              "holdout": {
+                "observations": 92,
+                "sharpe": -2.17902,
+                "total_return": -0.113891
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 138,
+                "sharpe": 0.73018,
+                "total_return": 0.036983
+              }
+            },
+            {
+              "holdout": {
+                "observations": 92,
+                "sharpe": 0.0,
+                "total_return": 0.0
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 138,
+                "sharpe": 1.354031,
+                "total_return": 0.055626
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": -1.652843
+        }
+      },
+      "observations": 230,
+      "regime": "volmageddon",
+      "split_date": "2018-08-13",
+      "train_observations": 138
+    },
+    {
+      "date_end": "2020-12-31",
+      "date_start": "2020-02-19",
+      "holdout_observations": 89,
+      "metrics": {
+        "analytical": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 89,
+                "sharpe": 1.682694,
+                "total_return": 0.004581
+              },
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 132,
+                "sharpe": 2.857719,
+                "total_return": 0.082989
+              }
+            },
+            {
+              "holdout": {
+                "observations": 89,
+                "sharpe": 0.869494,
+                "total_return": 0.027132
+              },
+              "params": {
+                "num_std": 2.0,
+                "window": 20
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 132,
+                "sharpe": -0.666773,
+                "total_return": -0.087436
+              }
+            },
+            {
+              "holdout": {
+                "observations": 89,
+                "sharpe": -0.776395,
+                "total_return": -0.022789
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 132,
+                "sharpe": 2.507541,
+                "total_return": 0.24944
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 0.0,
+          "holdout_mean_sharpe": 0.591931
+        },
+        "ensemble": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 89,
+                "sharpe": 2.271419,
+                "total_return": 0.084748
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 132,
+                "sharpe": 2.77463,
+                "total_return": 0.331876
+              }
+            },
+            {
+              "holdout": {
+                "observations": 89,
+                "sharpe": -1.003632,
+                "total_return": -0.043352
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 132,
+                "sharpe": 0.205195,
+                "total_return": 0.008628
+              }
+            },
+            {
+              "holdout": {
+                "observations": 89,
+                "sharpe": -0.776395,
+                "total_return": -0.022789
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 132,
+                "sharpe": 2.507541,
+                "total_return": 0.24944
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 2.0,
+          "holdout_mean_sharpe": 0.163797
+        },
+        "hyde": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 89,
+                "sharpe": 2.271419,
+                "total_return": 0.084748
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 132,
+                "sharpe": 2.77463,
+                "total_return": 0.331876
+              }
+            },
+            {
+              "holdout": {
+                "observations": 89,
+                "sharpe": -1.003632,
+                "total_return": -0.043352
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 132,
+                "sharpe": 0.205195,
+                "total_return": 0.008628
+              }
+            },
+            {
+              "holdout": {
+                "observations": 89,
+                "sharpe": -0.776395,
+                "total_return": -0.022789
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 132,
+                "sharpe": 2.507541,
+                "total_return": 0.24944
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": 0.163797
+        },
+        "literature": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 89,
+                "sharpe": 2.271419,
+                "total_return": 0.084748
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 132,
+                "sharpe": 2.77463,
+                "total_return": 0.331876
+              }
+            },
+            {
+              "holdout": {
+                "observations": 89,
+                "sharpe": -1.003632,
+                "total_return": -0.043352
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 132,
+                "sharpe": 0.205195,
+                "total_return": 0.008628
+              }
+            },
+            {
+              "holdout": {
+                "observations": 89,
+                "sharpe": -0.776395,
+                "total_return": -0.022789
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 132,
+                "sharpe": 2.507541,
+                "total_return": 0.24944
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": 0.163797
+        }
+      },
+      "observations": 221,
+      "regime": "covid_crash_rebound",
+      "split_date": "2020-08-25",
+      "train_observations": 132
+    },
+    {
+      "date_end": "2022-10-12",
+      "date_start": "2022-01-03",
+      "holdout_observations": 79,
+      "metrics": {
+        "analytical": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 79,
+                "sharpe": 0.0,
+                "total_return": 0.0
+              },
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 117,
+                "sharpe": 0.0,
+                "total_return": 0.0
+              }
+            },
+            {
+              "holdout": {
+                "observations": 79,
+                "sharpe": -2.738019,
+                "total_return": -0.10641
+              },
+              "params": {
+                "num_std": 2.0,
+                "window": 20
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 117,
+                "sharpe": 0.383096,
+                "total_return": 0.02533
+              }
+            },
+            {
+              "holdout": {
+                "observations": 79,
+                "sharpe": -2.177492,
+                "total_return": -0.053724
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 117,
+                "sharpe": -2.214689,
+                "total_return": -0.106141
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 0.0,
+          "holdout_mean_sharpe": -1.638504
+        },
+        "ensemble": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 79,
+                "sharpe": 1.905948,
+                "total_return": 0.061612
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 117,
+                "sharpe": -2.097013,
+                "total_return": -0.112568
+              }
+            },
+            {
+              "holdout": {
+                "observations": 79,
+                "sharpe": -0.161096,
+                "total_return": -0.0108
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 117,
+                "sharpe": -0.38933,
+                "total_return": -0.04102
+              }
+            },
+            {
+              "holdout": {
+                "observations": 79,
+                "sharpe": -2.177492,
+                "total_return": -0.053724
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 117,
+                "sharpe": -2.214689,
+                "total_return": -0.106141
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 2.0,
+          "holdout_mean_sharpe": -0.144213
+        },
+        "hyde": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 79,
+                "sharpe": 1.905948,
+                "total_return": 0.061612
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 117,
+                "sharpe": -2.097013,
+                "total_return": -0.112568
+              }
+            },
+            {
+              "holdout": {
+                "observations": 79,
+                "sharpe": -0.161096,
+                "total_return": -0.0108
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 117,
+                "sharpe": -0.38933,
+                "total_return": -0.04102
+              }
+            },
+            {
+              "holdout": {
+                "observations": 79,
+                "sharpe": -2.177492,
+                "total_return": -0.053724
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 117,
+                "sharpe": -2.214689,
+                "total_return": -0.106141
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": -0.144213
+        },
+        "literature": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 79,
+                "sharpe": 1.905948,
+                "total_return": 0.061612
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 117,
+                "sharpe": -2.097013,
+                "total_return": -0.112568
+              }
+            },
+            {
+              "holdout": {
+                "observations": 79,
+                "sharpe": -0.161096,
+                "total_return": -0.0108
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 117,
+                "sharpe": -0.38933,
+                "total_return": -0.04102
+              }
+            },
+            {
+              "holdout": {
+                "observations": 79,
+                "sharpe": -2.177492,
+                "total_return": -0.053724
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 117,
+                "sharpe": -2.214689,
+                "total_return": -0.106141
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": -0.144213
+        }
+      },
+      "observations": 196,
+      "regime": "inflation_rate_shock",
+      "split_date": "2022-06-21",
+      "train_observations": 117
+    },
+    {
+      "date_end": "2023-12-29",
+      "date_start": "2023-01-03",
+      "holdout_observations": 100,
+      "metrics": {
+        "analytical": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 100,
+                "sharpe": -1.587451,
+                "total_return": -0.003395
+              },
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 150,
+                "sharpe": 2.36746,
+                "total_return": 0.085722
+              }
+            },
+            {
+              "holdout": {
+                "observations": 100,
+                "sharpe": -1.854146,
+                "total_return": -0.062398
+              },
+              "params": {
+                "num_std": 2.0,
+                "window": 20
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 150,
+                "sharpe": 0.432239,
+                "total_return": 0.021641
+              }
+            },
+            {
+              "holdout": {
+                "observations": 100,
+                "sharpe": 3.158527,
+                "total_return": 0.060954
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 150,
+                "sharpe": 1.651512,
+                "total_return": 0.099082
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 0.0,
+          "holdout_mean_sharpe": -0.094357
+        },
+        "ensemble": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 100,
+                "sharpe": 1.431064,
+                "total_return": 0.045041
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 150,
+                "sharpe": 1.6856,
+                "total_return": 0.10003
+              }
+            },
+            {
+              "holdout": {
+                "observations": 100,
+                "sharpe": -3.19142,
+                "total_return": -0.096905
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 150,
+                "sharpe": 0.425789,
+                "total_return": 0.021219
+              }
+            },
+            {
+              "holdout": {
+                "observations": 100,
+                "sharpe": 3.158527,
+                "total_return": 0.060954
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 150,
+                "sharpe": 1.651512,
+                "total_return": 0.099082
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 2.0,
+          "holdout_mean_sharpe": 0.466057
+        },
+        "hyde": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 100,
+                "sharpe": 1.431064,
+                "total_return": 0.045041
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 150,
+                "sharpe": 1.6856,
+                "total_return": 0.10003
+              }
+            },
+            {
+              "holdout": {
+                "observations": 100,
+                "sharpe": -3.19142,
+                "total_return": -0.096905
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 150,
+                "sharpe": 0.425789,
+                "total_return": 0.021219
+              }
+            },
+            {
+              "holdout": {
+                "observations": 100,
+                "sharpe": 3.158527,
+                "total_return": 0.060954
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 150,
+                "sharpe": 1.651512,
+                "total_return": 0.099082
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": 0.466057
+        },
+        "literature": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 100,
+                "sharpe": 1.431064,
+                "total_return": 0.045041
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 150,
+                "sharpe": 1.6856,
+                "total_return": 0.10003
+              }
+            },
+            {
+              "holdout": {
+                "observations": 100,
+                "sharpe": -3.19142,
+                "total_return": -0.096905
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 150,
+                "sharpe": 0.425789,
+                "total_return": 0.021219
+              }
+            },
+            {
+              "holdout": {
+                "observations": 100,
+                "sharpe": 3.158527,
+                "total_return": 0.060954
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 150,
+                "sharpe": 1.651512,
+                "total_return": 0.099082
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": 0.466057
+        }
+      },
+      "observations": 250,
+      "regime": "2023_recovery",
+      "split_date": "2023-08-08",
+      "train_observations": 150
+    },
+    {
+      "date_end": "2024-12-31",
+      "date_start": "2024-01-02",
+      "holdout_observations": 101,
+      "metrics": {
+        "analytical": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 101,
+                "sharpe": -1.579573,
+                "total_return": -0.004138
+              },
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 151,
+                "sharpe": -0.194397,
+                "total_return": -0.011189
+              }
+            },
+            {
+              "holdout": {
+                "observations": 101,
+                "sharpe": 1.114057,
+                "total_return": 0.024273
+              },
+              "params": {
+                "num_std": 2.0,
+                "window": 20
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 151,
+                "sharpe": -1.677843,
+                "total_return": -0.087689
+              }
+            },
+            {
+              "holdout": {
+                "observations": 101,
+                "sharpe": 0.037749,
+                "total_return": -0.000136
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 151,
+                "sharpe": 0.548503,
+                "total_return": 0.024296
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 0.0,
+          "holdout_mean_sharpe": -0.142589
+        },
+        "ensemble": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 101,
+                "sharpe": -0.577408,
+                "total_return": -0.022204
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 151,
+                "sharpe": 2.067208,
+                "total_return": 0.113211
+              }
+            },
+            {
+              "holdout": {
+                "observations": 101,
+                "sharpe": 1.492456,
+                "total_return": 0.042441
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 151,
+                "sharpe": -1.372204,
+                "total_return": -0.068591
+              }
+            },
+            {
+              "holdout": {
+                "observations": 101,
+                "sharpe": 0.037749,
+                "total_return": -0.000136
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 151,
+                "sharpe": 0.548503,
+                "total_return": 0.024296
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 2.0,
+          "holdout_mean_sharpe": 0.317599
+        },
+        "hyde": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 101,
+                "sharpe": -0.577408,
+                "total_return": -0.022204
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 151,
+                "sharpe": 2.067208,
+                "total_return": 0.113211
+              }
+            },
+            {
+              "holdout": {
+                "observations": 101,
+                "sharpe": 1.492456,
+                "total_return": 0.042441
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 151,
+                "sharpe": -1.372204,
+                "total_return": -0.068591
+              }
+            },
+            {
+              "holdout": {
+                "observations": 101,
+                "sharpe": 0.037749,
+                "total_return": -0.000136
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 151,
+                "sharpe": 0.548503,
+                "total_return": 0.024296
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": 0.317599
+        },
+        "literature": {
+          "budget": 4,
+          "candidate_count": 3,
+          "candidates": [
+            {
+              "holdout": {
+                "observations": 101,
+                "sharpe": -0.577408,
+                "total_return": -0.022204
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 151,
+                "sharpe": 2.067208,
+                "total_return": 0.113211
+              }
+            },
+            {
+              "holdout": {
+                "observations": 101,
+                "sharpe": 1.492456,
+                "total_return": 0.042441
+              },
+              "params": {
+                "num_std": 1.5,
+                "window": 10
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 151,
+                "sharpe": -1.372204,
+                "total_return": -0.068591
+              }
+            },
+            {
+              "holdout": {
+                "observations": 101,
+                "sharpe": 0.037749,
+                "total_return": -0.000136
+              },
+              "params": {
+                "vol_threshold": 0.2,
+                "window": 21
+              },
+              "strategy_type": "volatility",
+              "train": {
+                "observations": 151,
+                "sharpe": 0.548503,
+                "total_return": 0.024296
+              }
+            }
+          ],
+          "cost_bps_per_unit_turnover": 5.0,
+          "cost_units": 1.0,
+          "holdout_mean_sharpe": 0.317599
+        }
+      },
+      "observations": 252,
+      "regime": "2024_expansion",
+      "split_date": "2024-08-07",
+      "train_observations": 151
+    }
+  ],
+  "seed": 29,
+  "symbol": "SPY",
+  "transaction_cost_model": "fixed basis points per unit change in position"
+}

@@ -4,9 +4,20 @@ from src.agent.hyde_retrieval import (
     Evidence,
     HydeRetrievalTool,
     HypothesisRequest,
+    RetrievedEvidence,
     SyntheticHypothesis,
+    validate_citations,
 )
 from src.agent.parameter_grid import ParameterGrid
+
+
+def test_explicit_proposal_parameters_take_precedence_over_retrieved_prior():
+    from src.agent.hyde_retrieval import _canonical_params
+
+    proposal = SyntheticHypothesis("momentum", "momentum", {"fast_window": 20, "slow_window": 100})
+    prior = Evidence("prior", "momentum", "catalog", "2020-01-01", "2020-01-01",
+                     "momentum", {"fast_window": 5, "slow_window": 20})
+    assert _canonical_params(proposal, [prior], ParameterGrid()) == proposal.proposed_params
 
 
 class StubGenerator:
@@ -88,3 +99,43 @@ def test_does_not_choose_arbitrary_grid_point_without_params_or_evidence():
     assert HydeRetrievalTool(gen, []).run(
         HypothesisRequest("regime", ("momentum",), "2024-01-01")
     ) == []
+
+
+def test_retrieved_citations_are_grounded_and_zero_similarity_is_not_cited():
+    gen = StubGenerator([SyntheticHypothesis("momentum trend", "momentum", {"fast_window": 10})])
+    records = [Evidence("visible", "momentum trend", "paper:doi:123", "2020-01-01",
+                        "2020-01-02", "momentum", {"fast_window": 10}, .8)]
+    candidate = HydeRetrievalTool(gen, records).run(
+        HypothesisRequest("trend", ("momentum",), "2024-01-01")
+    )[0]
+    assert candidate.citations == ("visible",)
+    assert candidate.citation_status == "grounded"
+    assert candidate.evidence[0].citation == "visible"
+
+    no_match = HydeRetrievalTool(gen, records, similarity=lambda *_: 0).run(
+        HypothesisRequest("trend", ("momentum",), "2024-01-01")
+    )[0]
+    assert no_match.evidence == ()
+    assert no_match.citations == ()
+    assert no_match.citation_status == "unsupported"
+
+
+def test_citation_validator_rejects_invented_and_stale_references():
+    visible = RetrievedEvidence("ok", "doi:visible", "2020-01-01", "2020-01-02",
+                                .8, .5, "paper", None, "ok")
+    stale = RetrievedEvidence("old", "doi:old", "2023-01-01", "2025-01-02",
+                              .9, .5, "paper", None, "old")
+    report = validate_citations(["ok", "ghost", "old"], [visible, stale], as_of="2024-12-31")
+    assert report == {"status": "stale", "valid": ("ok",),
+                      "unsupported": ("ghost",), "stale": ("old",)}
+
+
+def test_similarity_nan_fails_closed_without_fabricating_evidence():
+    gen = StubGenerator([SyntheticHypothesis("momentum trend", "momentum", {"fast_window": 10})])
+    records = [Evidence("x", "momentum trend", "src", "2020-01-01", "2020-01-02",
+                        "momentum", {"fast_window": 10}, .8)]
+    candidate = HydeRetrievalTool(gen, records, similarity=lambda *_: float("nan")).run(
+        HypothesisRequest("trend", ("momentum",), "2024-01-01")
+    )[0]
+    assert candidate.evidence == ()
+    assert candidate.citation_status == "unsupported"

@@ -3,7 +3,10 @@ discovery tool (fetch_and_extract_content). Network calls are mocked so
 this suite stays offline/deterministic; live-URL verification lives in
 scripts/verify_research_tool_urls.py (opt-in, see its docstring)."""
 
+import socket
 from unittest.mock import Mock, patch
+
+import pytest
 
 from src.agent.tools.content_extraction import (
     fetch_and_extract_content,
@@ -30,6 +33,14 @@ SAMPLE_HTML = """
 </body>
 </html>
 """
+
+
+@pytest.fixture(autouse=True)
+def _public_dns_for_mocked_fetches():
+    # Keep URL safety checks deterministic and offline; mocked HTTP requests
+    # never actually connect to this documentation address.
+    with patch("socket.getaddrinfo", return_value=[(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 443))]):
+        yield
 
 
 def test_parse_html_extracts_citation_meta_over_title_tag():
@@ -77,6 +88,8 @@ def _mock_response(status_code=200, content_type="text/html; charset=utf-8", tex
     resp.status_code = status_code
     resp.headers = {"Content-Type": content_type}
     resp.text = text
+    resp.encoding = "utf-8"
+    resp.iter_content.return_value = [text.encode("utf-8")]
     return resp
 
 
@@ -94,6 +107,27 @@ def test_fetch_and_extract_content_rejects_invalid_url():
     result = fetch_and_extract_content("not-a-url")
     assert result["error"] is not None
     assert "invalid" in result["error"]
+
+
+def test_fetch_and_extract_content_blocks_private_literal_hosts():
+    result = fetch_and_extract_content("http://127.0.0.1/admin")
+    assert "not public" in result["error"]
+
+
+def test_fetch_and_extract_content_does_not_follow_redirects():
+    with patch("requests.get", return_value=_mock_response(status_code=302)) as mock_get:
+        result = fetch_and_extract_content("https://example.com/redirect")
+    assert result["error"] == "redirects are not followed"
+    assert mock_get.call_args.kwargs["allow_redirects"] is False
+    assert mock_get.call_args.kwargs["timeout"] == 15
+
+
+def test_fetch_and_extract_content_enforces_response_size_limit():
+    response = _mock_response()
+    response.headers["Content-Length"] = "2000001"
+    with patch("requests.get", return_value=response):
+        result = fetch_and_extract_content("https://example.com/large")
+    assert result["error"] == "response exceeds maximum size"
 
 
 def test_fetch_and_extract_content_reports_http_error_without_raising():

@@ -11,11 +11,14 @@ unit-testable against fixture HTML without a live HTTP call.
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 import re
+import socket
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlsplit
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +30,32 @@ _SKIP_TAGS = {"script", "style", "noscript", "nav", "footer", "form"}
 
 MAX_CONTENT_CHARS = 8000
 REQUEST_TIMEOUT_S = 15
+MAX_RESPONSE_BYTES = 2_000_000
+
+
+def _validate_public_http_url(url: str) -> Optional[str]:
+    """Reject malformed URLs and destinations that could reach local services."""
+    try:
+        parts = urlsplit(url)
+        if parts.scheme.lower() not in {"http", "https"} or not parts.hostname:
+            return "invalid or missing URL"
+        if parts.username or parts.password:
+            return "URL credentials are not allowed"
+        host = parts.hostname.rstrip(".").lower()
+        if host in {"localhost", "localhost.localdomain"} or host.endswith(".localhost"):
+            return "URL host is not public"
+        try:
+            addresses = [ipaddress.ip_address(host)]
+        except ValueError:
+            try:
+                addresses = [ipaddress.ip_address(item[4][0]) for item in socket.getaddrinfo(host, parts.port or (443 if parts.scheme == "https" else 80), type=socket.SOCK_STREAM)]
+            except OSError:
+                return "URL host could not be resolved"
+        if not addresses or any(not address.is_global for address in addresses):
+            return "URL host is not public"
+        return None
+    except (ValueError, TypeError):
+        return "invalid or missing URL"
 
 
 @dataclass
@@ -167,22 +196,30 @@ def fetch_and_extract_content(url: str, query: str = "") -> Dict[str, Any]:
     must be able to treat "the fetch failed" as an observable tool result,
     not a crash.
     """
-    import requests
+    validation_error = _validate_public_http_url(url or "")
+    if validation_error:
+        return ExtractedContent(url=url or "", error=f"{validation_error}: {url!r}").to_dict()
 
-    if not url or not re.match(r"^https?://", url):
-        return ExtractedContent(url=url, error=f"invalid or missing URL: {url!r}").to_dict()
+    try:
+        import requests
+    except ImportError:
+        return ExtractedContent(url=url, error="request failed: requests dependency is not installed").to_dict()
 
     try:
         resp = requests.get(
             url,
             timeout=REQUEST_TIMEOUT_S,
             headers={"User-Agent": "AgentQuant-ResearchAgent/1.0 (+literature discovery tool)"},
+            stream=True,
+            allow_redirects=False,
         )
     except requests.RequestException as exc:
         return ExtractedContent(url=url, error=f"request failed: {exc}").to_dict()
 
     if resp.status_code >= 400:
         return ExtractedContent(url=url, error=f"HTTP {resp.status_code}").to_dict()
+    if 300 <= resp.status_code < 400:
+        return ExtractedContent(url=url, error="redirects are not followed").to_dict()
 
     content_type = resp.headers.get("Content-Type", "")
     if "html" not in content_type and "xml" not in content_type:
@@ -190,7 +227,24 @@ def fetch_and_extract_content(url: str, query: str = "") -> Dict[str, Any]:
             url=url, error=f"unsupported content-type for text extraction: {content_type!r}"
         ).to_dict()
 
-    parsed = parse_html(resp.text)
+    try:
+        content_length = int(resp.headers.get("Content-Length", "0") or 0)
+        if content_length > MAX_RESPONSE_BYTES:
+            return ExtractedContent(url=url, error="response exceeds maximum size").to_dict()
+        chunks = []
+        total = 0
+        for chunk in resp.iter_content(chunk_size=65536):
+            if not chunk:
+                continue
+            total += len(chunk)
+            if total > MAX_RESPONSE_BYTES:
+                return ExtractedContent(url=url, error="response exceeds maximum size").to_dict()
+            chunks.append(chunk)
+        html = b"".join(chunks).decode(resp.encoding or "utf-8", errors="replace")
+    except requests.RequestException as exc:
+        return ExtractedContent(url=url, error=f"request failed: {exc}").to_dict()
+
+    parsed = parse_html(html)
     if not parsed["text"] and not parsed["title"]:
         return ExtractedContent(url=url, error="no extractable text found on page").to_dict()
 

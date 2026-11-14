@@ -33,3 +33,14 @@ instead of receiving an arbitrary grid default. Request caps are 16 hypotheses
 and 64 evidence rows. Candidate
 `evaluation_status` starts as `unevaluated` and must be evaluated by the normal
 backtest and quality gate before any performance claim is made.
+
+## Optional OpenAI generator
+
+`ProviderHydeGenerator` is an opt-in adapter in `src.agent.generators.provider_hyde`.
+Install `agentquant[llm]` and set `OPENAI_API_KEY` to construct it without an
+injected client. It asks for a bounded JSON array, accepts only requested
+strategy types and exact canonical parameter-grid entries, and caps both
+completion and description size. Its `metadata` records the model and
+temperature; generation is a proposal step, not evidence of strategy
+performance. Tests can inject a client implementing
+`client.chat.completions.create`, so they need no SDK credentials or API call.
