@@ -55,18 +55,9 @@ Use three evidence tiers consistently:
 
 Keep the runtime research loop small and deterministic at its trust boundaries. Sidecars may propose candidate actions or consolidate evidence, but they do not own backtesting, holdout access, or promotion.
 
-```mermaid
-flowchart TD
-  A[Versioned data and split] --> B[Dev-only observation]
-  B --> C[Policy or idea sidecar]
-  C --> D[Canonical action validation]
-  D --> E[Shared evaluator]
-  E --> F[Trial and evidence graph]
-  F --> G[Validation selection]
-  G --> H[Gate and incumbent decision]
-  H --> I[One-time sealed final grading]
-  F --> J[Offline memory consolidation]
-```
+![Research harness architecture](diagrams/research_harness.png)
+
+[Edit the diagram in Excalidraw](diagrams/research_harness.excalidraw). The diagram shows the current bounded gate separately from the target architecture; sealed final grading remains a planned trust boundary.
 
 ### Component responsibilities
 

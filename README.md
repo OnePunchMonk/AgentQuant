@@ -17,14 +17,9 @@ This zero-key demo uses deterministic synthetic prices and a grid/random fallbac
 
 ## How it works
 
-```mermaid
-flowchart LR
-    A["Observe and recall"] --> B["Propose"]
-    B --> C["Validate and backtest"]
-    C --> D["Diagnose and record"]
-    D --> B
-    D --> E["Evaluate on held-out data"]
-```
+![Research harness architecture](docs/diagrams/research_harness.png)
+
+[Edit the diagram in Excalidraw](docs/diagrams/research_harness.excalidraw).
 
 - **Search:** a bounded loop proposes strategy candidates, applies one backtest evaluator with costs, and records failed as well as successful attempts.
 - **Memory:** SQLite stores trials and retrieves evidence available by the market-time cutoff. A temporal evidence graph is an experimental, rebuildable projection for relationship-based discovery.
