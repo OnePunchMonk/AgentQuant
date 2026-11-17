@@ -150,3 +150,42 @@ def test_opt_in_process_isolation_enforces_handler_deadline():
                                     {"type": "object"}, frozenset(), slow, "fixture"))
     result = registry.call(ToolRequest("x", "slow", {}))
     assert not result.ok and "wall_budget_exceeded" in result.error
+
+
+def test_dispatch_uses_json_snapshot_without_mutating_caller():
+    def mutate(args):
+        args["nested"]["values"].append(2)
+        return args
+
+    registry = SidecarToolRegistry()
+    registry.register(AssistantTool("mutate", "fixture", {"type": "object"},
+                                   {"type": "object"}, frozenset(), mutate, "fixture"))
+    arguments = {"nested": {"values": [1]}}
+    result = registry.call(ToolRequest("snapshot", "mutate", arguments))
+    assert result.ok and result.data == {"nested": {"values": [1, 2]}}
+    assert arguments == {"nested": {"values": [1]}}
+
+
+def test_budget_rejects_non_finite_and_non_integer_limits():
+    import pytest
+
+    for value in (float("nan"), float("inf"), True, -1):
+        with pytest.raises(ValueError):
+            ToolBudget(max_wall_seconds=value)
+    for value in (True, 1.5, -1):
+        with pytest.raises(ValueError):
+            ToolBudget(max_calls=value)
+
+
+def test_session_snapshots_registrations_and_keeps_direct_call_budget():
+    registry = make_idea_sidecar_registry(budget=ToolBudget(max_calls=1))
+    session = registry.new_session()
+    registry.register(AssistantTool("later", "fixture", {"type": "object"},
+                                   {"type": "object"}, frozenset(), lambda _: {}, "fixture"))
+    assert "later" not in {tool["name"] for tool in session.describe()}
+    request = ToolRequest("direct", "idea_visible_failures",
+                          {"decision_time": "2024-01-10", "failures": []},
+                          frozenset({"prior_results"}))
+    assert registry.call(request).ok
+    assert registry.call(request).error == "call_budget_exceeded"
+    assert session.call(request).ok
