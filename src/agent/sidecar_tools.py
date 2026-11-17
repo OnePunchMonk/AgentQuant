@@ -9,6 +9,7 @@ services without importing a particular storage or model backend.
 from __future__ import annotations
 
 import json
+import math
 import threading
 import time
 from dataclasses import dataclass, field
@@ -36,11 +37,14 @@ class ToolBudget:
     isolate_process: bool = False
 
     def __post_init__(self) -> None:
-        if min(self.max_calls, self.max_input_bytes, self.max_output_bytes,
-               self.max_total_input_bytes, self.max_total_output_bytes) < 0:
-            raise ValueError("integer tool limits must be non-negative")
-        if self.max_wall_seconds < 0:
-            raise ValueError("max_wall_seconds must be non-negative")
+        limits = (self.max_calls, self.max_input_bytes, self.max_output_bytes,
+                  self.max_total_input_bytes, self.max_total_output_bytes)
+        if any(isinstance(v, bool) or not isinstance(v, int) or v < 0 for v in limits):
+            raise ValueError("integer tool limits must be non-negative integers")
+        if (isinstance(self.max_wall_seconds, bool)
+                or not isinstance(self.max_wall_seconds, (int, float))
+                or not math.isfinite(self.max_wall_seconds) or self.max_wall_seconds < 0):
+            raise ValueError("max_wall_seconds must be finite and non-negative")
 
 
 @dataclass(frozen=True)
@@ -96,6 +100,16 @@ class SidecarToolRegistry:
         self._output_bytes = 0
         self._lock = threading.Lock()
 
+    def new_session(self) -> "SidecarToolRegistry":
+        """Snapshot registrations with fresh counters, deadline, and lock.
+
+        Handlers are shared services: they must be read-only or independently
+        thread-safe. Never reset a live registry's counters between requests.
+        """
+        session = SidecarToolRegistry(self.budget)
+        session._tools = dict(self._tools)
+        return session
+
     def register(self, tool: AssistantTool) -> None:
         if not tool.name or tool.name in self._tools:
             raise ValueError(f"invalid or duplicate tool name: {tool.name!r}")
@@ -144,11 +158,14 @@ class SidecarToolRegistry:
             self._input_bytes += len(encoded)
         start = time.monotonic()
         try:
+            # Dispatch the validated wire snapshot, not caller-owned nested
+            # containers that may change after admission or inside a handler.
+            arguments = json.loads(encoded)
             remaining = max(0.0, self.budget.max_wall_seconds - (start - self._started))
             if self.budget.isolate_process:
-                data = _run_isolated(tool.handler, request.arguments, remaining)
+                data = _run_isolated(tool.handler, arguments, remaining)
             else:
-                data = tool.handler(request.arguments)
+                data = tool.handler(arguments)
             self._validate_object(data, tool.result_schema, "result")
             encoded = _encode_json(data)
             if len(encoded) > self.budget.max_output_bytes:

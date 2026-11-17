@@ -47,6 +47,24 @@ def test_unknown_intent_does_not_invoke_tools():
     assert not result.attempts
 
 
+def test_reused_runner_has_independent_run_budgets():
+    runner = AssistantToolRunner(make_idea_sidecar_registry(budget=ToolBudget(max_calls=1)))
+    for index in range(3):
+        result = runner.run(AssistantToolRunRequest(
+            f"reuse-{index}", "failure_lookup", "2024-01-10", {"failures": []}))
+        assert result.status == "ok"
+
+
+def test_concurrent_runs_do_not_consume_each_others_budgets():
+    from concurrent.futures import ThreadPoolExecutor
+
+    runner = AssistantToolRunner(make_idea_sidecar_registry(budget=ToolBudget(max_calls=1)))
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(lambda index: runner.run(AssistantToolRunRequest(
+            f"parallel-{index}", "failure_lookup", "2024-01-10", {"failures": []})), range(8)))
+    assert all(result.status == "ok" for result in results)
+
+
 def test_runner_rejects_conflicting_decision_time():
     runner = AssistantToolRunner(make_idea_sidecar_registry())
     result = runner.run(AssistantToolRunRequest(

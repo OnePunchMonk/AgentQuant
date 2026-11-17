@@ -112,7 +112,8 @@ class AssistantToolRunner:
         return tuple(self.registry.describe())
 
     def run(self, request: AssistantToolRunRequest) -> AssistantToolRunResult:
-        discovery = self.discover()
+        registry = self.registry.new_session()
+        discovery = tuple(registry.describe())
         selected, selection_trace = self.selector.select(request, discovery)
         selected = selected[:request.max_tool_calls]
         results: list[ToolResult] = []
@@ -121,7 +122,7 @@ class AssistantToolRunner:
             tool_request_id = f"{request.request_id}:{index + 1}"
             try:
                 args = self._scoped_arguments(tool_name, request)
-                result = self.registry.call(ToolRequest(
+                result = registry.call(ToolRequest(
                     request_id=tool_request_id,
                     tool_name=tool_name,
                     arguments=args,

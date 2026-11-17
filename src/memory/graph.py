@@ -9,6 +9,7 @@ visibility date so an attached holdout result cannot leak early.
 from __future__ import annotations
 
 import hashlib
+import heapq
 import json
 import re
 from dataclasses import dataclass, field
@@ -184,6 +185,8 @@ class EvidenceGraph:
             if market_as_of is not None and market_as_of != as_of:
                 raise ValueError("as_of and market_as_of disagree")
             market_as_of = as_of
+        if limit <= 0:
+            return []
         if market_as_of is not None and knowledge_as_of is None:
             # market-only retrospective replay
             pass
@@ -220,28 +223,49 @@ class EvidenceGraph:
             candidates = {node_id: evidence for node_id, evidence in candidates.items() if evidence}
 
         q = query.casefold().strip()
+        tokens = re.findall(r"\w+", q)
         hits: list[EvidenceHit] = []
         for node_id, evidence in candidates.items():
             node = self.nodes[node_id]
             haystack = " ".join([node.key, node.node_type,
                                  str(node.attributes.get("predicate", "")),
                                  str(node.attributes.get("value", ""))]).casefold()
-            text_match = bool(q and all(token in haystack for token in re.findall(r"\w+", q)))
+            text_match = bool(q and all(token in haystack for token in tokens))
             if q and not text_match:
                 continue
             # Evidence diversity and recency give a stable ranking; provenance id breaks ties.
             score = (1.0 + min(len(evidence), 4) * 0.1) if not q else 2.0 + min(len(evidence), 4) * 0.1
             latest = max((e.visible_at or e.data_end or e.known_at or "" for e in evidence), default="")
             score += min(len(latest), 10) * 0.001
-            contradictions = tuple(sorted((other for other in self.edges
-                                           if other.relation == "asserts" and
-                                           self._visible(other, market_as_of, knowledge_as_of, include_undated) and
-                                           other.target != node_id and
-                                           self._contradicts(node, self.nodes.get(other.target))),
+            # Contradictions and evidence ordering do not affect ranking. Delay
+            # their materialization until after top-k selection.
+            hits.append(EvidenceHit(node, score, tuple(evidence)))
+        selected = heapq.nsmallest(limit, hits, key=lambda h: (
+            -h.score, h.node.node_type, h.node.key, h.node.node_id))
+        # Keep this index query-local: graph containers are public and cutoffs
+        # vary between calls. Index all visible assertions, including those
+        # outside the retrieval scope, to preserve contradiction semantics.
+        assertions: dict[tuple[Any, Any], list[EvidenceEdge]] = {}
+        if any(hit.node.node_type == "claim" for hit in selected):
+            for edge in self.edges:
+                if edge.relation != "asserts" or not self._visible(
+                        edge, market_as_of, knowledge_as_of, include_undated):
+                    continue
+                node = self.nodes.get(edge.target)
+                if node is not None and node.node_type == "claim":
+                    key = (node.attributes.get("subject"), node.attributes.get("predicate"))
+                    assertions.setdefault(key, []).append(edge)
+        result = []
+        for hit in selected:
+            node = hit.node
+            key = (node.attributes.get("subject"), node.attributes.get("predicate"))
+            contradictions = tuple(sorted((edge for edge in assertions.get(key, ())
+                                           if edge.target != node.node_id and
+                                           self._contradicts(node, self.nodes.get(edge.target))),
                                           key=lambda e: (e.source_record_id, e.edge_id)))
-            hits.append(EvidenceHit(node, score, tuple(sorted(evidence,
-                                       key=lambda e: (e.source_record_id, e.edge_id))), contradictions))
-        return sorted(hits, key=lambda h: (-h.score, h.node.node_type, h.node.key, h.node.node_id))[:max(0, limit)]
+            result.append(EvidenceHit(node, hit.score, tuple(sorted(hit.evidence,
+                key=lambda e: (e.source_record_id, e.edge_id))), contradictions))
+        return result
 
     @staticmethod
     def _visible(edge: EvidenceEdge, market_as_of: Optional[str],

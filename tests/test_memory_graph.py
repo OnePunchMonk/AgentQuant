@@ -94,3 +94,32 @@ def test_service_graph_search_respects_market_and_knowledge_cutoffs(tmp_path):
     assert service.graph_search(query, text="is_sharpe")
     assert service.graph_search(query, text="oos_sharpe") == []
     assert service.graph_search(query, text="is_sharpe", knowledge_as_of="2025-12-31") == []
+
+
+def test_top_k_keeps_contradictions_outside_query_and_regime():
+    good = _trial("good", outcome="accepted")
+    bad = _trial("bad", outcome="rejected")
+    bad.regime_label = "bear"
+    future = _trial("future", outcome="rejected", known="2025-01-01")
+    graph = EvidenceGraph.rebuild([good, bad, future])
+    hits = graph.retrieve(query="accepted", regime_label="bull", limit=1,
+                          market_as_of="2022-01-01", knowledge_as_of="2022-01-01")
+    assert len(hits) == 1
+    assert {edge.source_record_id for edge in hits[0].evidence} == {"good"}
+    assert {edge.source_record_id for edge in hits[0].contradictions} == {"bad"}
+
+
+def test_contradictions_are_resolved_only_for_top_k(monkeypatch):
+    graph = EvidenceGraph.rebuild([_trial(str(i), outcome="accepted" if i % 2 else "rejected")
+                                   for i in range(40)])
+    original = EvidenceGraph._contradicts
+    calls = []
+
+    def counted(left, right):
+        calls.append(left.node_id)
+        return original(left, right)
+
+    monkeypatch.setattr(EvidenceGraph, "_contradicts", staticmethod(counted))
+    hits = graph.retrieve(query="outcome", limit=1)
+    assert len(hits) == 1
+    assert set(calls) == {hits[0].node.node_id}

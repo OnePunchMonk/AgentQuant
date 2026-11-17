@@ -1,5 +1,8 @@
 # AgentQuant harness architecture and implementation handoff
 
+For the sidecar execution lanes, current bottlenecks, session lifecycle, and
+ordered optimization plan, see [Sidecar design](SIDECAR_DESIGN.md).
+
 **Audience:** coding agents implementing the next research-harness milestones.  
 **Purpose:** describe the repository as it exists, the target boundaries, and a dependency-ordered plan with falsifiable acceptance criteria.  
 **Status:** implementation handoff, updated against the current code. It does not report new experiments or claim that open-issue work is complete.
