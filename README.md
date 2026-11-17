@@ -1,59 +1,56 @@
 # AgentQuant
 
-**A reproducible, failure-aware harness for research agents.** AgentQuant lets an agent propose experiments, test them under a fixed budget, inspect failures, and compare changes to its own research policy. Quantitative strategies are the first testbed.
+**Give research agents a memory of what failed—and a way to test what works.**
 
-The goal is to answer a specific question: **does evidence from earlier experiments help the agent choose better next experiments on unseen episodes, at the same cost?** A changed prompt or a higher in-sample score alone is not self-improvement.
+AgentQuant runs a research loop: propose an experiment, test it, inspect the result, and use that evidence to choose the next one. It tracks the whole search, including failed attempts, so you can compare research approaches at the same budget and replay their decisions.
 
-## Try it locally
+Quantitative strategies are the first testbed. The broader question is simple: **does the agent get better at choosing experiments, or does it just run more of them?**
+
+## What you get
+
+- **Bounded experiments.** Candidates share a backtest evaluator and cost model, with explicit search budgets.
+- **Memory with provenance.** Trials, notes, and temporal graph evidence retain their sources and date cutoffs.
+- **Comparisons you can inspect.** Compare search policies on the same episodes; export traces, episode bundles, and research memos.
+- **Tools around one research loop.** Memory retrieval, hypothesis evidence, and candidate suggestions help the agent without owning evaluation or promotion.
+
+Use it to study research-agent behavior, test memory and proposal policies, or build on an inspectable experiment loop.
+
+## Try it without API keys
+
+Requires Python 3.10+.
 
 ```bash
+git clone https://github.com/OnePunchMonk/AgentQuant.git
+cd AgentQuant
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install -e ".[dev]"
+python -m pip install -e .
 python run_app.py
 ```
 
-This zero-key demo uses deterministic synthetic prices and a grid/random fallback. It checks that the loop runs and produces a report in `results/`; it does not measure trading performance. For the optional dashboard, install `.[ui]` and run `python run_app.py --app`. LLM-guided proposals and web research require `.[llm]` and provider credentials.
+The demo runs three search iterations on synthetic prices and writes `results/demo_run.json`. It shows the loop and its trace; it is not a trading-performance benchmark.
 
-## How it works
+For the dashboard, install `.[ui]` and run `python run_app.py --app`. For LLM-guided proposals and web research, install `.[llm]` and configure provider credentials.
+
+## Follow an experiment
 
 ![Research harness architecture](docs/diagrams/research_harness.png)
 
-[Edit the diagram in Excalidraw](docs/diagrams/research_harness.excalidraw).
+[Walk through the research loop](docs/SELF_IMPROVING_SEARCH.md) · [Architecture](docs/AGENTQUANT_HARNESS_ARCHITECTURE.md) · [Memory](docs/MEMORY_LAYER_DESIGN.md)
 
-- **Search:** a bounded loop proposes strategy candidates, applies one backtest evaluator with costs, and records failed as well as successful attempts.
-- **Memory:** SQLite stores trials and retrieves evidence available by the market-time cutoff. A temporal evidence graph is an experimental, rebuildable projection for relationship-based discovery.
-- **Policy improvement:** an outer loop can propose changes to the research process. A candidate must clear protected and statistical evaluation before promotion. The standalone search-aware gate is a foundation; validated Sharpe inference and full application integration remain [open work](https://github.com/OnePunchMonk/AgentQuant/issues/48).
-- **Replay:** manifests, episode bundles, traces, and research memos make decisions inspectable. See the [architecture and implementation handoff](docs/AGENTQUANT_HARNESS_ARCHITECTURE.md) for current wiring and remaining work.
-
-The [assistant tool contract](docs/ASSISTANT_TOOL_CONTRACT.md) explains how idea, hypothesis, and memory sidecars expose bounded, auditable calls.
-
-## Reproduce development comparisons
+Run a comparison locally:
 
 ```bash
 python scripts/fair_search_benchmark.py --episodes 3 --seeds 7 11 19 \
   --output results/fair_search_benchmark.json
-python scripts/bounded_self_improvement.py --episodes 6 --seeds 7 11 19 \
-  --n-mutations 3 --output results/bounded_self_improvement.json
-python scripts/export_research_memo.py --episodes 6 --seeds 7 11 19 \
-  --n-mutations 3 --output results/research_memo
 ```
 
-These default to synthetic fixtures. In offline fallback mode, prompt mutation does not reach an LLM; identical mutation-arm results cannot support an evidence-guided improvement claim. The live comparison in [#31](https://github.com/OnePunchMonk/AgentQuant/issues/31), statistical work in [#48](https://github.com/OnePunchMonk/AgentQuant/issues/48), and prospective evaluation are still required.
+This defaults to synthetic fixtures. Offline prompt-mutation arms do not call an LLM, so matching scores are not evidence of learned improvement. See [experimental details](docs/EXPERIMENTAL_DETAILS.md) for interpretation.
 
-| Evidence tier | What it establishes |
-|---|---|
-| Synthetic fixture | Wiring, replay, and leakage tests; no strategy-quality claim |
-| Historical held-out | A result on specified past windows, with search and evaluation separated |
-| Prospective | Precommitted decisions graded after future observations arrive; planned |
+## Where it stands
 
-## Explore the project
+The bounded search loop, memory service, replay artifacts, and advisory tools are implemented. Validated autonomous self-improvement remains a research goal: live policy comparisons, search-aware Sharpe inference, full promotion-gate integration, and prospective evaluation are still open.
 
-- [Architecture and agent implementation handoff](docs/AGENTQUANT_HARNESS_ARCHITECTURE.md)
-- [Worked research loop](docs/SELF_IMPROVING_SEARCH.md) and [memory design](docs/MEMORY_LAYER_DESIGN.md)
-- [Experimental details](docs/EXPERIMENTAL_DETAILS.md) and [research memo design](https://github.com/OnePunchMonk/AgentQuant/issues/32)
-- [Assistant tool demo](docs/ASSISTANT_TOOL_RUNNER.md), [communication experiment](docs/COMMUNICATION_EXPERIMENT.md), and [benchmark evolution](docs/BENCHMARK_EVOLUTION.md)
-- [Harnesskit trace integration](https://github.com/OnePunchMonk/harnesskit) and [Peek leakage auditor](https://github.com/OnePunchMonk/peek)
-- [Contributing](CONTRIBUTING.md), [roadmap](ROADMAP.md), and [open issues](https://github.com/OnePunchMonk/AgentQuant/issues)
+For measured runtime improvements, see [optimizations](optimizations/README.md), including the graph-memory retrieval [before-and-after diagram](optimizations/sidecar_graph_retrieval/README.md).
 
-Backtests are research measurements, not predictions of future returns. The repository does not claim a profitable strategy or validated autonomous self-improvement. License: [MIT](LICENSE).
+[Contribute](CONTRIBUTING.md) · [Roadmap](ROADMAP.md) · [Open issues](https://github.com/OnePunchMonk/AgentQuant/issues) · [MIT license](LICENSE)
