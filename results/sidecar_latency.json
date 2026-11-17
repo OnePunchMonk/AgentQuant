@@ -1,0 +1,18 @@
+{
+  "benchmark": "graph_memory_sidecar_cpu_latency",
+  "baseline_ref": "a6ae7b2c27cdd5331dc5b699e2b85743bb52728e",
+  "trials": 400,
+  "repeats": 7,
+  "parity_cases": 180,
+  "fixture": "synthetic; actual local wall time; no SQLite or provider latency",
+  "timings": {
+    "before_retrieve_median_ms": 206.39155100002426,
+    "before_rebuild_and_retrieve_median_ms": 223.41080199998942,
+    "after_retrieve_median_ms": 2.5347660000534233,
+    "after_rebuild_and_retrieve_median_ms": 22.46196900000541
+  },
+  "speedup": {
+    "retrieve": 81.42430149200135,
+    "rebuild_and_retrieve": 9.946180675431242
+  }
+}
