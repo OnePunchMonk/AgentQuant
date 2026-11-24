@@ -6,17 +6,17 @@ not promoted into an active suite until an independent reviewer accepts them.
 """
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional
 
-from src.agent.benchmark_suite import BenchmarkSuite, SuiteEpisode, evolve_suite
-
-
-def _hash(value: Any) -> str:
-    raw = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+from src.agent.benchmark_suite import (
+    BenchmarkSuite,
+    SuiteEpisode,
+    evolve_suite,
+)
+from src.agent.benchmark_suite import (
+    _canonical_hash as _hash,
+)
 
 
 @dataclass(frozen=True)
