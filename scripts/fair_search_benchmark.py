@@ -39,6 +39,7 @@ from src.agent.harness_config import harness_v1_base  # noqa: E402
 from src.agent.search_arms import (  # noqa: E402
     run_fixed_arm,
     run_frozen_agent_arm,
+    run_frozen_agent_folding_arm,
     run_frozen_agent_memory_arm,
     run_grid_search_arm,
     run_mutation_agent_arm,
@@ -222,6 +223,8 @@ def main() -> None:
     if not args.skip_agent_arms:
         run_arm("frozen_agent", lambda oh, ep, seed, cb: run_frozen_agent_arm(
             oh, ep, seed, cb, max_iterations=args.max_iterations, live=args.live))
+        run_arm("frozen_agent_folding", lambda oh, ep, seed, cb: run_frozen_agent_folding_arm(
+            oh, ep, seed, cb, max_iterations=args.max_iterations, live=args.live))
 
         # frozen_agent_memory: one persistent memory db shared across
         # episodes IN CHRONOLOGICAL ORDER, reset once per seed so results
@@ -331,6 +334,15 @@ def main() -> None:
                     report["arms"][arm_b]["episode_results"],
                 )
                 print(f"[paired: {key}] {report['paired_comparisons'][key]}")
+
+    if not args.skip_agent_arms:
+        report.setdefault("paired_comparisons", {})
+        report["paired_comparisons"]["frozen_agent_folding_minus_frozen_agent"] = _paired_comparison(
+            report["arms"]["frozen_agent"]["episode_results"],
+            report["arms"]["frozen_agent_folding"]["episode_results"],
+        )
+        print("[paired: frozen_agent_folding_minus_frozen_agent] "
+              f"{report['paired_comparisons']['frozen_agent_folding_minus_frozen_agent']}")
 
     out_path = ROOT / args.output
     out_path.parent.mkdir(parents=True, exist_ok=True)

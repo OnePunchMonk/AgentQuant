@@ -95,6 +95,14 @@ The distinction matters. A higher score from an opaque model call is not enough
 to establish improvement. AgentQuant requires a baseline, a measurable metric,
 and an evaluation protocol that can expose overfitting.
 
+The fair-search benchmark also includes a `frozen_agent_folding` arm. It keeps
+a short digest for every attempt in the current run and expands a few records
+selected by score and recency within a fixed prompt budget. Compare it with
+`frozen_agent` using the benchmark's paired episodes and seeds. Run with
+`--live` and an available model key for a meaningful prompt-policy comparison;
+the offline fallback does not consume prior-attempt prompts, so an offline tie
+checks wiring only. Neither arm sees the sealed holdout while proposing.
+
 ## The harness evolution experiment
 
 Earlier experiments evolved the agent’s configuration through multiple epochs:

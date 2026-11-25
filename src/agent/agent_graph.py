@@ -66,6 +66,8 @@ class AgentState(TypedDict, total=False):
     as_of: Optional[str]
     memory_pack: Optional[Any]
     memory_snapshot_id: Optional[str]
+    attempt_history_policy: str
+    attempt_history_char_budget: int
 
 
 def _split_search_and_holdout(
@@ -265,6 +267,18 @@ def _prompt_prefix_for(harness: Optional[EffectiveHarnessConfig]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _prior_attempts_for_prompt(state: AgentState) -> List[Dict[str, Any]]:
+    attempts = state.get("all_results") or []
+    if state.get("attempt_history_policy") != "folding":
+        return attempts
+    from src.agent.attempt_history import fold_attempt_history
+
+    return fold_attempt_history(
+        attempts,
+        char_budget=state.get("attempt_history_char_budget", 6000),
+    )
+
+
 def hypothesize_node(state: AgentState) -> AgentState:
     """Generate strategy proposals via tool orchestrator with fallback to ProposalGenerator."""
     iteration = state.get("iteration", 0) + 1
@@ -290,11 +304,12 @@ def hypothesize_node(state: AgentState) -> AgentState:
         logger.info("Using ProposalGenerator (tools disabled or returned no proposals)")
         generator = ProposalGenerator()
         prompt_prefix = _prompt_prefix_for(harness)
+        prior_results = _prior_attempts_for_prompt(state)
         proposals = generator.generate(
             context=context,
             n_proposals=5,
             strategy_type=strategy_type,
-            prior_results=state.get("all_results"),
+            prior_results=prior_results,
             prompt_prefix=prompt_prefix,
             memory_pack=state.get("memory_pack"),
         )
@@ -684,10 +699,12 @@ def _hypothesize_with_tools(
         orchestrator = ToolOrchestrator(registry)
 
         prompt_prefix = _prompt_prefix_for(harness)
+        from src.agent.proposal_generator import ProposalGenerator
+        prior_attempts = ProposalGenerator._format_prior_results(_prior_attempts_for_prompt(state))
         result = orchestrator.run_tool_loop(
             user_prompt=f"""
 {assistant_context}
-{prompt_prefix}Generate 5 high-confidence {strategy_type} strategy proposals for the current market regime.
+{prompt_prefix}{prior_attempts}Generate 5 high-confidence {strategy_type} strategy proposals for the current market regime.
 
 For each proposal:
 1. Identify which regime characteristic (volatility, trend, mean reversion) you're targeting
@@ -879,6 +896,8 @@ def run_agent(
     max_iterations: int = None,
     trace: Optional[TraceRecorder] = None,
     harness_config: Optional[Any] = None,
+    attempt_history_policy: str = "recent",
+    attempt_history_char_budget: int = 6000,
 ) -> AgentState:
     """
     Run the full agent loop: analyze → hypothesize → backtest → reflect → (loop or store).
@@ -895,6 +914,11 @@ def run_agent(
             harness config threading existed (global config.agent.*).
     """
     from src.agent.harness_config import HarnessConfig, resolve_effective_config
+
+    if attempt_history_policy not in ("recent", "folding"):
+        raise ValueError("attempt_history_policy must be 'recent' or 'folding'")
+    if attempt_history_char_budget < 0:
+        raise ValueError("attempt_history_char_budget must be non-negative")
 
     resolved_asset = asset or config.reference_asset
     effective_max_iterations = max_iterations or config.agent.max_iterations
@@ -937,6 +961,8 @@ def run_agent(
         "as_of": as_of,
         "memory_pack": None,
         "memory_snapshot_id": None,
+        "attempt_history_policy": attempt_history_policy,
+        "attempt_history_char_budget": attempt_history_char_budget,
     }
     if holdout_start is not None:
         state["run_log"].append(

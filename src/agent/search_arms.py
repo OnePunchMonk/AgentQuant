@@ -290,7 +290,8 @@ def _run_agent_offline(dev_ohlcv: Dict[str, pd.DataFrame], asset: str, seed: int
                         memory_db_path: str, max_iterations: int = 2,
                         harness_config: Optional[Any] = None,
                         cost_bps: Optional[float] = None,
-                        live: bool = False) -> Dict[str, Any]:
+                        live: bool = False,
+                        attempt_history_policy: str = "recent") -> Dict[str, Any]:
     """Invoke the existing propose->backtest->reflect inner loop
     (src.agent.agent_graph.run_agent) once, pointed at an explicit memory
     db path. Does not change agent_graph's core semantics -- just calls it
@@ -350,6 +351,7 @@ def _run_agent_offline(dev_ohlcv: Dict[str, pd.DataFrame], asset: str, seed: int
         state = run_agent(
             dev_ohlcv, strategy_type="momentum", asset=asset,
             max_iterations=max_iterations, harness_config=harness_config,
+            attempt_history_policy=attempt_history_policy,
         )
     finally:
         app_config.results_db_path = original_db_path
@@ -384,6 +386,32 @@ def run_frozen_agent_arm(
     holdout_df = slice_holdout(ohlcv, episode)[episode.asset]
     return _grade_on_holdout("frozen_agent", episode, seed, candidates, winner_params, holdout_df,
                               cost_bps, tool_calls, started)
+
+
+def run_frozen_agent_folding_arm(
+    ohlcv: Dict[str, pd.DataFrame], episode: Episode, seed: int, cost_bps: float,
+    max_iterations: int = 2, live: bool = False,
+) -> EpisodeResult:
+    """Run the frozen agent with a folded, bounded within-run attempt history."""
+    started = time.time()
+    dev_ohlcv = slice_dev(ohlcv, episode)
+    with tempfile.TemporaryDirectory() as tmp:
+        state = _run_agent_offline(
+            dev_ohlcv, episode.asset, seed, str(Path(tmp) / "memory.db"),
+            max_iterations=max_iterations, live=live, attempt_history_policy="folding",
+        )
+    candidates = [
+        Candidate(params=r.get("params"), dev_sharpe=r.get("sharpe"), status="ok",
+                  generation_method=r.get("generation_method", "agent"))
+        for r in state.get("all_results", [])
+    ]
+    best = state.get("best_result")
+    winner_params = best.get("params") if best else None
+    tool_calls = int(sum(1 for e in (getattr(state.get("trace"), "events", []) or [])
+                         if getattr(e, "stage", "") == "tool_call"))
+    holdout_df = slice_holdout(ohlcv, episode)[episode.asset]
+    return _grade_on_holdout("frozen_agent_folding", episode, seed, candidates, winner_params,
+                              holdout_df, cost_bps, tool_calls, started)
 
 
 def run_frozen_agent_memory_arm(

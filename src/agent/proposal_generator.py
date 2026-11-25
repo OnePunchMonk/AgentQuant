@@ -311,6 +311,15 @@ class ProposalGenerator:
     def _format_prior_results(prior_results: Optional[List[Dict[str, Any]]]) -> str:
         if not prior_results:
             return ""
+        if "attempt_index" in prior_results[0]:
+            lines = [
+                "\nFOLDED ATTEMPT HISTORY (every digest is retained; expanded records are selected by score and recency):"
+            ]
+            for result in prior_results:
+                lines.append(f"- {result['digest']}")
+                if result.get("expanded_text"):
+                    lines.append(f"  details: {result['expanded_text']}")
+            return "\n".join(lines) + "\n"
         lines = ["\nPRIOR ATTEMPTS THIS RUN (avoid repeating underperforming regions):"]
         for r in prior_results[-10:]:
             lines.append(
