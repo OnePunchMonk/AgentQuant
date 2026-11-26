@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `agentquant memory --beliefs | --trials | --prompt | --stats [--as-of DATE]`.
 
 ### Changed
+- Bootstrap Sharpe uses NumPy block sampling and reductions to avoid constructing a pandas Series for each resample.
+- The simple backtest reuses the shared drawdown helper.
 - Memory seeds (`generation_method="memory_seed"`) now come only from configs with out-of-sample "works" beliefs. Previously they were re-proposed in-sample winners from `AlphaStore`.
 - `reflect_node` no longer writes one `failure_records` row per sub-threshold result per iteration. Failures live on the trial rows.
 

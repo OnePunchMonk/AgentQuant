@@ -4,14 +4,8 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 
+from src.utils.backtest_utils import max_drawdown_from_equity
 
-def max_drawdown_from_equity(equity: pd.Series) -> float:
-    equity = equity.dropna()
-    if equity.empty:
-        return float("nan")
-    running_max = equity.cummax()
-    drawdown = (running_max - equity) / running_max
-    return float(drawdown.max())
 
 def ensure_equity_from_returns(maybe_series: pd.Series) -> pd.Series:
     s = maybe_series.dropna()

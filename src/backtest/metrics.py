@@ -85,11 +85,14 @@ class PerformanceMetrics:
         block_size = max(1, min(block_size, n_obs))
         n_blocks = int(np.ceil(n_obs / block_size))
         rng = np.random.default_rng()
+        # The view shares storage; only the current resample is materialized.
+        blocks = np.lib.stride_tricks.sliding_window_view(r, block_size)
         sharpes = []
         for _ in range(n):
             starts = rng.integers(0, n_obs - block_size + 1, size=n_blocks)
-            sample = np.concatenate([r[s:s + block_size] for s in starts])[:n_obs]
-            sharpes.append(PerformanceMetrics.sharpe(pd.Series(sample)))
+            sample = blocks[starts].reshape(-1)[:n_obs]
+            std = sample.std(ddof=1)  # Match pandas Series.std in sharpe().
+            sharpes.append(float(sample.mean() / std * np.sqrt(ANN_FACTOR)) if std else 0.0)
         return float(np.percentile(sharpes, pct))
 
     @staticmethod
