@@ -6,7 +6,9 @@ All Sharpe, drawdown, Calmar, Sortino, and bootstrap calculations live here.
 Import this everywhere instead of computing inline.
 """
 
+import hashlib
 import logging
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -68,7 +70,8 @@ class PerformanceMetrics:
 
     @staticmethod
     def bootstrap_sharpe(
-        returns: pd.Series, n: int = 200, pct: int = 5, block_size: int = 20
+        returns: pd.Series, n: int = 200, pct: int = 5, block_size: int = 20,
+        seed: Optional[int] = None,
     ) -> float:
         """
         5th percentile Sharpe from a moving-block bootstrap (penalizes lucky
@@ -77,6 +80,10 @@ class PerformanceMetrics:
         structure in the return series is preserved — an IID resample
         destroys the serial correlation present in trend/momentum strategies
         and understates the true uncertainty of the Sharpe estimate.
+
+        The resampling is deterministic: when `seed` is None it is derived from
+        a hash of the return series itself, so identical inputs always give an
+        identical p5 (needed for replay and reproducibility claims).
         """
         r = returns.dropna().to_numpy()
         n_obs = len(r)
@@ -84,7 +91,9 @@ class PerformanceMetrics:
             return 0.0
         block_size = max(1, min(block_size, n_obs))
         n_blocks = int(np.ceil(n_obs / block_size))
-        rng = np.random.default_rng()
+        if seed is None:
+            seed = int.from_bytes(hashlib.sha256(r.tobytes()).digest()[:8], "big")
+        rng = np.random.default_rng(seed)
         # The view shares storage; only the current resample is materialized.
         blocks = np.lib.stride_tricks.sliding_window_view(r, block_size)
         sharpes = []

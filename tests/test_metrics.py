@@ -82,7 +82,7 @@ def test_bootstrap_matches_pandas_reference(monkeypatch, block_size, constant):
         sample = np.concatenate([values[s:s + size] for s in starts])[:len(values)]
         sharpes.append(PerformanceMetrics.sharpe(pd.Series(sample)))
     rng = np.random.default_rng(42)
-    monkeypatch.setattr(np.random, "default_rng", lambda: rng)
+    monkeypatch.setattr(np.random, "default_rng", lambda *args, **kwargs: rng)
     assert PerformanceMetrics.bootstrap_sharpe(returns, n=31, pct=17, block_size=block_size) == pytest.approx(
         np.percentile(sharpes, 17), abs=1e-12
     )

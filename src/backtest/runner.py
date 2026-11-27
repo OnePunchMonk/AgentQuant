@@ -7,6 +7,7 @@ Uses concurrent.futures for parallel multi-proposal backtests.
 """
 
 import logging
+import math
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional
 
@@ -100,7 +101,12 @@ def _backtest_single_asset(
         strat_ret = strat_ret.loc[strat_ret.index >= eval_start]
 
     metrics = PerformanceMetrics.from_equity(equity)
-    metrics["num_trades"] = int(signal.diff().abs().sum() / 2)
+    # Round trips, as before (entry + exit = 1, flip = 1), but rounded up: the old
+    # `int(sum(|diff|) / 2)` truncated an enter-once-and-hold signal to 0 trades.
+    turnover = signal.diff().abs()
+    if len(signal):
+        turnover.iloc[0] = abs(float(signal.iloc[0]))  # count a position held from bar 0
+    metrics["num_trades"] = int(math.ceil(float(turnover.fillna(0).sum()) / 2.0))
     metrics["asset"] = asset
     return {"asset": asset, "equity": equity, "metrics": metrics}
 
