@@ -17,9 +17,9 @@ Quantitative strategies are the first testbed. The broader question is simple: *
 
 Use it to study research-agent behavior, test memory and proposal policies, or build on an inspectable experiment loop.
 
-## Try it without API keys
+## Install and try it
 
-Requires Python 3.10+.
+Requires Python 3.10+. The offline demo needs no API keys.
 
 ```bash
 git clone https://github.com/OnePunchMonk/AgentQuant.git
@@ -32,7 +32,16 @@ python run_app.py
 
 The demo runs three search iterations on synthetic prices and writes `results/demo_run.json`. It shows the loop and its trace; it is not a trading-performance benchmark.
 
-The dashboard is in [agentquant-artifacts/app](https://github.com/OnePunchMonk/agentquant-artifacts/tree/main/app). For LLM-guided proposals and web research, install `.[llm]` and configure provider credentials.
+Optional extras, from the repository root:
+
+```bash
+python -m pip install -e ".[llm]"  # model providers and web research
+python -m pip install -e ".[dev]"  # tests and development tools
+```
+
+Extras can be combined (`".[llm,dev]"`); `data`, `backtest` and `regime` also exist, see [pyproject.toml](pyproject.toml). For provider-backed features copy `.env.example` to `.env` and set the keys for your provider; never commit `.env`. Market data and provider calls need network access, the offline demo does not.
+
+Troubleshooting: for a missing module, activate the environment and install the extra above; for a failed data download, check the network and ticker symbols and try a shorter date range. The Streamlit dashboard is in [agentquant-artifacts/app](https://github.com/OnePunchMonk/agentquant-artifacts/tree/main/app).
 
 ## Follow an experiment
 
@@ -56,5 +65,3 @@ The bounded search loop, memory service, replay artifacts, and advisory tools ar
 For measured runtime improvements, see [optimizations](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/optimizations/README.md), including the graph-memory retrieval [before-and-after diagram](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/optimizations/sidecar_graph_retrieval/README.md).
 
 [Contribute](CONTRIBUTING.md) · [Roadmap](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/notes/ROADMAP.md) · [Open issues](https://github.com/OnePunchMonk/AgentQuant/issues) · [MIT license](LICENSE)
-
-Docs, diagrams, notebooks and notes live in [agentquant-artifacts](https://github.com/OnePunchMonk/agentquant-artifacts).

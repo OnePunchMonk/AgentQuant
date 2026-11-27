@@ -4,7 +4,7 @@ Thanks for helping improve AgentQuant. For large changes, open an issue first to
 
 ## Setup
 
-Follow the [installation guide](docs/INSTALLATION.md), then install the development dependencies:
+Follow the [install steps in the README](README.md#install-and-try-it), then install the development dependencies:
 
 ```bash
 python -m pip install -e ".[dev,llm]"
