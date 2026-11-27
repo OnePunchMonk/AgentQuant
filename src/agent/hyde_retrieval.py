@@ -101,6 +101,8 @@ class ActionableCandidate:
     evaluation_status: str = "unevaluated"
     citations: tuple[str, ...] = ()
     citation_status: str = "unsupported"
+    # Filled by HypothesisAgent.evaluate: train and holdout metrics from the shared evaluator.
+    evaluation: Mapping[str, object] = field(default_factory=dict)
 
 
 class LexicalSimilarity:
@@ -142,8 +144,11 @@ def _canonical_params(h: SyntheticHypothesis, retrieved: Sequence[Evidence],
     # An explicit proposal must determine its own grid point. Retrieved
     # evidence supplies parameters only when the proposal left them blank;
     # otherwise every generator collapses to the same first evidence row.
-    seeds = ([dict(h.proposed_params)] if h.proposed_params else
-             [dict(e.params) for e in retrieved if e.strategy_type == h.strategy_type])
+    # With no explicit proposal, the best-ranked retrieved row with parameters decides. Using every
+    # retrieved row and taking the grid point nearest to any of them made the choice depend on
+    # incidental overlap instead of on which evidence matched best.
+    ranked = [dict(e.params) for e in retrieved if e.strategy_type == h.strategy_type and e.params]
+    seeds = [dict(h.proposed_params)] if h.proposed_params else ranked[:1]
     if not any(seed for seed in seeds):
         return {}
     def distance(candidate: Mapping[str, object]) -> float:

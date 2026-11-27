@@ -53,6 +53,7 @@ def window_metrics(net_returns: pd.Series, turnover: pd.Series) -> Optional[Dict
     equity = np.concatenate([[1.0], (1.0 + net_returns.fillna(0.0)).cumprod().to_numpy()])
     equity_series = pd.Series(equity)
     return {
+        "observations": float(len(net_returns)),
         "sharpe": PerformanceMetrics.sharpe(net_returns),
         "net_return": float(equity[-1] - 1.0),
         "max_drawdown": PerformanceMetrics.max_drawdown(equity_series),

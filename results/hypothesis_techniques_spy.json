@@ -1,14 +1,16 @@
 {
-  "benchmark": "hypothesis_techniques_public_historical_v1",
+  "benchmark": "hypothesis_techniques_public_historical_v2",
   "candidate_budget": 4,
   "claim_scope": "historical descriptive backtest; not a prospective or investment claim",
   "data_label": "public_historical_daily_prices",
+  "evaluator": "src.backtest.core.evaluate_window with history before each scored window",
+  "evidence": "published_literature_summary rows (cited, dated by publication year); no performance numbers",
   "provenance": {
     "auto_adjust": true,
     "end_exclusive": "2025-01-01",
     "first_date": "2000-01-04",
     "last_date": "2024-12-31",
-    "price_sha256": "56d216fd04f6d5817e8384cc973f6c773f44118e1c8a01c5884ca3683fb7bcd1",
+    "price_sha256": "bd193c63fa370c277323ab76e16dd4a6a6ef40ddde881aa7de1c87948e84cf0e",
     "provider": "Yahoo Finance via yfinance",
     "rows": 6288,
     "start_inclusive": "2000-01-01",
@@ -54,16 +56,25 @@
       "date_end": "2002-10-09",
       "date_start": "2000-03-10",
       "holdout_observations": 260,
+      "method_overlap": {
+        "analytical|ensemble": 0.0,
+        "hyde|analytical": 0.3333,
+        "hyde|ensemble": 0.0,
+        "literature|analytical": 0.25,
+        "literature|ensemble": 0.0,
+        "literature|hyde": 0.6667
+      },
       "metrics": {
         "analytical": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 2,
           "candidates": [
             {
+              "citations": [],
               "holdout": {
                 "observations": 260,
-                "sharpe": -0.956313,
-                "total_return": -0.114605
+                "sharpe": 0.211138,
+                "total_return": 0.022561
               },
               "params": {
                 "fast_window": 5,
@@ -72,15 +83,16 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 388,
-                "sharpe": -1.088061,
-                "total_return": -0.159363
+                "sharpe": 0.196546,
+                "total_return": 0.02938
               }
             },
             {
+              "citations": [],
               "holdout": {
                 "observations": 260,
-                "sharpe": 0.29188,
-                "total_return": 0.038823
+                "sharpe": 0.100537,
+                "total_return": 0.005235
               },
               "params": {
                 "num_std": 2.0,
@@ -89,101 +101,78 @@
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 388,
-                "sharpe": 0.292264,
-                "total_return": 0.057236
-              }
-            },
-            {
-              "holdout": {
-                "observations": 260,
-                "sharpe": -1.275957,
-                "total_return": -0.125666
-              },
-              "params": {
-                "vol_threshold": 0.2,
-                "window": 21
-              },
-              "strategy_type": "volatility",
-              "train": {
-                "observations": 388,
-                "sharpe": -1.716455,
-                "total_return": -0.316627
+                "sharpe": -0.164616,
+                "total_return": -0.029333
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 0.0,
-          "holdout_mean_sharpe": -0.646797
+          "holdout_mean_sharpe": 0.155837
         },
         "ensemble": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 2,
           "candidates": [
             {
+              "citations": [
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-jegadeesh-titman-1993"
+              ],
               "holdout": {
                 "observations": 260,
-                "sharpe": -0.956313,
-                "total_return": -0.114605
+                "sharpe": 0.159543,
+                "total_return": 0.009186
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 17,
+                "slow_window": 91
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 388,
-                "sharpe": -1.088061,
-                "total_return": -0.159363
+                "sharpe": 0.302462,
+                "total_return": 0.065674
               }
             },
             {
+              "citations": [
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 260,
-                "sharpe": 0.283201,
-                "total_return": 0.036989
+                "sharpe": 0.607096,
+                "total_return": 0.047479
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 15
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 388,
-                "sharpe": 0.399459,
-                "total_return": 0.086287
-              }
-            },
-            {
-              "holdout": {
-                "observations": 260,
-                "sharpe": -1.275957,
-                "total_return": -0.125666
-              },
-              "params": {
-                "vol_threshold": 0.2,
-                "window": 21
-              },
-              "strategy_type": "volatility",
-              "train": {
-                "observations": 388,
-                "sharpe": -1.716455,
-                "total_return": -0.316627
+                "sharpe": -0.494059,
+                "total_return": -0.062698
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 2.0,
-          "holdout_mean_sharpe": -0.64969
+          "holdout_mean_sharpe": 0.383319
         },
         "hyde": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 2,
           "candidates": [
             {
+              "citations": [
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-jegadeesh-titman-1993"
+              ],
               "holdout": {
                 "observations": 260,
-                "sharpe": -0.956313,
-                "total_return": -0.114605
+                "sharpe": 0.211138,
+                "total_return": 0.022561
               },
               "params": {
                 "fast_window": 5,
@@ -192,15 +181,18 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 388,
-                "sharpe": -1.088061,
-                "total_return": -0.159363
+                "sharpe": 0.196546,
+                "total_return": 0.02938
               }
             },
             {
+              "citations": [
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 260,
-                "sharpe": 0.283201,
-                "total_return": 0.036989
+                "sharpe": 0.834249,
+                "total_return": 0.093182
               },
               "params": {
                 "num_std": 1.5,
@@ -209,41 +201,28 @@
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 388,
-                "sharpe": 0.399459,
-                "total_return": 0.086287
-              }
-            },
-            {
-              "holdout": {
-                "observations": 260,
-                "sharpe": -1.275957,
-                "total_return": -0.125666
-              },
-              "params": {
-                "vol_threshold": 0.2,
-                "window": 21
-              },
-              "strategy_type": "volatility",
-              "train": {
-                "observations": 388,
-                "sharpe": -1.716455,
-                "total_return": -0.316627
+                "sharpe": -0.136128,
+                "total_return": -0.030086
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": -0.64969
+          "holdout_mean_sharpe": 0.522694
         },
         "literature": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-jegadeesh-titman-1993"
+              ],
               "holdout": {
                 "observations": 260,
-                "sharpe": -0.956313,
-                "total_return": -0.114605
+                "sharpe": 0.211138,
+                "total_return": 0.022561
               },
               "params": {
                 "fast_window": 5,
@@ -252,15 +231,18 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 388,
-                "sharpe": -1.088061,
-                "total_return": -0.159363
+                "sharpe": 0.196546,
+                "total_return": 0.02938
               }
             },
             {
+              "citations": [
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 260,
-                "sharpe": 0.283201,
-                "total_return": 0.036989
+                "sharpe": 0.834249,
+                "total_return": 0.093182
               },
               "params": {
                 "num_std": 1.5,
@@ -269,52 +251,66 @@
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 388,
-                "sharpe": 0.399459,
-                "total_return": 0.086287
+                "sharpe": -0.136128,
+                "total_return": -0.030086
               }
             },
             {
+              "citations": [
+                "lit-jegadeesh-titman-1993",
+                "lit-brock-lakonishok-lebaron-1992"
+              ],
               "holdout": {
                 "observations": 260,
-                "sharpe": -1.275957,
-                "total_return": -0.125666
+                "sharpe": 0.381693,
+                "total_return": 0.06808
               },
               "params": {
-                "vol_threshold": 0.2,
-                "window": 21
+                "fast_window": 20,
+                "slow_window": 100
               },
-              "strategy_type": "volatility",
+              "strategy_type": "momentum",
               "train": {
                 "observations": 388,
-                "sharpe": -1.716455,
-                "total_return": -0.316627
+                "sharpe": 0.153041,
+                "total_return": 0.016124
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": -0.64969
+          "holdout_mean_sharpe": 0.475693
         }
       },
       "observations": 648,
       "regime": "dotcom_bear",
       "split_date": "2001-09-27",
-      "train_observations": 388
+      "train_observations": 388,
+      "visible_literature_rows": 3
     },
     {
       "date_end": "2009-03-09",
       "date_start": "2007-10-09",
       "holdout_observations": 143,
+      "method_overlap": {
+        "analytical|ensemble": 1.0,
+        "hyde|analytical": 0.0,
+        "hyde|ensemble": 0.0,
+        "literature|analytical": 0.5,
+        "literature|ensemble": 0.5,
+        "literature|hyde": 0.5
+      },
       "metrics": {
         "analytical": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 2,
           "candidates": [
             {
+              "citations": [],
               "holdout": {
                 "observations": 143,
-                "sharpe": -2.699254,
-                "total_return": -0.246645
+                "sharpe": -0.407081,
+                "total_return": -0.192245
               },
               "params": {
                 "fast_window": 5,
@@ -323,15 +319,16 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 213,
-                "sharpe": -1.016663,
-                "total_return": -0.098782
+                "sharpe": -0.686219,
+                "total_return": -0.1279
               }
             },
             {
+              "citations": [],
               "holdout": {
                 "observations": 143,
-                "sharpe": 1.342556,
-                "total_return": 0.311278
+                "sharpe": 0.989162,
+                "total_return": 0.138891
               },
               "params": {
                 "num_std": 2.0,
@@ -340,41 +337,29 @@
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 213,
-                "sharpe": 0.23656,
-                "total_return": 0.020345
-              }
-            },
-            {
-              "holdout": {
-                "observations": 143,
-                "sharpe": -3.033196,
-                "total_return": -0.416685
-              },
-              "params": {
-                "vol_threshold": 0.2,
-                "window": 21
-              },
-              "strategy_type": "volatility",
-              "train": {
-                "observations": 213,
-                "sharpe": -1.603135,
-                "total_return": -0.180271
+                "sharpe": -0.227248,
+                "total_return": -0.013824
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 0.0,
-          "holdout_mean_sharpe": -1.463298
+          "holdout_mean_sharpe": 0.29104
         },
         "ensemble": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 2,
           "candidates": [
             {
+              "citations": [
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-faber-2007",
+                "lit-jegadeesh-titman-1993"
+              ],
               "holdout": {
                 "observations": 143,
-                "sharpe": -2.699254,
-                "total_return": -0.246645
+                "sharpe": -0.407081,
+                "total_return": -0.192245
               },
               "params": {
                 "fast_window": 5,
@@ -383,75 +368,71 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 213,
-                "sharpe": -1.016663,
-                "total_return": -0.098782
+                "sharpe": -0.686219,
+                "total_return": -0.1279
               }
             },
             {
+              "citations": [
+                "lit-jegadeesh-lehmann-1990",
+                "lit-bollinger-2001"
+              ],
               "holdout": {
                 "observations": 143,
-                "sharpe": 1.286067,
-                "total_return": 0.294303
+                "sharpe": 0.989162,
+                "total_return": 0.138891
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 213,
-                "sharpe": 2.087111,
-                "total_return": 0.277606
-              }
-            },
-            {
-              "holdout": {
-                "observations": 143,
-                "sharpe": -3.033196,
-                "total_return": -0.416685
-              },
-              "params": {
-                "vol_threshold": 0.2,
-                "window": 21
-              },
-              "strategy_type": "volatility",
-              "train": {
-                "observations": 213,
-                "sharpe": -1.603135,
-                "total_return": -0.180271
+                "sharpe": -0.227248,
+                "total_return": -0.013824
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 2.0,
-          "holdout_mean_sharpe": -1.482128
+          "holdout_mean_sharpe": 0.29104
         },
         "hyde": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 2,
           "candidates": [
             {
+              "citations": [
+                "lit-faber-2007",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-jegadeesh-titman-1993"
+              ],
               "holdout": {
                 "observations": 143,
-                "sharpe": -2.699254,
-                "total_return": -0.246645
+                "sharpe": 1.749363,
+                "total_return": 0.578753
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 50,
+                "slow_window": 200
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 213,
-                "sharpe": -1.016663,
-                "total_return": -0.098782
+                "sharpe": 0.374926,
+                "total_return": 0.048402
               }
             },
             {
+              "citations": [
+                "lit-jegadeesh-lehmann-1990",
+                "lit-bollinger-2001"
+              ],
               "holdout": {
                 "observations": 143,
-                "sharpe": 1.286067,
-                "total_return": 0.294303
+                "sharpe": 1.085805,
+                "total_return": 0.20075
               },
               "params": {
                 "num_std": 1.5,
@@ -460,41 +441,72 @@
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 213,
-                "sharpe": 2.087111,
-                "total_return": 0.277606
-              }
-            },
-            {
-              "holdout": {
-                "observations": 143,
-                "sharpe": -3.033196,
-                "total_return": -0.416685
-              },
-              "params": {
-                "vol_threshold": 0.2,
-                "window": 21
-              },
-              "strategy_type": "volatility",
-              "train": {
-                "observations": 213,
-                "sharpe": -1.603135,
-                "total_return": -0.180271
+                "sharpe": 0.897457,
+                "total_return": 0.072016
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": -1.482128
+          "holdout_mean_sharpe": 1.417584
         },
         "literature": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 4,
           "candidates": [
             {
+              "citations": [
+                "lit-faber-2007",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-jegadeesh-titman-1993"
+              ],
               "holdout": {
                 "observations": 143,
-                "sharpe": -2.699254,
-                "total_return": -0.246645
+                "sharpe": 1.749363,
+                "total_return": 0.578753
+              },
+              "params": {
+                "fast_window": 50,
+                "slow_window": 200
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 213,
+                "sharpe": 0.374926,
+                "total_return": 0.048402
+              }
+            },
+            {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
+              "holdout": {
+                "observations": 143,
+                "sharpe": 0.989162,
+                "total_return": 0.138891
+              },
+              "params": {
+                "num_std": 2.0,
+                "window": 20
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 213,
+                "sharpe": -0.227248,
+                "total_return": -0.013824
+              }
+            },
+            {
+              "citations": [
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-faber-2007",
+                "lit-jegadeesh-titman-1993"
+              ],
+              "holdout": {
+                "observations": 143,
+                "sharpe": -0.407081,
+                "total_return": -0.192245
               },
               "params": {
                 "fast_window": 5,
@@ -503,15 +515,19 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 213,
-                "sharpe": -1.016663,
-                "total_return": -0.098782
+                "sharpe": -0.686219,
+                "total_return": -0.1279
               }
             },
             {
+              "citations": [
+                "lit-jegadeesh-lehmann-1990",
+                "lit-bollinger-2001"
+              ],
               "holdout": {
                 "observations": 143,
-                "sharpe": 1.286067,
-                "total_return": 0.294303
+                "sharpe": 1.085805,
+                "total_return": 0.20075
               },
               "params": {
                 "num_std": 1.5,
@@ -520,52 +536,47 @@
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 213,
-                "sharpe": 2.087111,
-                "total_return": 0.277606
-              }
-            },
-            {
-              "holdout": {
-                "observations": 143,
-                "sharpe": -3.033196,
-                "total_return": -0.416685
-              },
-              "params": {
-                "vol_threshold": 0.2,
-                "window": 21
-              },
-              "strategy_type": "volatility",
-              "train": {
-                "observations": 213,
-                "sharpe": -1.603135,
-                "total_return": -0.180271
+                "sharpe": 0.897457,
+                "total_return": 0.072016
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": -1.482128
+          "holdout_mean_sharpe": 0.854312
         }
       },
       "observations": 356,
       "regime": "housing_credit_crisis",
       "split_date": "2008-08-12",
-      "train_observations": 213
+      "train_observations": 213,
+      "visible_literature_rows": 5
     },
     {
       "date_end": "2015-12-31",
       "date_start": "2010-01-04",
       "holdout_observations": 604,
+      "method_overlap": {
+        "analytical|ensemble": 0.3333,
+        "hyde|analytical": 0.0,
+        "hyde|ensemble": 0.0,
+        "literature|analytical": 0.2,
+        "literature|ensemble": 0.2,
+        "literature|hyde": 0.5
+      },
       "metrics": {
         "analytical": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 2,
           "candidates": [
             {
+              "citations": [
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
               "holdout": {
                 "observations": 604,
-                "sharpe": -0.761365,
-                "total_return": -0.144509
+                "sharpe": -1.800711,
+                "total_return": -0.44215
               },
               "params": {
                 "fast_window": 5,
@@ -574,15 +585,16 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 906,
-                "sharpe": 0.613784,
-                "total_return": 0.245726
+                "sharpe": -0.166712,
+                "total_return": -0.147864
               }
             },
             {
+              "citations": [],
               "holdout": {
                 "observations": 604,
-                "sharpe": 0.858935,
-                "total_return": 0.191923
+                "sharpe": 0.071374,
+                "total_return": 0.005686
               },
               "params": {
                 "num_std": 2.0,
@@ -591,118 +603,104 @@
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 906,
-                "sharpe": 0.083635,
-                "total_return": 0.009165
-              }
-            },
-            {
-              "holdout": {
-                "observations": 604,
-                "sharpe": -0.921739,
-                "total_return": -0.135526
-              },
-              "params": {
-                "vol_threshold": 0.2,
-                "window": 21
-              },
-              "strategy_type": "volatility",
-              "train": {
-                "observations": 906,
-                "sharpe": 1.0251,
-                "total_return": 0.409186
+                "sharpe": 0.045966,
+                "total_return": 0.002622
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 0.0,
-          "holdout_mean_sharpe": -0.274723
+          "holdout_mean_sharpe": -0.864668
         },
         "ensemble": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 2,
           "candidates": [
             {
+              "citations": [
+                "lit-jegadeesh-titman-1993",
+                "lit-faber-2007",
+                "lit-moskowitz-ooi-pedersen-2012",
+                "lit-brock-lakonishok-lebaron-1992"
+              ],
               "holdout": {
                 "observations": 604,
-                "sharpe": -0.761365,
-                "total_return": -0.144509
+                "sharpe": 0.20191,
+                "total_return": 0.043663
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 17,
+                "slow_window": 91
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 906,
-                "sharpe": 0.613784,
-                "total_return": 0.245726
+                "sharpe": 0.024514,
+                "total_return": -0.038512
               }
             },
             {
+              "citations": [
+                "lit-jegadeesh-lehmann-1990",
+                "lit-bollinger-2001"
+              ],
               "holdout": {
                 "observations": 604,
-                "sharpe": -0.097035,
-                "total_return": -0.031471
+                "sharpe": 0.071374,
+                "total_return": 0.005686
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 906,
-                "sharpe": -0.301781,
-                "total_return": -0.151535
-              }
-            },
-            {
-              "holdout": {
-                "observations": 604,
-                "sharpe": -0.921739,
-                "total_return": -0.135526
-              },
-              "params": {
-                "vol_threshold": 0.2,
-                "window": 21
-              },
-              "strategy_type": "volatility",
-              "train": {
-                "observations": 906,
-                "sharpe": 1.0251,
-                "total_return": 0.409186
+                "sharpe": 0.045966,
+                "total_return": 0.002622
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 2.0,
-          "holdout_mean_sharpe": -0.59338
+          "holdout_mean_sharpe": 0.136642
         },
         "hyde": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 2,
           "candidates": [
             {
+              "citations": [
+                "lit-faber-2007",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-jegadeesh-titman-1993",
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
               "holdout": {
                 "observations": 604,
-                "sharpe": -0.761365,
-                "total_return": -0.144509
+                "sharpe": 0.438288,
+                "total_return": 0.123446
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 50,
+                "slow_window": 200
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 906,
-                "sharpe": 0.613784,
-                "total_return": 0.245726
+                "sharpe": 0.113944,
+                "total_return": 0.016811
               }
             },
             {
+              "citations": [
+                "lit-jegadeesh-lehmann-1990",
+                "lit-bollinger-2001"
+              ],
               "holdout": {
                 "observations": 604,
-                "sharpe": -0.097035,
-                "total_return": -0.031471
+                "sharpe": 0.258904,
+                "total_return": 0.036004
               },
               "params": {
                 "num_std": 1.5,
@@ -711,58 +709,95 @@
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 906,
-                "sharpe": -0.301781,
-                "total_return": -0.151535
-              }
-            },
-            {
-              "holdout": {
-                "observations": 604,
-                "sharpe": -0.921739,
-                "total_return": -0.135526
-              },
-              "params": {
-                "vol_threshold": 0.2,
-                "window": 21
-              },
-              "strategy_type": "volatility",
-              "train": {
-                "observations": 906,
-                "sharpe": 1.0251,
-                "total_return": 0.409186
+                "sharpe": -0.29391,
+                "total_return": -0.087228
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": -0.59338
+          "holdout_mean_sharpe": 0.348596
         },
         "literature": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 4,
           "candidates": [
             {
+              "citations": [
+                "lit-faber-2007",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-moskowitz-ooi-pedersen-2012",
+                "lit-jegadeesh-titman-1993"
+              ],
               "holdout": {
                 "observations": 604,
-                "sharpe": -0.761365,
-                "total_return": -0.144509
+                "sharpe": 0.438288,
+                "total_return": 0.123446
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 50,
+                "slow_window": 200
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 906,
-                "sharpe": 0.613784,
-                "total_return": 0.245726
+                "sharpe": 0.113944,
+                "total_return": 0.016811
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 604,
-                "sharpe": -0.097035,
-                "total_return": -0.031471
+                "sharpe": 0.071374,
+                "total_return": 0.005686
+              },
+              "params": {
+                "num_std": 2.0,
+                "window": 20
+              },
+              "strategy_type": "mean_reversion",
+              "train": {
+                "observations": 906,
+                "sharpe": 0.045966,
+                "total_return": 0.002622
+              }
+            },
+            {
+              "citations": [
+                "lit-jegadeesh-titman-1993",
+                "lit-moskowitz-ooi-pedersen-2012",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-faber-2007"
+              ],
+              "holdout": {
+                "observations": 604,
+                "sharpe": -0.049742,
+                "total_return": -0.035225
+              },
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 906,
+                "sharpe": -0.092305,
+                "total_return": -0.106656
+              }
+            },
+            {
+              "citations": [
+                "lit-jegadeesh-lehmann-1990",
+                "lit-bollinger-2001"
+              ],
+              "holdout": {
+                "observations": 604,
+                "sharpe": 0.258904,
+                "total_return": 0.036004
               },
               "params": {
                 "num_std": 1.5,
@@ -771,52 +806,47 @@
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 906,
-                "sharpe": -0.301781,
-                "total_return": -0.151535
-              }
-            },
-            {
-              "holdout": {
-                "observations": 604,
-                "sharpe": -0.921739,
-                "total_return": -0.135526
-              },
-              "params": {
-                "vol_threshold": 0.2,
-                "window": 21
-              },
-              "strategy_type": "volatility",
-              "train": {
-                "observations": 906,
-                "sharpe": 1.0251,
-                "total_return": 0.409186
+                "sharpe": -0.29391,
+                "total_return": -0.087228
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": -0.59338
+          "holdout_mean_sharpe": 0.179706
         }
       },
       "observations": 1510,
       "regime": "post_crisis_expansion",
       "split_date": "2013-08-08",
-      "train_observations": 906
+      "train_observations": 906,
+      "visible_literature_rows": 6
     },
     {
       "date_end": "2018-12-24",
       "date_start": "2018-01-26",
       "holdout_observations": 92,
+      "method_overlap": {
+        "analytical|ensemble": 0.5,
+        "hyde|analytical": 0.5,
+        "hyde|ensemble": 0.5,
+        "literature|analytical": 0.4,
+        "literature|ensemble": 0.4,
+        "literature|hyde": 0.75
+      },
       "metrics": {
         "analytical": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
               "holdout": {
                 "observations": 92,
-                "sharpe": 0.0,
-                "total_return": 0.0
+                "sharpe": 1.428641,
+                "total_return": 0.092519
               },
               "params": {
                 "fast_window": 20,
@@ -825,15 +855,16 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 138,
-                "sharpe": 0.96455,
-                "total_return": 0.023445
+                "sharpe": -0.519067,
+                "total_return": -0.050648
               }
             },
             {
+              "citations": [],
               "holdout": {
                 "observations": 92,
-                "sharpe": -1.450549,
-                "total_return": -0.078219
+                "sharpe": -1.36968,
+                "total_return": -0.045049
               },
               "params": {
                 "num_std": 2.0,
@@ -842,15 +873,18 @@
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 138,
-                "sharpe": 0.068832,
-                "total_return": 0.001275
+                "sharpe": 1.02213,
+                "total_return": 0.031799
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 92,
-                "sharpe": 0.0,
-                "total_return": 0.0
+                "sharpe": -0.226809,
+                "total_return": -0.01419
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -859,58 +893,72 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 138,
-                "sharpe": 1.354031,
-                "total_return": 0.055626
+                "sharpe": -0.4251,
+                "total_return": -0.031415
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 0.0,
-          "holdout_mean_sharpe": -0.483516
+          "holdout_mean_sharpe": -0.055949
         },
         "ensemble": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-faber-2007",
+                "lit-jegadeesh-titman-1993",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
               "holdout": {
                 "observations": 92,
-                "sharpe": -2.77951,
-                "total_return": -0.081567
+                "sharpe": 2.098884,
+                "total_return": 0.141517
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 15,
+                "slow_window": 80
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 138,
-                "sharpe": -0.329729,
-                "total_return": -0.015791
+                "sharpe": -1.101373,
+                "total_return": -0.097342
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 92,
-                "sharpe": -2.17902,
-                "total_return": -0.113891
+                "sharpe": -1.36968,
+                "total_return": -0.045049
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 138,
-                "sharpe": 0.73018,
-                "total_return": 0.036983
+                "sharpe": 1.02213,
+                "total_return": 0.031799
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 92,
-                "sharpe": 0.0,
-                "total_return": 0.0
+                "sharpe": -0.226809,
+                "total_return": -0.01419
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -919,24 +967,31 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 138,
-                "sharpe": 1.354031,
-                "total_return": 0.055626
+                "sharpe": -0.4251,
+                "total_return": -0.031415
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 2.0,
-          "holdout_mean_sharpe": -1.652843
+          "holdout_mean_sharpe": 0.167465
         },
         "hyde": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-jegadeesh-titman-1993",
+                "lit-faber-2007",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
               "holdout": {
                 "observations": 92,
-                "sharpe": -2.77951,
-                "total_return": -0.081567
+                "sharpe": 0.774446,
+                "total_return": 0.046604
               },
               "params": {
                 "fast_window": 5,
@@ -945,32 +1000,39 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 138,
-                "sharpe": -0.329729,
-                "total_return": -0.015791
+                "sharpe": -2.070431,
+                "total_return": -0.170236
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 92,
-                "sharpe": -2.17902,
-                "total_return": -0.113891
+                "sharpe": -1.36968,
+                "total_return": -0.045049
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 138,
-                "sharpe": 0.73018,
-                "total_return": 0.036983
+                "sharpe": 1.02213,
+                "total_return": 0.031799
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 92,
-                "sharpe": 0.0,
-                "total_return": 0.0
+                "sharpe": -0.226809,
+                "total_return": -0.01419
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -979,58 +1041,72 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 138,
-                "sharpe": 1.354031,
-                "total_return": 0.055626
+                "sharpe": -0.4251,
+                "total_return": -0.031415
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": -1.652843
+          "holdout_mean_sharpe": -0.274014
         },
         "literature": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 4,
           "candidates": [
             {
+              "citations": [
+                "lit-faber-2007",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-moskowitz-ooi-pedersen-2012",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-jegadeesh-titman-1993"
+              ],
               "holdout": {
                 "observations": 92,
-                "sharpe": -2.77951,
-                "total_return": -0.081567
+                "sharpe": 0.983888,
+                "total_return": 0.061048
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 50,
+                "slow_window": 200
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 138,
-                "sharpe": -0.329729,
-                "total_return": -0.015791
+                "sharpe": 0.127991,
+                "total_return": 0.004242
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 92,
-                "sharpe": -2.17902,
-                "total_return": -0.113891
+                "sharpe": -1.36968,
+                "total_return": -0.045049
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 138,
-                "sharpe": 0.73018,
-                "total_return": 0.036983
+                "sharpe": 1.02213,
+                "total_return": 0.031799
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 92,
-                "sharpe": 0.0,
-                "total_return": 0.0
+                "sharpe": -0.226809,
+                "total_return": -0.01419
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1039,35 +1115,71 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 138,
-                "sharpe": 1.354031,
-                "total_return": 0.055626
+                "sharpe": -0.4251,
+                "total_return": -0.031415
+              }
+            },
+            {
+              "citations": [
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-faber-2007",
+                "lit-jegadeesh-titman-1993",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
+              "holdout": {
+                "observations": 92,
+                "sharpe": 0.774446,
+                "total_return": 0.046604
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 138,
+                "sharpe": -2.070431,
+                "total_return": -0.170236
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": -1.652843
+          "holdout_mean_sharpe": 0.040461
         }
       },
       "observations": 230,
       "regime": "volmageddon",
       "split_date": "2018-08-13",
-      "train_observations": 138
+      "train_observations": 138,
+      "visible_literature_rows": 8
     },
     {
       "date_end": "2020-12-31",
       "date_start": "2020-02-19",
       "holdout_observations": 89,
+      "method_overlap": {
+        "analytical|ensemble": 1.0,
+        "hyde|analytical": 0.5,
+        "hyde|ensemble": 0.5,
+        "literature|analytical": 0.75,
+        "literature|ensemble": 0.75,
+        "literature|hyde": 0.4
+      },
       "metrics": {
         "analytical": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
               "holdout": {
                 "observations": 89,
-                "sharpe": 1.682694,
-                "total_return": 0.004581
+                "sharpe": 1.510189,
+                "total_return": 0.095481
               },
               "params": {
                 "fast_window": 20,
@@ -1076,15 +1188,16 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 132,
-                "sharpe": 2.857719,
-                "total_return": 0.082989
+                "sharpe": -1.139869,
+                "total_return": -0.265549
               }
             },
             {
+              "citations": [],
               "holdout": {
                 "observations": 89,
-                "sharpe": 0.869494,
-                "total_return": 0.027132
+                "sharpe": 2.58188,
+                "total_return": 0.058185
               },
               "params": {
                 "num_std": 2.0,
@@ -1093,15 +1206,18 @@
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 132,
-                "sharpe": -0.666773,
-                "total_return": -0.087436
+                "sharpe": 1.831117,
+                "total_return": 0.177175
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 89,
-                "sharpe": -0.776395,
-                "total_return": -0.022789
+                "sharpe": -0.679109,
+                "total_return": -0.033247
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1110,58 +1226,72 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 132,
-                "sharpe": 2.507541,
-                "total_return": 0.24944
+                "sharpe": 0.084473,
+                "total_return": 0.001648
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 0.0,
-          "holdout_mean_sharpe": 0.591931
+          "holdout_mean_sharpe": 1.137653
         },
         "ensemble": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-jegadeesh-titman-1993",
+                "lit-faber-2007",
+                "lit-moskowitz-ooi-pedersen-2012",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-hurst-ooi-pedersen-2017"
+              ],
               "holdout": {
                 "observations": 89,
-                "sharpe": 2.271419,
-                "total_return": 0.084748
+                "sharpe": 1.510189,
+                "total_return": 0.095481
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 20,
+                "slow_window": 100
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 132,
-                "sharpe": 2.77463,
-                "total_return": 0.331876
+                "sharpe": -1.139869,
+                "total_return": -0.265549
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 89,
-                "sharpe": -1.003632,
-                "total_return": -0.043352
+                "sharpe": 2.58188,
+                "total_return": 0.058185
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 132,
-                "sharpe": 0.205195,
-                "total_return": 0.008628
+                "sharpe": 1.831117,
+                "total_return": 0.177175
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 89,
-                "sharpe": -0.776395,
-                "total_return": -0.022789
+                "sharpe": -0.679109,
+                "total_return": -0.033247
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1170,24 +1300,31 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 132,
-                "sharpe": 2.507541,
-                "total_return": 0.24944
+                "sharpe": 0.084473,
+                "total_return": 0.001648
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 2.0,
-          "holdout_mean_sharpe": 0.163797
+          "holdout_mean_sharpe": 1.137653
         },
         "hyde": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-jegadeesh-titman-1993",
+                "lit-faber-2007",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
               "holdout": {
                 "observations": 89,
-                "sharpe": 2.271419,
-                "total_return": 0.084748
+                "sharpe": 0.174946,
+                "total_return": 0.005466
               },
               "params": {
                 "fast_window": 5,
@@ -1196,32 +1333,39 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 132,
-                "sharpe": 2.77463,
-                "total_return": 0.331876
+                "sharpe": 1.617223,
+                "total_return": 0.374184
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 89,
-                "sharpe": -1.003632,
-                "total_return": -0.043352
+                "sharpe": 2.58188,
+                "total_return": 0.058185
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 132,
-                "sharpe": 0.205195,
-                "total_return": 0.008628
+                "sharpe": 1.831117,
+                "total_return": 0.177175
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 89,
-                "sharpe": -0.776395,
-                "total_return": -0.022789
+                "sharpe": -0.679109,
+                "total_return": -0.033247
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1230,58 +1374,72 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 132,
-                "sharpe": 2.507541,
-                "total_return": 0.24944
+                "sharpe": 0.084473,
+                "total_return": 0.001648
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": 0.163797
+          "holdout_mean_sharpe": 0.692572
         },
         "literature": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 4,
           "candidates": [
             {
+              "citations": [
+                "lit-faber-2007",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-moskowitz-ooi-pedersen-2012",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-jegadeesh-titman-1993"
+              ],
               "holdout": {
                 "observations": 89,
-                "sharpe": 2.271419,
-                "total_return": 0.084748
+                "sharpe": 1.510189,
+                "total_return": 0.095481
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 50,
+                "slow_window": 200
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 132,
-                "sharpe": 2.77463,
-                "total_return": 0.331876
+                "sharpe": -1.623739,
+                "total_return": -0.341541
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 89,
-                "sharpe": -1.003632,
-                "total_return": -0.043352
+                "sharpe": 2.58188,
+                "total_return": 0.058185
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 132,
-                "sharpe": 0.205195,
-                "total_return": 0.008628
+                "sharpe": 1.831117,
+                "total_return": 0.177175
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 89,
-                "sharpe": -0.776395,
-                "total_return": -0.022789
+                "sharpe": -0.679109,
+                "total_return": -0.033247
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1290,35 +1448,71 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 132,
-                "sharpe": 2.507541,
-                "total_return": 0.24944
+                "sharpe": 0.084473,
+                "total_return": 0.001648
+              }
+            },
+            {
+              "citations": [
+                "lit-jegadeesh-titman-1993",
+                "lit-moskowitz-ooi-pedersen-2012",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-faber-2007"
+              ],
+              "holdout": {
+                "observations": 89,
+                "sharpe": 1.510189,
+                "total_return": 0.095481
+              },
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 132,
+                "sharpe": -1.139869,
+                "total_return": -0.265549
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": 0.163797
+          "holdout_mean_sharpe": 1.230787
         }
       },
       "observations": 221,
       "regime": "covid_crash_rebound",
       "split_date": "2020-08-25",
-      "train_observations": 132
+      "train_observations": 132,
+      "visible_literature_rows": 8
     },
     {
       "date_end": "2022-10-12",
       "date_start": "2022-01-03",
       "holdout_observations": 79,
+      "method_overlap": {
+        "analytical|ensemble": 0.5,
+        "hyde|analytical": 0.5,
+        "hyde|ensemble": 0.5,
+        "literature|analytical": 0.4,
+        "literature|ensemble": 0.4,
+        "literature|hyde": 0.75
+      },
       "metrics": {
         "analytical": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
               "holdout": {
                 "observations": 79,
-                "sharpe": 0.0,
-                "total_return": 0.0
+                "sharpe": -3.006937,
+                "total_return": -0.195033
               },
               "params": {
                 "fast_window": 20,
@@ -1327,15 +1521,16 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 117,
-                "sharpe": 0.0,
-                "total_return": 0.0
+                "sharpe": 1.18952,
+                "total_return": 0.133441
               }
             },
             {
+              "citations": [],
               "holdout": {
                 "observations": 79,
-                "sharpe": -2.738019,
-                "total_return": -0.10641
+                "sharpe": -2.511678,
+                "total_return": -0.033164
               },
               "params": {
                 "num_std": 2.0,
@@ -1344,15 +1539,18 @@
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 117,
-                "sharpe": 0.383096,
-                "total_return": 0.02533
+                "sharpe": 0.744405,
+                "total_return": 0.020803
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 79,
-                "sharpe": -2.177492,
-                "total_return": -0.053724
+                "sharpe": 0.379344,
+                "total_return": 0.012219
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1361,58 +1559,72 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 117,
-                "sharpe": -2.214689,
-                "total_return": -0.106141
+                "sharpe": -1.613024,
+                "total_return": -0.091722
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 0.0,
-          "holdout_mean_sharpe": -1.638504
+          "holdout_mean_sharpe": -1.71309
         },
         "ensemble": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-faber-2007",
+                "lit-jegadeesh-titman-1993",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
               "holdout": {
                 "observations": 79,
-                "sharpe": 1.905948,
-                "total_return": 0.061612
+                "sharpe": -1.261463,
+                "total_return": -0.09229
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 15,
+                "slow_window": 80
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 117,
-                "sharpe": -2.097013,
-                "total_return": -0.112568
+                "sharpe": -0.235656,
+                "total_return": -0.04178
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 79,
-                "sharpe": -0.161096,
-                "total_return": -0.0108
+                "sharpe": -2.511678,
+                "total_return": -0.033164
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 117,
-                "sharpe": -0.38933,
-                "total_return": -0.04102
+                "sharpe": 0.744405,
+                "total_return": 0.020803
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 79,
-                "sharpe": -2.177492,
-                "total_return": -0.053724
+                "sharpe": 0.379344,
+                "total_return": 0.012219
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1421,24 +1633,31 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 117,
-                "sharpe": -2.214689,
-                "total_return": -0.106141
+                "sharpe": -1.613024,
+                "total_return": -0.091722
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 2.0,
-          "holdout_mean_sharpe": -0.144213
+          "holdout_mean_sharpe": -1.131266
         },
         "hyde": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-jegadeesh-titman-1993",
+                "lit-faber-2007",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
               "holdout": {
                 "observations": 79,
-                "sharpe": 1.905948,
-                "total_return": 0.061612
+                "sharpe": 1.940267,
+                "total_return": 0.13716
               },
               "params": {
                 "fast_window": 5,
@@ -1447,32 +1666,39 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 117,
-                "sharpe": -2.097013,
-                "total_return": -0.112568
+                "sharpe": -0.500003,
+                "total_return": -0.071452
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 79,
-                "sharpe": -0.161096,
-                "total_return": -0.0108
+                "sharpe": -2.511678,
+                "total_return": -0.033164
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 117,
-                "sharpe": -0.38933,
-                "total_return": -0.04102
+                "sharpe": 0.744405,
+                "total_return": 0.020803
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 79,
-                "sharpe": -2.177492,
-                "total_return": -0.053724
+                "sharpe": 0.379344,
+                "total_return": 0.012219
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1481,58 +1707,72 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 117,
-                "sharpe": -2.214689,
-                "total_return": -0.106141
+                "sharpe": -1.613024,
+                "total_return": -0.091722
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": -0.144213
+          "holdout_mean_sharpe": -0.064022
         },
         "literature": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 4,
           "candidates": [
             {
+              "citations": [
+                "lit-faber-2007",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-moskowitz-ooi-pedersen-2012",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-jegadeesh-titman-1993"
+              ],
               "holdout": {
                 "observations": 79,
-                "sharpe": 1.905948,
-                "total_return": 0.061612
+                "sharpe": 0.547104,
+                "total_return": 0.031258
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 50,
+                "slow_window": 200
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 117,
-                "sharpe": -2.097013,
-                "total_return": -0.112568
+                "sharpe": 0.421459,
+                "total_return": 0.035547
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 79,
-                "sharpe": -0.161096,
-                "total_return": -0.0108
+                "sharpe": -2.511678,
+                "total_return": -0.033164
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 117,
-                "sharpe": -0.38933,
-                "total_return": -0.04102
+                "sharpe": 0.744405,
+                "total_return": 0.020803
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 79,
-                "sharpe": -2.177492,
-                "total_return": -0.053724
+                "sharpe": 0.379344,
+                "total_return": 0.012219
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1541,35 +1781,71 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 117,
-                "sharpe": -2.214689,
-                "total_return": -0.106141
+                "sharpe": -1.613024,
+                "total_return": -0.091722
+              }
+            },
+            {
+              "citations": [
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-faber-2007",
+                "lit-jegadeesh-titman-1993",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
+              "holdout": {
+                "observations": 79,
+                "sharpe": 1.940267,
+                "total_return": 0.13716
+              },
+              "params": {
+                "fast_window": 5,
+                "slow_window": 20
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 117,
+                "sharpe": -0.500003,
+                "total_return": -0.071452
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": -0.144213
+          "holdout_mean_sharpe": 0.088759
         }
       },
       "observations": 196,
       "regime": "inflation_rate_shock",
       "split_date": "2022-06-21",
-      "train_observations": 117
+      "train_observations": 117,
+      "visible_literature_rows": 8
     },
     {
       "date_end": "2023-12-29",
       "date_start": "2023-01-03",
       "holdout_observations": 100,
+      "method_overlap": {
+        "analytical|ensemble": 1.0,
+        "hyde|analytical": 0.5,
+        "hyde|ensemble": 0.5,
+        "literature|analytical": 1.0,
+        "literature|ensemble": 1.0,
+        "literature|hyde": 0.5
+      },
       "metrics": {
         "analytical": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
               "holdout": {
                 "observations": 100,
-                "sharpe": -1.587451,
-                "total_return": -0.003395
+                "sharpe": -1.510794,
+                "total_return": -0.072646
               },
               "params": {
                 "fast_window": 20,
@@ -1578,15 +1854,16 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 150,
-                "sharpe": 2.36746,
-                "total_return": 0.085722
+                "sharpe": 1.825225,
+                "total_return": 0.154346
               }
             },
             {
+              "citations": [],
               "holdout": {
                 "observations": 100,
-                "sharpe": -1.854146,
-                "total_return": -0.062398
+                "sharpe": -0.944179,
+                "total_return": -0.015776
               },
               "params": {
                 "num_std": 2.0,
@@ -1595,15 +1872,18 @@
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 150,
-                "sharpe": 0.432239,
-                "total_return": 0.021641
+                "sharpe": 0.656343,
+                "total_return": 0.006706
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 100,
-                "sharpe": 3.158527,
-                "total_return": 0.060954
+                "sharpe": 1.413497,
+                "total_return": 0.067232
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1612,58 +1892,72 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 150,
-                "sharpe": 1.651512,
-                "total_return": 0.099082
+                "sharpe": 2.121199,
+                "total_return": 0.182271
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 0.0,
-          "holdout_mean_sharpe": -0.094357
+          "holdout_mean_sharpe": -0.347159
         },
         "ensemble": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-jegadeesh-titman-1993",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-moskowitz-ooi-pedersen-2012",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-faber-2007"
+              ],
               "holdout": {
                 "observations": 100,
-                "sharpe": 1.431064,
-                "total_return": 0.045041
+                "sharpe": -1.510794,
+                "total_return": -0.072646
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 20,
+                "slow_window": 100
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 150,
-                "sharpe": 1.6856,
-                "total_return": 0.10003
+                "sharpe": 1.825225,
+                "total_return": 0.154346
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 100,
-                "sharpe": -3.19142,
-                "total_return": -0.096905
+                "sharpe": -0.944179,
+                "total_return": -0.015776
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 150,
-                "sharpe": 0.425789,
-                "total_return": 0.021219
+                "sharpe": 0.656343,
+                "total_return": 0.006706
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 100,
-                "sharpe": 3.158527,
-                "total_return": 0.060954
+                "sharpe": 1.413497,
+                "total_return": 0.067232
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1672,24 +1966,31 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 150,
-                "sharpe": 1.651512,
-                "total_return": 0.099082
+                "sharpe": 2.121199,
+                "total_return": 0.182271
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 2.0,
-          "holdout_mean_sharpe": 0.466057
+          "holdout_mean_sharpe": -0.347159
         },
         "hyde": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-jegadeesh-titman-1993",
+                "lit-faber-2007",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
               "holdout": {
                 "observations": 100,
-                "sharpe": 1.431064,
-                "total_return": 0.045041
+                "sharpe": 0.028294,
+                "total_return": -0.001549
               },
               "params": {
                 "fast_window": 5,
@@ -1698,32 +1999,39 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 150,
-                "sharpe": 1.6856,
-                "total_return": 0.10003
+                "sharpe": 1.276595,
+                "total_return": 0.104024
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 100,
-                "sharpe": -3.19142,
-                "total_return": -0.096905
+                "sharpe": -0.944179,
+                "total_return": -0.015776
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 150,
-                "sharpe": 0.425789,
-                "total_return": 0.021219
+                "sharpe": 0.656343,
+                "total_return": 0.006706
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 100,
-                "sharpe": 3.158527,
-                "total_return": 0.060954
+                "sharpe": 1.413497,
+                "total_return": 0.067232
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1732,58 +2040,72 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 150,
-                "sharpe": 1.651512,
-                "total_return": 0.099082
+                "sharpe": 2.121199,
+                "total_return": 0.182271
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": 0.466057
+          "holdout_mean_sharpe": 0.165871
         },
         "literature": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 4,
           "candidates": [
             {
+              "citations": [
+                "lit-jegadeesh-titman-1993",
+                "lit-moskowitz-ooi-pedersen-2012",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-faber-2007"
+              ],
               "holdout": {
                 "observations": 100,
-                "sharpe": 1.431064,
-                "total_return": 0.045041
+                "sharpe": -1.510794,
+                "total_return": -0.072646
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 20,
+                "slow_window": 100
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 150,
-                "sharpe": 1.6856,
-                "total_return": 0.10003
+                "sharpe": 1.825225,
+                "total_return": 0.154346
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 100,
-                "sharpe": -3.19142,
-                "total_return": -0.096905
+                "sharpe": -0.944179,
+                "total_return": -0.015776
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 150,
-                "sharpe": 0.425789,
-                "total_return": 0.021219
+                "sharpe": 0.656343,
+                "total_return": 0.006706
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 100,
-                "sharpe": 3.158527,
-                "total_return": 0.060954
+                "sharpe": 1.413497,
+                "total_return": 0.067232
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1792,35 +2114,71 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 150,
-                "sharpe": 1.651512,
-                "total_return": 0.099082
+                "sharpe": 2.121199,
+                "total_return": 0.182271
+              }
+            },
+            {
+              "citations": [
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-moskowitz-ooi-pedersen-2012",
+                "lit-jegadeesh-titman-1993",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-faber-2007"
+              ],
+              "holdout": {
+                "observations": 100,
+                "sharpe": -1.510794,
+                "total_return": -0.072646
+              },
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 150,
+                "sharpe": 1.825225,
+                "total_return": 0.154346
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": 0.466057
+          "holdout_mean_sharpe": -0.638068
         }
       },
       "observations": 250,
       "regime": "2023_recovery",
       "split_date": "2023-08-08",
-      "train_observations": 150
+      "train_observations": 150,
+      "visible_literature_rows": 8
     },
     {
       "date_end": "2024-12-31",
       "date_start": "2024-01-02",
       "holdout_observations": 101,
+      "method_overlap": {
+        "analytical|ensemble": 1.0,
+        "hyde|analytical": 0.5,
+        "hyde|ensemble": 0.5,
+        "literature|analytical": 1.0,
+        "literature|ensemble": 1.0,
+        "literature|hyde": 0.5
+      },
       "metrics": {
         "analytical": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
               "holdout": {
                 "observations": 101,
-                "sharpe": -1.579573,
-                "total_return": -0.004138
+                "sharpe": 2.523797,
+                "total_return": 0.13727
               },
               "params": {
                 "fast_window": 20,
@@ -1829,15 +2187,16 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 151,
-                "sharpe": -0.194397,
-                "total_return": -0.011189
+                "sharpe": 1.33602,
+                "total_return": 0.098125
               }
             },
             {
+              "citations": [],
               "holdout": {
                 "observations": 101,
-                "sharpe": 1.114057,
-                "total_return": 0.024273
+                "sharpe": 0.626591,
+                "total_return": 0.006558
               },
               "params": {
                 "num_std": 2.0,
@@ -1846,15 +2205,18 @@
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 151,
-                "sharpe": -1.677843,
-                "total_return": -0.087689
+                "sharpe": -1.115572,
+                "total_return": -0.031876
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 101,
-                "sharpe": 0.037749,
-                "total_return": -0.000136
+                "sharpe": 1.627322,
+                "total_return": 0.079781
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1863,58 +2225,72 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 151,
-                "sharpe": 0.548503,
-                "total_return": 0.024296
+                "sharpe": 1.33602,
+                "total_return": 0.098125
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 0.0,
-          "holdout_mean_sharpe": -0.142589
+          "holdout_mean_sharpe": 1.59257
         },
         "ensemble": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-jegadeesh-titman-1993",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-moskowitz-ooi-pedersen-2012",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-faber-2007"
+              ],
               "holdout": {
                 "observations": 101,
-                "sharpe": -0.577408,
-                "total_return": -0.022204
+                "sharpe": 2.523797,
+                "total_return": 0.13727
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 20,
+                "slow_window": 100
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 151,
-                "sharpe": 2.067208,
-                "total_return": 0.113211
+                "sharpe": 1.33602,
+                "total_return": 0.098125
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 101,
-                "sharpe": 1.492456,
-                "total_return": 0.042441
+                "sharpe": 0.626591,
+                "total_return": 0.006558
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 151,
-                "sharpe": -1.372204,
-                "total_return": -0.068591
+                "sharpe": -1.115572,
+                "total_return": -0.031876
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 101,
-                "sharpe": 0.037749,
-                "total_return": -0.000136
+                "sharpe": 1.627322,
+                "total_return": 0.079781
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1923,24 +2299,31 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 151,
-                "sharpe": 0.548503,
-                "total_return": 0.024296
+                "sharpe": 1.33602,
+                "total_return": 0.098125
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 2.0,
-          "holdout_mean_sharpe": 0.317599
+          "holdout_mean_sharpe": 1.59257
         },
         "hyde": {
           "budget": 4,
           "candidate_count": 3,
           "candidates": [
             {
+              "citations": [
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-jegadeesh-titman-1993",
+                "lit-faber-2007",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-moskowitz-ooi-pedersen-2012"
+              ],
               "holdout": {
                 "observations": 101,
-                "sharpe": -0.577408,
-                "total_return": -0.022204
+                "sharpe": -3.537124,
+                "total_return": -0.172261
               },
               "params": {
                 "fast_window": 5,
@@ -1949,32 +2332,39 @@
               "strategy_type": "momentum",
               "train": {
                 "observations": 151,
-                "sharpe": 2.067208,
-                "total_return": 0.113211
+                "sharpe": 2.423892,
+                "total_return": 0.188352
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 101,
-                "sharpe": 1.492456,
-                "total_return": 0.042441
+                "sharpe": 0.626591,
+                "total_return": 0.006558
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 151,
-                "sharpe": -1.372204,
-                "total_return": -0.068591
+                "sharpe": -1.115572,
+                "total_return": -0.031876
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 101,
-                "sharpe": 0.037749,
-                "total_return": -0.000136
+                "sharpe": 1.627322,
+                "total_return": 0.079781
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -1983,58 +2373,72 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 151,
-                "sharpe": 0.548503,
-                "total_return": 0.024296
+                "sharpe": 1.33602,
+                "total_return": 0.098125
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": 0.317599
+          "holdout_mean_sharpe": -0.427737
         },
         "literature": {
           "budget": 4,
-          "candidate_count": 3,
+          "candidate_count": 4,
           "candidates": [
             {
+              "citations": [
+                "lit-jegadeesh-titman-1993",
+                "lit-moskowitz-ooi-pedersen-2012",
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-faber-2007"
+              ],
               "holdout": {
                 "observations": 101,
-                "sharpe": -0.577408,
-                "total_return": -0.022204
+                "sharpe": 2.523797,
+                "total_return": 0.13727
               },
               "params": {
-                "fast_window": 5,
-                "slow_window": 20
+                "fast_window": 20,
+                "slow_window": 100
               },
               "strategy_type": "momentum",
               "train": {
                 "observations": 151,
-                "sharpe": 2.067208,
-                "total_return": 0.113211
+                "sharpe": 1.33602,
+                "total_return": 0.098125
               }
             },
             {
+              "citations": [
+                "lit-bollinger-2001",
+                "lit-jegadeesh-lehmann-1990"
+              ],
               "holdout": {
                 "observations": 101,
-                "sharpe": 1.492456,
-                "total_return": 0.042441
+                "sharpe": 0.626591,
+                "total_return": 0.006558
               },
               "params": {
-                "num_std": 1.5,
-                "window": 10
+                "num_std": 2.0,
+                "window": 20
               },
               "strategy_type": "mean_reversion",
               "train": {
                 "observations": 151,
-                "sharpe": -1.372204,
-                "total_return": -0.068591
+                "sharpe": -1.115572,
+                "total_return": -0.031876
               }
             },
             {
+              "citations": [
+                "lit-moreira-muir-2017"
+              ],
               "holdout": {
                 "observations": 101,
-                "sharpe": 0.037749,
-                "total_return": -0.000136
+                "sharpe": 1.627322,
+                "total_return": 0.079781
               },
               "params": {
                 "vol_threshold": 0.2,
@@ -2043,20 +2447,45 @@
               "strategy_type": "volatility",
               "train": {
                 "observations": 151,
-                "sharpe": 0.548503,
-                "total_return": 0.024296
+                "sharpe": 1.33602,
+                "total_return": 0.098125
+              }
+            },
+            {
+              "citations": [
+                "lit-hurst-ooi-pedersen-2017",
+                "lit-moskowitz-ooi-pedersen-2012",
+                "lit-jegadeesh-titman-1993",
+                "lit-brock-lakonishok-lebaron-1992",
+                "lit-faber-2007"
+              ],
+              "holdout": {
+                "observations": 101,
+                "sharpe": 2.523797,
+                "total_return": 0.13727
+              },
+              "params": {
+                "fast_window": 20,
+                "slow_window": 100
+              },
+              "strategy_type": "momentum",
+              "train": {
+                "observations": 151,
+                "sharpe": 1.33602,
+                "total_return": 0.098125
               }
             }
           ],
           "cost_bps_per_unit_turnover": 5.0,
           "cost_units": 1.0,
-          "holdout_mean_sharpe": 0.317599
+          "holdout_mean_sharpe": 1.825377
         }
       },
       "observations": 252,
       "regime": "2024_expansion",
       "split_date": "2024-08-07",
-      "train_observations": 151
+      "train_observations": 151,
+      "visible_literature_rows": 8
     }
   ],
   "seed": 29,

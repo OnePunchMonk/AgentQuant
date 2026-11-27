@@ -23,6 +23,7 @@ from src.agent.generators import (  # noqa: E402
     EnsembleGenerator,
     HydeGenerator,
     LiteratureGenerator,
+    literature_corpus,
 )
 from src.agent.hyde_retrieval import Evidence, HypothesisRequest  # noqa: E402
 from src.agent.hypothesis_agent import HypothesisAgent  # noqa: E402
@@ -122,46 +123,16 @@ def load_historical_prices(csv_path=None, *, symbol="SPY", start="2000-01-01", e
     return frame[["Date", "Close", "Return"]], source
 
 
-def _causal_strategy_returns(candidate, prices, cost_bps):
-    """Close-to-close returns with yesterday-known signals and turnover costs."""
-    import numpy as np
-    import pandas as pd
-
-    close = pd.Series(prices["Close"].to_numpy(dtype=float))
-    ret = pd.Series(prices["Return"].to_numpy(dtype=float))
-    typ, params = candidate.strategy_type, candidate.params
-    if typ == "momentum":
-        fast = int(params.get("fast_window", 20))
-        slow = int(params.get("slow_window", 100))
-        fast = max(2, min(fast, len(close) - 1))
-        slow = max(fast + 1, min(slow, len(close) - 1))
-        signal = (close.rolling(fast).mean() > close.rolling(slow).mean()).astype(float)
-    elif typ == "mean_reversion":
-        window = max(2, min(int(params.get("window", 20)), len(close) - 1))
-        mean = close.rolling(window).mean()
-        std = close.rolling(window).std().replace(0, np.nan)
-        z = (close - mean) / std
-        signal = pd.Series(np.where(z < -1.0, 1.0, np.where(z > 1.0, -1.0, 0.0)))
-    else:
-        window = max(2, min(int(params.get("window", 20)), len(close) - 1))
-        vol = ret.rolling(window).std()
-        cap = vol.expanding(min_periods=window).median()
-        signal = (vol <= cap).astype(float)
-    position = signal.shift(1).fillna(0.0)
-    turnover = position.diff().abs().fillna(position.abs())
-    return (position * ret - turnover * cost_bps / 10000).to_numpy(dtype=float)
-
-
-def _stats(values):
-    vals = [float(x) for x in values if math.isfinite(float(x))]
-    if not vals:
+def _stats(metrics):
+    """Report shape for one window of shared-evaluator output (None when the window was too short)."""
+    if not metrics:
         return {"observations": 0, "sharpe": 0.0, "total_return": 0.0}
-    wealth = math.prod(1 + x for x in vals)
-    return {
-        "observations": len(vals),
-        "sharpe": round(_sharpe(vals), 6),
-        "total_return": round(wealth - 1, 6),
-    }
+    return {"observations": int(metrics["observations"]), "sharpe": round(float(metrics["sharpe"]), 6),
+            "total_return": round(float(metrics["net_return"]), 6)}
+
+
+def _jaccard(a, b):
+    return round(len(a & b) / len(a | b), 4) if (a | b) else 1.0
 
 
 def run_historical_benchmark(
@@ -171,23 +142,11 @@ def run_historical_benchmark(
     import pandas as pd
 
     prices, provenance = load_historical_prices(csv_path, symbol=symbol)
-    # Strategy catalog is static and available before every regime; evidence
-    # text is not used as a performance label or scored for quality.
-    evidence = [
-        Evidence(
-            f"catalog-{s}",
-            f"{s} strategy parameter catalog",
-            "benchmark_catalog",
-            "1999-12-31",
-            "1999-12-31",
-            s,
-            {"fast_window": 5, "slow_window": 20}
-            if s == "momentum"
-            else ({"window": 10, "num_std": 1.5} if s == "mean_reversion" else {"window": 20}),
-            evidence_tier="parameter_catalog",
-        )
-        for s in ("momentum", "mean_reversion", "volatility")
-    ]
+    # Evidence is the dated, cited literature corpus (src/agent/generators/corpus.py). Which rows a
+    # method may use depends on the request's cutoff, so earlier regimes see less literature. Text is
+    # never used as a performance label.
+    evidence = list(literature_corpus())
+    px = prices.assign(ts=pd.to_datetime(prices.Date)).set_index("ts")[["Close"]]
     literature = LiteratureGenerator(evidence)
     hyde = HydeGenerator()
     analytical = AnalyticalGenerator()
@@ -217,20 +176,25 @@ def run_historical_benchmark(
             candidate_budget,
             8,
         )
+        signatures = {}
         for method in METHODS:
             run = agent.run(method, request)
+            run = agent.evaluate(
+                run, px, train_start=train.Date.iloc[0].isoformat(), train_end=train.Date.iloc[-1].isoformat(),
+                holdout_end=holdout.Date.iloc[-1].isoformat(), cost_bps=cost_bps,
+            )
             evaluated = []
             for candidate in run.candidates[:candidate_budget]:
-                train_stats = _stats(_causal_strategy_returns(candidate, train, cost_bps))
-                hold_stats = _stats(_causal_strategy_returns(candidate, holdout, cost_bps))
                 evaluated.append(
                     {
                         "strategy_type": candidate.strategy_type,
                         "params": dict(candidate.params),
-                        "train": train_stats,
-                        "holdout": hold_stats,
+                        "train": _stats(candidate.evaluation.get("train")),
+                        "holdout": _stats(candidate.evaluation.get("holdout")),
+                        "citations": list(candidate.citations),
                     }
                 )
+            signatures[method] = {(c["strategy_type"], tuple(sorted(c["params"].items()))) for c in evaluated}
             rows[method] = {
                 "candidate_count": len(evaluated),
                 "budget": candidate_budget,
@@ -252,11 +216,16 @@ def run_historical_benchmark(
                 "split_date": train.Date.iloc[-1].isoformat(),
                 "train_observations": len(train),
                 "holdout_observations": len(holdout),
+                "visible_literature_rows": sum(1 for e in evidence if e.known_at <= train.Date.iloc[-1].isoformat()),
+                "method_overlap": {f"{a}|{b}": _jaccard(signatures[a], signatures[b])
+                                   for i, a in enumerate(METHODS) for b in METHODS[i + 1:]},
                 "metrics": rows,
             }
         )
     return {
-        "benchmark": "hypothesis_techniques_public_historical_v1",
+        "benchmark": "hypothesis_techniques_public_historical_v2",
+        "evidence": "published_literature_summary rows (cited, dated by publication year); no performance numbers",
+        "evaluator": "src.backtest.core.evaluate_window with history before each scored window",
         "seed": seed,
         "claim_scope": "historical descriptive backtest; not a prospective or investment claim",
         "data_label": "public_historical_daily_prices",
