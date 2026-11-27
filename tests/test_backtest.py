@@ -41,12 +41,7 @@ def _make_close_series(n: int = 300, trend: float = 0.001, seed: int = 0) -> pd.
     return pd.Series(close, index=idx, name="Close")
 
 
-def test_momentum_backtest_returns_result():
-    df = make_ohlcv()
-    result = run_backtest({"SPY": df}, ["SPY"], "momentum", {"fast_window": 10, "slow_window": 30})
-    assert result is not None
-    assert "equity_curve" in result
-    assert "metrics" in result
+
 
 
 def test_zero_signal_flat_equity():
@@ -62,10 +57,11 @@ def test_zero_signal_flat_equity():
     assert abs(metrics["total_return"]) < 0.01
 
 
-def test_metrics_keys_present():
+def test_momentum_backtest_returns_equity_curve_and_metrics():
     df = make_ohlcv(trend=0.002)
     result = run_backtest({"SPY": df}, ["SPY"], "momentum", {"fast_window": 10, "slow_window": 40})
     assert result is not None
+    assert "equity_curve" in result
     for key in ("total_return", "max_drawdown", "sharpe_ratio"):
         assert key in result["metrics"], f"Missing metric key: {key}"
 
@@ -163,18 +159,12 @@ def test_sharpe_known_value():
     assert 0.5 < sharpe < 4.0
 
 
-def test_max_drawdown_no_drawdown():
-    """Monotonically increasing equity curve has zero drawdown."""
-    equity = pd.Series(np.linspace(100, 200, 252))
-    dd = PerformanceMetrics.max_drawdown(equity)
-    assert dd == pytest.approx(0.0, abs=1e-9)
-
-
-def test_max_drawdown_known():
-    """Equity drops from 100 to 50 — max drawdown should be 0.50."""
-    equity = pd.Series([100, 90, 80, 70, 60, 50, 60, 70, 80])
-    dd = PerformanceMetrics.max_drawdown(equity)
-    assert dd == pytest.approx(0.50, abs=1e-6)
+@pytest.mark.parametrize("equity, expected", [
+    (np.linspace(100, 200, 252), 0.0),                      # monotonically increasing: no drawdown
+    ([100, 90, 80, 70, 60, 50, 60, 70, 80], 0.50),          # falls from 100 to 50
+])
+def test_max_drawdown(equity, expected):
+    assert PerformanceMetrics.max_drawdown(pd.Series(equity)) == pytest.approx(expected, abs=1e-6)
 
 
 def test_from_equity_returns_all_keys():

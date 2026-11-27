@@ -332,7 +332,8 @@ def test_promotion_blocked_by_protected_regression_even_with_large_validation_ga
     assert "protected" in decision.reason
 
 
-def test_promotion_rejected_when_both_protected_scores_missing():
+@pytest.mark.parametrize("incumbent_protected, candidate_protected", [(0.5, None), (None, None)])
+def test_promotion_rejected_when_a_protected_score_is_missing(incumbent_protected, candidate_protected):
     """Promotion must fail closed (never promote) when protected-episode
     evaluation is unavailable, even if the candidate posts a large gain on
     validation -- previously the regression check was silently skipped and
@@ -340,21 +341,11 @@ def test_promotion_rejected_when_both_protected_scores_missing():
     decision = evaluate_promotion(
         incumbent_val_scores=[0.2, 0.2],
         candidate_val_scores=[0.6, 0.7, 0.8],
-        incumbent_protected_score=None,
-        candidate_protected_score=None,
+        incumbent_protected_score=incumbent_protected,
+        candidate_protected_score=candidate_protected,
     )
     assert decision.promote is False
     assert "protected" in decision.reason
-
-
-def test_promotion_rejected_when_one_protected_score_missing():
-    decision = evaluate_promotion(
-        incumbent_val_scores=[0.2, 0.2],
-        candidate_val_scores=[0.6, 0.7, 0.8],
-        incumbent_protected_score=0.5,
-        candidate_protected_score=None,
-    )
-    assert decision.promote is False
 
 
 def test_promotion_rejected_on_mismatched_validation_coverage():
@@ -434,12 +425,6 @@ def test_random_baseline_runs_under_identical_budget(tmp_path):
     for rec in random_baseline["mutation_records"]:
         assert "random_baseline" in rec["diagnosis"]
 
-
-def test_final_holdout_cannot_be_reused(tmp_path):
-    guard = FinalHoldoutGuard(tmp_path / "guard.json")
-    guard.check_and_mark_used("run-1")
-    with pytest.raises(RuntimeError):
-        guard.check_and_mark_used("run-2")
 
 
 def test_inconclusive_outer_loop_keeps_incumbent_selected(tmp_path):

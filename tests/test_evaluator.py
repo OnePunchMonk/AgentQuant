@@ -195,16 +195,11 @@ def test_split_reserves_trailing_fraction():
     assert (search["^VIX"].index < holdout_start).all()
 
 
-def test_split_disabled_returns_original_data():
-    ohlcv = _make_ohlcv(500)
-    search, holdout_start = _split_search_and_holdout(ohlcv, "SPY", 0.0)
-
-    assert holdout_start is None
-    assert search is ohlcv
 
 
-@pytest.mark.parametrize("fraction", [-0.1, 1.0, 1.5])
-def test_split_invalid_fraction_is_noop(fraction):
+
+@pytest.mark.parametrize("fraction", [0.0, -0.1, 1.0, 1.5])  # 0.0 means disabled
+def test_split_disabled_or_invalid_fraction_is_noop(fraction):
     ohlcv = _make_ohlcv(500)
     search, holdout_start = _split_search_and_holdout(ohlcv, "SPY", fraction)
 
