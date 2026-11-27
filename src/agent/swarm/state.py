@@ -55,6 +55,9 @@ class SwarmResult:
     run_log: List[str] = field(default_factory=list)
     full_ranking: List[Dict[str, Any]] = field(default_factory=list)
     memory_patterns: List[str] = field(default_factory=list)
+    # "ok", "below_min_approved" (fewer approved than the minimum) or
+    # "no_approved_proposals" (the critic rejected everything; nothing was backtested).
+    status: str = "ok"
 
     def summary(self) -> str:
         return "\n".join(
@@ -75,6 +78,7 @@ class SwarmResult:
                     f"{self.proposals_rejected} rejected"
                 ),
                 f"Methods: {self.generation_methods}",
+                f"Status: {self.status}",
             ]
         )
 
@@ -93,4 +97,5 @@ class SwarmResult:
             "regime_label": self.regime_label,
             "regime_confidence": self.regime_confidence,
             "generation_methods": self.generation_methods,
+            "status": self.status,
         }

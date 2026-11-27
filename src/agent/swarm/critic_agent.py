@@ -3,6 +3,7 @@
 import logging
 from typing import Dict, List, Tuple
 
+from src.agent.parameter_grid import ParameterGrid
 from src.agent.proposal_generator import Proposal, ProposalValidator
 from src.agent.swarm.state import SwarmState
 
@@ -40,12 +41,14 @@ class CriticAgent:
                     "regime_characteristic_used": proposal.regime_characteristic_used,
                 },
                 strategy_type,
+                ParameterGrid().get_grid(strategy_type),
             )
             if strategy_type == "trend_following":
                 sw = proposal.params.get("short_window", 0)
                 mw = proposal.params.get("medium_window", 0)
                 lw = proposal.params.get("long_window", 0)
-                valid = proposal if 0 < sw < mw < lw else None
+                ordered = 0 < sw < mw < lw
+                valid = valid if (valid is not None and ordered) else None
 
             if valid is None:
                 rejected.append({"proposal": str(proposal.params), "reason": "Invalid parameters."})

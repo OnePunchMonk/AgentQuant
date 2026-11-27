@@ -56,24 +56,28 @@ class SwarmOrchestrator:
 
         approved = len(state.get("approved_proposals", []))
         rejected = state.get("rejected_count", 0)
-        if approved < self.min_approved_proposals:
-            proposals = sorted(
-                state.get("all_proposals", []),
-                key=lambda proposal: proposal.confidence,
-                reverse=True,
-            )
-            state["approved_proposals"] = proposals[: self.min_approved_proposals]
-            approved = len(state["approved_proposals"])
+        # The critic fails closed. It used to re-admit the top proposals by the
+        # proposer's own confidence when fewer than the minimum were approved, which
+        # turned a rejection into a quota. Rejected proposals now stay rejected and
+        # the result says so.
+        if approved == 0:
+            status = "no_approved_proposals"
             state.setdefault("run_log", []).append(
-                f"[Orchestrator] Re-admitted top proposals to reach {approved} approved candidates."
+                "[Orchestrator] The critic approved nothing; skipping backtests."
             )
-
-        state = run_backtest_coordinator(state)
+        else:
+            status = "ok" if approved >= self.min_approved_proposals else "below_min_approved"
+            if status == "below_min_approved":
+                state.setdefault("run_log", []).append(
+                    f"[Orchestrator] Only {approved} approved (minimum {self.min_approved_proposals}); "
+                    "continuing without re-admitting rejected proposals."
+                )
+            state = run_backtest_coordinator(state)
         state = run_memory_agent(state)
         state.setdefault("run_log", []).append(
             f"[Orchestrator] Completed swarm in {time.perf_counter() - start:.1f}s."
         )
-        return self._build_result(state, generated, approved, rejected)
+        return self._build_result(state, generated, approved, rejected, status)
 
     @staticmethod
     def _build_result(
@@ -81,6 +85,7 @@ class SwarmOrchestrator:
         generated: int,
         approved: int,
         rejected: int,
+        status: str = "ok",
     ) -> SwarmResult:
         best = state.get("best_result") or {}
         context = state.get("regime_context")
@@ -111,6 +116,7 @@ class SwarmOrchestrator:
             run_log=state.get("run_log", []),
             full_ranking=state.get("final_ranking", []),
             memory_patterns=state.get("memory_patterns", []),
+            status=status,
         )
 
 
