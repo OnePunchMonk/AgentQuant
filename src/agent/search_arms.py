@@ -292,6 +292,37 @@ def _run_agent_offline(dev_ohlcv: Dict[str, pd.DataFrame], asset: str, seed: int
                         cost_bps: Optional[float] = None,
                         live: bool = False,
                         attempt_history_policy: str = "recent") -> Dict[str, Any]:
+    """Run the inner agent loop; see `_run_agent_offline_impl` for the details.
+
+    Offline mode strips API keys and sets AGENTQUANT_OFFLINE for the duration of
+    the call. The caller's environment is snapshotted first and restored in a
+    `finally`, so nothing leaks even if setup raises. Previously one offline
+    benchmark call permanently deleted the process's API keys.
+    """
+    import os
+
+    env_names = (*_LLM_KEY_VARS, "TAVILY_API_KEY", "AGENTQUANT_OFFLINE")
+    saved_env = {name: os.environ.get(name) for name in env_names}
+    try:
+        return _run_agent_offline_impl(
+            dev_ohlcv, asset, seed, memory_db_path, max_iterations=max_iterations,
+            harness_config=harness_config, cost_bps=cost_bps, live=live,
+            attempt_history_policy=attempt_history_policy,
+        )
+    finally:
+        for name, value in saved_env.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+
+
+def _run_agent_offline_impl(dev_ohlcv: Dict[str, pd.DataFrame], asset: str, seed: int,
+                        memory_db_path: str, max_iterations: int = 2,
+                        harness_config: Optional[Any] = None,
+                        cost_bps: Optional[float] = None,
+                        live: bool = False,
+                        attempt_history_policy: str = "recent") -> Dict[str, Any]:
     """Invoke the existing propose->backtest->reflect inner loop
     (src.agent.agent_graph.run_agent) once, pointed at an explicit memory
     db path. Does not change agent_graph's core semantics -- just calls it
