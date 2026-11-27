@@ -284,6 +284,7 @@ _HEURISTIC_ORDER = (ProposalSource.RETRIEVED_PRIOR, ProposalSource.FAILURE_COUNT
 class HeuristicPolicy:
     name = "heuristic_priority"
     version = "1"
+    deterministic = True
 
     def config(self) -> Dict[str, Any]:
         return {"order": [s.value for s in _HEURISTIC_ORDER]}
@@ -299,6 +300,7 @@ class RandomPolicy:
     logged decision can be reproduced from the logged observation alone."""
     name = "random_uniform"
     version = "1"
+    deterministic = False
 
     def __init__(self, seed: int = 0):
         self.seed = seed
@@ -310,6 +312,57 @@ class RandomPolicy:
         rng = random.Random(f"{self.seed}:{obs.episode_id}:{obs.step}")
         c = candidates[rng.randrange(len(candidates))]
         return Action(c.source, c.grid_index, dict(c.params), 1.0 / len(candidates))
+
+
+class EpsilonGreedyPolicy:
+    """Logging policy with exploration, so logged decisions can be reused to value other policies.
+
+    With probability ``1 - epsilon`` it takes the base policy's action; with
+    probability ``epsilon`` it picks uniformly from the candidate set. The logged
+    propensity is the exact probability of the chosen action,
+    ``epsilon / n`` plus ``1 - epsilon`` if it is the base action. Every candidate
+    therefore has propensity at least ``epsilon / n``.
+
+    A deterministic policy logs propensity 1.0 for the one action it takes and
+    never takes the others, so an off-policy estimator has zero support for any
+    other policy (see src/agent/ope.py). Seeded per (seed, episode, step) like
+    RandomPolicy, so every decision can be reproduced from the logged observation.
+    """
+    name = "epsilon_greedy"
+    version = "1"
+
+    def __init__(self, base: Optional[Policy] = None, epsilon: float = 0.1, seed: int = 0):
+        if not 0.0 < epsilon <= 1.0:
+            raise ValueError("epsilon must be in (0, 1]; use the base policy for no exploration")
+        self.base = base or HeuristicPolicy()
+        if not getattr(self.base, "deterministic", False):
+            # The propensity formula assumes the base always takes the same action.
+            raise ValueError("EpsilonGreedyPolicy needs a deterministic base policy")
+        self.epsilon = float(epsilon)
+        self.seed = seed
+
+    def config(self) -> Dict[str, Any]:
+        return {"epsilon": self.epsilon, "seed": self.seed,
+                "base": {"name": self.base.name, "version": self.base.version, "config": self.base.config()}}
+
+    def act(self, obs: Observation, candidates: Sequence[Candidate]) -> Action:
+        n = len(candidates)
+        keys = [(c.source, c.grid_index) for c in candidates]
+        if len(set(keys)) != n:
+            # Two candidates with the same action identity would need their exploration
+            # probabilities summed; reject instead of logging a wrong propensity.
+            raise ValueError("candidate menu contains duplicate (source, grid_index) actions")
+        greedy = self.base.act(obs, candidates)
+        greedy_key = (greedy.source, greedy.grid_index)
+        if greedy_key not in keys:
+            raise ValueError("base policy chose an action outside the candidate menu")
+        rng = random.Random(f"{self.seed}:{obs.episode_id}:{obs.step}")
+        if rng.random() < self.epsilon:
+            chosen = candidates[rng.randrange(n)]
+        else:
+            chosen = candidates[keys.index(greedy_key)]
+        propensity = self.epsilon / n + ((1.0 - self.epsilon) if (chosen.source, chosen.grid_index) == greedy_key else 0.0)
+        return Action(chosen.source, chosen.grid_index, dict(chosen.params), propensity)
 
 
 def policy_hash(policy: Policy) -> str:

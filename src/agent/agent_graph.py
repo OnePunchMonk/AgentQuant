@@ -367,6 +367,32 @@ def hypothesize_node(state: AgentState) -> AgentState:
     return state
 
 
+def _sidecar_policy(seed_text: str):
+    """Policy for the shadow advisory.
+
+    Deterministic by default (no behaviour change). Setting AGENTQUANT_IDEA_SIDECAR_EPSILON
+    to a value in (0, 1] logs with exploration, so the recorded propensities can be used
+    to value other policies off-policy. The advisory is shadow-only: it is shown to the
+    proposer but never drives the backtest, so exploring costs no evaluation budget.
+    """
+    import hashlib
+    import os
+
+    from src.agent import idea_sidecar
+
+    raw = os.getenv("AGENTQUANT_IDEA_SIDECAR_EPSILON", "").strip()
+    if not raw:
+        return None
+    try:
+        epsilon = float(raw)
+    except ValueError:
+        return None
+    if not 0.0 < epsilon <= 1.0:
+        return None
+    seed = int.from_bytes(hashlib.sha256(seed_text.encode()).digest()[:4], "big")
+    return idea_sidecar.EpsilonGreedyPolicy(epsilon=epsilon, seed=seed)
+
+
 def _common_eval_start(ohlcv: Dict[str, pd.DataFrame], asset: str, strategy_type: str):
     """First bar every grid config has a defined signal for, or None.
 
@@ -872,6 +898,11 @@ def _run_assistant_sidecar_context(
         from src.agent.rl_shadow_tool import advise
 
         grid = ParameterGrid().get_grid(strategy_type)
+        # What this run has already evaluated, as grid indices, so candidate options
+        # exclude it and the policy observation shows it (it used to be empty).
+        tried_keys = _tried_param_keys(state)
+        tried_indices = [i for i, g in enumerate(grid) if tuple(sorted(g.items())) in tried_keys]
+        rounds_left = max(0, int(state.get("max_iterations", 1)) - int(iteration) + 1)
         # Memory lookup is an independent request with an explicit point-in-time cutoff.
         request_id = f"{state.get('run_id', 'run')}:{iteration}:memory"
         memory_request = AssistantToolRunRequest(
@@ -890,7 +921,7 @@ def _run_assistant_sidecar_context(
         idea_request = AssistantToolRunRequest(
             request_id=f"{state.get('run_id', 'run')}:{iteration}:ideas",
             intent="candidate_options", decision_time=str(as_of),
-            arguments={"grid": grid, "tried_grid_indices": [], "failures": [],
+            arguments={"grid": grid, "tried_grid_indices": tried_indices, "failures": [],
                        "prior_params": prior_params},
             capabilities=frozenset({"prior_results"}), max_tool_calls=1,
         )
@@ -910,12 +941,23 @@ def _run_assistant_sidecar_context(
                 episode_id=f"{state.get('run_id', 'run')}:{iteration}",
                 decision_time=str(as_of), step=iteration, asset=state.get("asset", ""),
                 regime=context.regime_label, strategy_family=strategy_type,
-                grid_size=len(grid), tried_grid_indices=(), visible_failures=(),
-                attempted=(), remaining_proposals=5, remaining_tool_calls=0,
+                grid_size=len(grid), tried_grid_indices=tuple(tried_indices), visible_failures=(),
+                attempted=(), remaining_proposals=5 * rounds_left, remaining_tool_calls=0,
             )
+            # What the proposer sees is always the deterministic advisory. An exploration policy,
+            # when switched on, is only logged: if its sampled action reached the prompt,
+            # changing epsilon would change which configs get evaluated.
             rl_advisory = advise(observation, candidates).to_dict()
+            exploration = _sidecar_policy(seed_text=f"{state.get('run_id', 'run')}")
+            rl_logged = rl_advisory if exploration is None else advise(observation, candidates, exploration).to_dict()
+            rl_log_record = dict(
+                rl_logged,
+                observation=observation.to_dict(),
+                candidates=[c.to_dict() for c in candidates],
+            )
         else:
             rl_advisory = None
+            rl_log_record = None
         hyde_run = None
         try:
             retriever = HydeRetrievalTool(HydeGenerator(), evidence=[])
@@ -936,7 +978,7 @@ def _run_assistant_sidecar_context(
             payloads.append(hyde_run.to_dict())
         if rl_advisory is not None:
             payloads.append({"tool_name": "rl_shadow_advisory", "ok": True,
-                             "data": rl_advisory,
+                             "data": rl_log_record,
                              "provenance": {"source": "src.agent.rl_shadow_tool.advise",
                                             "validated_canonical_menu": True}})
         state.setdefault("assistant_tool_results", []).extend(payloads)
