@@ -551,3 +551,15 @@ def test_memory_tool_is_read_only_in_read_mode(tmp_path):
     result = tool(query="robust", as_of="2021-01-01")
     assert result["results"][0]["evidence"][0]["record_type"] == "note"
     assert read_service.can_write is False
+
+
+def test_partial_oos_fields_are_hidden_until_the_window_closes(tmp_path):
+    """A trial with OOS metadata but no OOS Sharpe (a partial or directly built record) must not
+    show its return, window end or failure mode to a query made before the window closes."""
+    svc = _svc(tmp_path)
+    svc.record_trial(Trial(asset="SPY", strategy_type="momentum", params={"fast_window": 5}, data_end="2020-01-01",
+                           oos_end="2021-01-01", oos_return=0.2, oos_failure_mode="oos_decay", outcome="accepted"))
+    early = svc.visible_trials(MemoryQuery(as_of="2020-06-01"))[0]
+    assert (early.oos_end, early.oos_return, early.oos_failure_mode) == (None, None, None)
+    late = svc.visible_trials(MemoryQuery(as_of="2021-06-01"))[0]
+    assert (late.oos_end, late.oos_return, late.oos_failure_mode) == ("2021-01-01", 0.2, "oos_decay")

@@ -179,7 +179,7 @@ class MemoryService:
         trials = [Trial.from_row(r) for r in rows]
         if query.as_of is not None:
             for trial in trials:
-                if trial.oos_sharpe is None:
+                if not _has_oos(trial):  # judge every out-of-sample field, not just the Sharpe
                     continue
                 if trial.oos_end is None and not self.include_undated:
                     _blank_oos(trial)
@@ -389,6 +389,12 @@ class MemoryService:
                 "notes": conn.execute("SELECT COUNT(*) FROM mem_notes").fetchone()[0],
                 "reads": conn.execute("SELECT COUNT(*) FROM mem_reads").fetchone()[0],
             }
+
+
+def _has_oos(trial: Trial) -> bool:
+    return any(v is not None for v in (
+        trial.oos_sharpe, trial.oos_return, trial.oos_max_dd, trial.oos_start,
+        trial.oos_end, trial.oos_source, trial.oos_failure_mode))
 
 
 def _blank_oos(trial: Trial) -> None:
