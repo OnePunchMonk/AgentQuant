@@ -71,6 +71,24 @@ def _query(as_of, **kw):
     return MemoryQuery(as_of=as_of, **kw)
 
 
+def test_record_trials_batch_and_rollback(tmp_path, monkeypatch):
+    svc = _svc(tmp_path)
+    first, second = _trial(), _trial(run_id="r2")
+    assert svc.record_trials([first, second]) == [first.trial_id, second.trial_id]
+    assert svc.stats()["trials"] == 2
+    assert svc.record_trials([]) == []
+    readonly = _svc(tmp_path, mode="read")
+    assert readonly.record_trials([first, second]) == ["", ""]
+
+    third, bad = _trial(run_id="r3"), _trial(run_id="r4")
+    def fail():
+        raise ValueError("bad trial")
+    monkeypatch.setattr(bad, "to_row", fail)
+    with pytest.raises(ValueError, match="bad trial"):
+        svc.record_trials([third, bad])
+    assert svc.stats()["trials"] == 2
+
+
 def _fixture(seed=3, n=400):
     rng = np.random.default_rng(seed)
     dates = pd.bdate_range("2020-01-01", periods=n)

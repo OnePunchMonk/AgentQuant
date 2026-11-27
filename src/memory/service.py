@@ -90,7 +90,17 @@ class MemoryService:
         return trial.trial_id
 
     def record_trials(self, trials: Sequence[Trial]) -> List[str]:
-        return [self.record_trial(t) for t in trials]
+        if not self.can_write:
+            return ["" for _ in trials]
+        if not trials:
+            return []
+        with self._conn() as conn:
+            for trial in trials:
+                row = trial.to_row()
+                columns = ", ".join(row)
+                placeholders = ", ".join(f":{k}" for k in row)
+                conn.execute(f"INSERT OR REPLACE INTO mem_trials ({columns}) VALUES ({placeholders})", row)
+        return [trial.trial_id for trial in trials]
 
     def attach_oos(
         self,
