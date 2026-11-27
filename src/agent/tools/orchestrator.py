@@ -194,8 +194,10 @@ def _parse_proposals_from_text(text: str, strategy_type: str) -> List[Dict[str, 
     Returns:
         List of Proposal-like dicts (compatible with ProposalValidator)
     """
+    from src.agent.parameter_grid import ParameterGrid
     from src.agent.proposal_generator import ProposalValidator
 
+    grid = ParameterGrid().get_grid(strategy_type)
     proposals = []
 
     # Extract JSON from text (Claude may wrap in markdown or other text)
@@ -217,7 +219,7 @@ def _parse_proposals_from_text(text: str, strategy_type: str) -> List[Dict[str, 
 
             for raw in raw_proposals:
                 # Validate using existing ProposalValidator
-                proposal = ProposalValidator.validate(raw, strategy_type)
+                proposal = ProposalValidator.validate(raw, strategy_type, grid)
                 if proposal:
                     # Add falsifiable claim if provided
                     if "falsifiable_claim" in raw:

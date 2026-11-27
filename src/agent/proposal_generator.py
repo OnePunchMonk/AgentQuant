@@ -51,11 +51,36 @@ class Proposal:
     generation_method: str = "unknown"  # "llm", "grid_search", "random"
 
 
+def _norm(value: Any) -> Any:
+    """Normalise numbers so 20 and 20.0 compare equal in a grid lookup."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return round(float(value), 9)
+    return value
+
+
+def _param_key(params: Dict[str, Any]) -> tuple:
+    return tuple(sorted((str(k), _norm(v)) for k, v in params.items()))
+
+
 class ProposalValidator:
     """Validates proposals before they hit backtest."""
 
     @staticmethod
-    def validate(raw: Dict[str, Any], strategy_type: str) -> Optional[Proposal]:
+    def validate(
+        raw: Dict[str, Any],
+        strategy_type: str,
+        grid: Optional[List[Dict[str, Any]]] = None,
+    ) -> Optional[Proposal]:
+        """Return a Proposal, or None if `raw` is malformed.
+
+        When `grid` is given, the proposal must be exactly one of its entries.
+        The prompt asks the LLM to select from the grid, but a prompt is a
+        request, not a guarantee: without this check an off-grid choice such as
+        fast=3, slow=17 was accepted and backtested, which broke the "LLM, grid
+        and random search the same space" comparison and the trial counts.
+        """
         if not isinstance(raw, dict):
             return None
 
@@ -81,6 +106,12 @@ class ProposalValidator:
             # Pass through all params for other strategy types
             params = {k: v for k, v in raw.items()
                       if k not in ("reasoning", "confidence", "regime_characteristic_used")}
+
+        if grid:
+            allowed_keys = set().union(*(entry.keys() for entry in grid))
+            params = {k: v for k, v in params.items() if k in allowed_keys}
+            if _param_key(params) not in {_param_key(entry) for entry in grid}:
+                return None
 
         return Proposal(
             params=params,
@@ -119,9 +150,15 @@ class ProposalGenerator:
         prior_results: Optional[List[Dict[str, Any]]] = None,
         prompt_prefix: str = "",
         memory_pack: Optional[Any] = None,
+        exclude_params: Optional[Any] = None,
     ) -> List[Proposal]:
         """
         Args:
+            exclude_params: Collection of parameter dicts (or `tuple(sorted(items))`
+                keys) already evaluated earlier in this run. They are never
+                proposed again, so each retry iteration spends its budget on
+                configs that have not been tested yet. May return fewer than
+                `n_proposals` when the grid is exhausted.
             prior_results: Backtest results from earlier iterations *within
                 this run* (each with at least "params" and "sharpe"), so the
                 LLM can reason about which parameter regions already failed
@@ -139,6 +176,10 @@ class ProposalGenerator:
         """
         proposals: List[Proposal] = []
         self._active_pack = memory_pack
+        excluded = {
+            _param_key(dict(e)) if isinstance(e, dict) else tuple(e)
+            for e in (exclude_params or [])
+        }
 
         # Try LLM first
         if self.planner.is_available():
@@ -146,6 +187,7 @@ class ProposalGenerator:
                 llm_proposals = self._llm_generate(
                     context, strategy_type, n_proposals, prior_results, prompt_prefix
                 )
+                llm_proposals = [p for p in llm_proposals if _param_key(p.params) not in excluded]
                 proposals.extend(llm_proposals)
                 logger.info("LLM generated %d valid proposals.", len(llm_proposals))
             except Exception as e:
@@ -156,6 +198,8 @@ class ProposalGenerator:
             needed = n_proposals - len(proposals)
             existing_params = {tuple(sorted(p.params.items())) for p in proposals}
             rejected_params = self._rejected_param_keys(context, strategy_type)
+            rejected_params = set(rejected_params) | excluded
+            existing_params |= excluded
 
             if memory_pack is not None:
                 memory_proposals = self._pack_seed_proposals(memory_pack, strategy_type)
@@ -174,7 +218,7 @@ class ProposalGenerator:
 
             needed = n_proposals - len(proposals)
             grid_proposals = self.grid.top_k_by_prior(
-                strategy_type, needed + 3, context.regime_label
+                strategy_type, needed + 3 + len(excluded), context.regime_label
             )
             for gp in grid_proposals:
                 if len(proposals) >= n_proposals:
@@ -192,8 +236,9 @@ class ProposalGenerator:
         # Last resort: random from grid
         if len(proposals) < n_proposals:
             needed = n_proposals - len(proposals)
-            rejected_params = self._rejected_param_keys(context, strategy_type)
-            for rp in self.grid.random_k(strategy_type, needed + 5):
+            rejected_params = set(self._rejected_param_keys(context, strategy_type)) | excluded
+            pool = len(self.grid.get_grid(strategy_type)) if excluded else needed + 5
+            for rp in self.grid.random_k(strategy_type, pool):
                 if len(proposals) >= n_proposals:
                     break
                 existing_params_set = {tuple(sorted(p.params.items())) for p in proposals}
@@ -302,7 +347,7 @@ class ProposalGenerator:
         raw_proposals = self.planner.generate_proposals(prompt, n)
         validated = []
         for raw in raw_proposals:
-            v = self.validator.validate(raw, strategy_type)
+            v = self.validator.validate(raw, strategy_type, self.grid.get_grid(strategy_type))
             if v is not None:
                 validated.append(v)
         return validated

@@ -68,6 +68,7 @@ class AgentState(TypedDict, total=False):
     memory_snapshot_id: Optional[str]
     attempt_history_policy: str
     attempt_history_char_budget: int
+    space_exhausted: bool
 
 
 def _split_search_and_holdout(
@@ -279,6 +280,15 @@ def _prior_attempts_for_prompt(state: AgentState) -> List[Dict[str, Any]]:
     )
 
 
+def _tried_param_keys(state: AgentState) -> set:
+    """Parameter keys already backtested earlier in this run."""
+    return {
+        tuple(sorted((r.get("params") or {}).items()))
+        for r in state.get("all_results", [])
+        if r.get("params")
+    }
+
+
 def hypothesize_node(state: AgentState) -> AgentState:
     """Generate strategy proposals via tool orchestrator with fallback to ProposalGenerator."""
     iteration = state.get("iteration", 0) + 1
@@ -293,9 +303,12 @@ def hypothesize_node(state: AgentState) -> AgentState:
     # Try tool-based orchestration first (uses Claude + web search if available),
     # but only when the resolved harness config actually enables tools. This is
     # the enforcement point for "disabling tools => zero external tool calls".
+    tried = _tried_param_keys(state)
     proposals: List[Proposal] = []
     if tools_enabled:
         proposals = _hypothesize_with_tools(state, strategy_type, context, iteration, harness)
+        # A retry must test something new; drop configs already evaluated this run.
+        proposals = [p for p in proposals if tuple(sorted(p.params.items())) not in tried]
     else:
         logger.info("Tools disabled by harness config; skipping tool orchestration")
 
@@ -312,7 +325,27 @@ def hypothesize_node(state: AgentState) -> AgentState:
             prior_results=prior_results,
             prompt_prefix=prompt_prefix,
             memory_pack=state.get("memory_pack"),
+            exclude_params=tried,
         )
+
+    if not proposals and tried:
+        # Every config in the canonical grid has been evaluated; another
+        # iteration cannot add information.
+        state["space_exhausted"] = True
+        state["iteration"] = iteration - 1  # no backtest ran this round
+        state["proposals"] = []
+        state["should_continue"] = False
+        state["run_status"] = (
+            STATUS_BUDGET_EXHAUSTED if state.get("best_result") is not None
+            else STATUS_NO_VALID_CANDIDATE
+        )
+        state["run_log"].append(
+            f"Iteration {iteration}: no new candidates to propose ({len(tried)} configs "
+            f"already evaluated; the rest are excluded or already tried); stopping early."
+        )
+        emit_trace(state.get("trace"), "hypothesize", state["run_log"][-1],
+                   iteration=iteration, methods=[], proposals=[])
+        return state
 
     state["proposals"] = proposals
     state["run_log"].append(
@@ -383,6 +416,12 @@ def backtest_node(state: AgentState) -> AgentState:
 
     if results:
         best = results[0]
+        previous_best = state.get("best_result")
+        if previous_best is not None and previous_best.get("sharpe", float("-inf")) > best.get("sharpe", float("-inf")):
+            # Keep the best candidate seen across all iterations. Previously this
+            # was overwritten each round, so a worse later iteration replaced the
+            # winner that holdout grading and storage then used.
+            best = previous_best
         state["best_result"] = best
         state["run_log"].append(
             f"Best: Sharpe={best['sharpe']:.2f}, Return={best['total_return']:.1%}, "
@@ -401,7 +440,9 @@ def backtest_node(state: AgentState) -> AgentState:
         logger.info("Best result: Sharpe=%.2f, Return=%.1f%%, Params=%s",
                      best["sharpe"], best["total_return"] * 100, best["params"])
     else:
-        state["best_result"] = None
+        # Keep any earlier best; only clear it if nothing has ever succeeded.
+        if not state.get("all_results"):
+            state["best_result"] = None
         state["run_log"].append("No valid backtest results.")
         emit_trace(state.get("trace"), "backtest", "No valid candidate backtests completed.")
         logger.warning("No valid backtest results produced.")
@@ -990,6 +1031,8 @@ def run_agent(
         # Step 2-4: Hypothesize → Backtest → Reflect (loop, in-sample search)
         while state["should_continue"] and state["iteration"] < state["max_iterations"]:
             state = hypothesize_node(state)
+            if state.get("space_exhausted"):
+                break
             state = backtest_node(state)
             state = reflect_node(state)
 
