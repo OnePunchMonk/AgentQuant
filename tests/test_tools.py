@@ -1,12 +1,19 @@
 """Tests: tools."""
 from unittest.mock import Mock, patch
 
+import pytest
+
 from src.agent.tools.content_extraction import (
     fetch_and_extract_content,
     parse_html,
     score_relevance,
 )
 from src.agent.tools.registry import get_default_registry
+
+
+@pytest.fixture(autouse=True)
+def public_dns(monkeypatch):
+    monkeypatch.setattr("socket.getaddrinfo", lambda *a, **kw: [(2, 1, 6, "", ("93.184.216.34", 443))])
 
 SAMPLE_HTML = """
 <html>
@@ -79,7 +86,7 @@ def test_score_relevance_full_match_is_one():
 
 
 def test_fetch_and_extract_content_happy_path():
-    with patch("requests.get", return_value=_mock_response()) as mock_get:
+    with patch("src.agent.tools.content_extraction._pinned_get", return_value=_mock_response()) as mock_get:
         result = fetch_and_extract_content("https://arxiv.org/abs/1234.5678", query="momentum crisis")
     mock_get.assert_called_once()
     assert result["error"] is None
@@ -100,29 +107,27 @@ def test_fetch_and_extract_content_blocks_private_literal_hosts():
 
 
 def test_fetch_and_extract_content_does_not_follow_redirects():
-    with patch("requests.get", return_value=_mock_response(status_code=302)) as mock_get:
+    with patch("src.agent.tools.content_extraction._pinned_get", return_value=_mock_response(status_code=302)) as mock_get:
         result = fetch_and_extract_content("https://example.com/redirect")
     assert result["error"] == "redirects are not followed"
-    assert mock_get.call_args.kwargs["allow_redirects"] is False
-    assert mock_get.call_args.kwargs["timeout"] == 15
 
 
 def test_fetch_and_extract_content_enforces_response_size_limit():
     response = _mock_response()
     response.headers["Content-Length"] = "2000001"
-    with patch("requests.get", return_value=response):
+    with patch("src.agent.tools.content_extraction._pinned_get", return_value=response):
         result = fetch_and_extract_content("https://example.com/large")
     assert result["error"] == "response exceeds maximum size"
 
 
 def test_fetch_and_extract_content_reports_http_error_without_raising():
-    with patch("requests.get", return_value=_mock_response(status_code=404, text="")):
+    with patch("src.agent.tools.content_extraction._pinned_get", return_value=_mock_response(status_code=404, text="")):
         result = fetch_and_extract_content("https://example.com/missing")
     assert result["error"] == "HTTP 404"
 
 
 def test_fetch_and_extract_content_reports_non_html_content_type():
-    with patch("requests.get", return_value=_mock_response(content_type="application/pdf")):
+    with patch("src.agent.tools.content_extraction._pinned_get", return_value=_mock_response(content_type="application/pdf")):
         result = fetch_and_extract_content("https://example.com/paper.pdf")
     assert "unsupported content-type" in result["error"]
 
@@ -130,13 +135,13 @@ def test_fetch_and_extract_content_reports_non_html_content_type():
 def test_fetch_and_extract_content_reports_network_failure_without_raising():
     import requests
 
-    with patch("requests.get", side_effect=requests.ConnectionError("boom")):
+    with patch("src.agent.tools.content_extraction._pinned_get", side_effect=requests.ConnectionError("boom")):
         result = fetch_and_extract_content("https://example.com/unreachable")
     assert "request failed" in result["error"]
 
 
 def test_fetch_and_extract_content_reports_empty_page():
-    with patch("requests.get", return_value=_mock_response(text="<html><body></body></html>")):
+    with patch("src.agent.tools.content_extraction._pinned_get", return_value=_mock_response(text="<html><body></body></html>")):
         result = fetch_and_extract_content("https://example.com/blank")
     assert result["error"] == "no extractable text found on page"
 
@@ -157,7 +162,7 @@ def test_tool_appears_in_claude_tool_definitions():
 
 def test_execute_tool_through_registry_dispatch():
     registry = get_default_registry()
-    with patch("requests.get", return_value=_mock_response()):
+    with patch("src.agent.tools.content_extraction._pinned_get", return_value=_mock_response()):
         result = registry.execute_tool(
             "fetch_and_extract_content", {"url": "https://arxiv.org/abs/1234.5678", "query": "momentum"}
         )

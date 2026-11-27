@@ -44,8 +44,8 @@ def _call_with_retry(fn: Callable[[], T], max_retries: int, backoff_seconds: flo
             last_exc = e
             if attempt < max_retries:
                 logger.warning(
-                    "LLM call failed (attempt %d/%d): %s. Retrying...",
-                    attempt + 1, max_retries + 1, e,
+                    "LLM call failed (attempt %d/%d; %s). Retrying...",
+                    attempt + 1, max_retries + 1, type(e).__name__,
                 )
                 time.sleep(backoff_seconds * (attempt + 1))
     raise last_exc
@@ -130,7 +130,7 @@ class GeminiPlanner(BasePlanner):
             except json.JSONDecodeError:
                 pass
 
-        logger.warning("Could not parse LLM response as JSON: %s...", text[:200])
+        logger.warning("Could not parse LLM response as JSON")
         return []
 
 

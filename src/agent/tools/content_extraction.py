@@ -18,7 +18,7 @@ import socket
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from typing import Any, Dict, List, Optional
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 
 logger = logging.getLogger(__name__)
 
@@ -33,29 +33,58 @@ REQUEST_TIMEOUT_S = 15
 MAX_RESPONSE_BYTES = 2_000_000
 
 
-def _validate_public_http_url(url: str) -> Optional[str]:
-    """Reject malformed URLs and destinations that could reach local services."""
+def _resolve_public_http_url(url: str):
+    """Return a checked IP and original hostname, or a rejection reason."""
     try:
         parts = urlsplit(url)
         if parts.scheme.lower() not in {"http", "https"} or not parts.hostname:
-            return "invalid or missing URL"
+            return None, None, "invalid or missing URL"
         if parts.username or parts.password:
-            return "URL credentials are not allowed"
+            return None, None, "URL credentials are not allowed"
         host = parts.hostname.rstrip(".").lower()
         if host in {"localhost", "localhost.localdomain"} or host.endswith(".localhost"):
-            return "URL host is not public"
+            return None, None, "URL host is not public"
         try:
             addresses = [ipaddress.ip_address(host)]
         except ValueError:
             try:
                 addresses = [ipaddress.ip_address(item[4][0]) for item in socket.getaddrinfo(host, parts.port or (443 if parts.scheme == "https" else 80), type=socket.SOCK_STREAM)]
             except OSError:
-                return "URL host could not be resolved"
+                return None, None, "URL host could not be resolved"
         if not addresses or any(not address.is_global for address in addresses):
-            return "URL host is not public"
-        return None
+            return None, None, "URL host is not public"
+        return str(addresses[0]), host, None
     except (ValueError, TypeError):
-        return "invalid or missing URL"
+        return None, None, "invalid or missing URL"
+
+
+def _pinned_get(url: str, ip: str, host: str):
+    """Connect to the checked IP; verify HTTPS against the original hostname."""
+    import requests
+    from requests.adapters import HTTPAdapter
+
+    parts = urlsplit(url)
+    address = f"[{ip}]" if ":" in ip else ip
+    netloc = address + (f":{parts.port}" if parts.port is not None else "")
+    pinned_url = urlunsplit((parts.scheme, netloc, parts.path, parts.query, ""))
+    host_header = f"[{host}]" if ":" in host else host
+    if parts.port is not None:
+        host_header += f":{parts.port}"
+
+    class PinnedAdapter(HTTPAdapter):
+        def init_poolmanager(self, connections, maxsize, block=False, **kwargs):
+            kwargs.update(assert_hostname=host, server_hostname=host)
+            return super().init_poolmanager(connections, maxsize, block=block, **kwargs)
+
+    session = requests.Session()
+    session.trust_env = False  # A proxy must not resolve or redirect the checked destination.
+    session.mount("https://", PinnedAdapter())
+    try:
+        return session.get(pinned_url, timeout=REQUEST_TIMEOUT_S, stream=True,
+                           allow_redirects=False, headers={"Host": host_header,
+                           "User-Agent": "AgentQuant-ResearchAgent/1.0 (+literature discovery tool)"})
+    finally:
+        session.close()
 
 
 @dataclass
@@ -196,7 +225,7 @@ def fetch_and_extract_content(url: str, query: str = "") -> Dict[str, Any]:
     must be able to treat "the fetch failed" as an observable tool result,
     not a crash.
     """
-    validation_error = _validate_public_http_url(url or "")
+    ip, host, validation_error = _resolve_public_http_url(url or "")
     if validation_error:
         return ExtractedContent(url=url or "", error=f"{validation_error}: {url!r}").to_dict()
 
@@ -206,13 +235,7 @@ def fetch_and_extract_content(url: str, query: str = "") -> Dict[str, Any]:
         return ExtractedContent(url=url, error="request failed: requests dependency is not installed").to_dict()
 
     try:
-        resp = requests.get(
-            url,
-            timeout=REQUEST_TIMEOUT_S,
-            headers={"User-Agent": "AgentQuant-ResearchAgent/1.0 (+literature discovery tool)"},
-            stream=True,
-            allow_redirects=False,
-        )
+        resp = _pinned_get(url, ip, host)
     except requests.RequestException as exc:
         return ExtractedContent(url=url, error=f"request failed: {exc}").to_dict()
 

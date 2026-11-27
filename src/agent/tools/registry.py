@@ -113,12 +113,12 @@ class ToolRegistry:
                 "output": output,
             }
         except Exception as e:
-            logger.error(f"Tool {tool_name} execution failed: {e}")
+            logger.error("Tool %s execution failed (%s)", tool_name, type(e).__name__)
             return {
                 "tool_name": tool_name,
                 "success": False,
                 "output": None,
-                "error": str(e),
+                "error": "tool execution failed",
             }
 
 

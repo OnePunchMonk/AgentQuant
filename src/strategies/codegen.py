@@ -2,8 +2,6 @@
 import ast
 from typing import Iterable, Tuple
 
-from src.strategies.base import Strategy
-
 ALLOWED_IMPORTS = {"pandas", "numpy"}
 
 class StrategyCodeValidator:
@@ -33,13 +31,4 @@ class StrategyCodeValidator:
         return True, cls.name
 
 def register_strategy_source(source: str, name: str, registry: dict) -> str:
-    ok, detail = StrategyCodeValidator().validate(source)
-    if not ok:
-        raise ValueError(detail)
-    namespace = {"Strategy": Strategy}
-    exec(compile(ast.parse(source), "<generated_strategy>", "exec"), {"__builtins__": {"int": int, "float": float, "len": len}}, namespace)
-    candidate = namespace[detail]()
-    if not isinstance(candidate, Strategy):
-        raise TypeError("generated class is not a Strategy")
-    registry[name] = candidate
-    return name
+    raise RuntimeError("Generated strategy execution is disabled: AST validation is not a sandbox")
