@@ -136,6 +136,43 @@ jobs:
           # runs from defaults rather than crashing on a repo-relative path.
           /tmp/agentquant-wheel-venv/bin/python -c "from src.utils.config import config; print('config loaded with defaults:', config.reference_asset)"
 
+  harness-verification:
+    name: Harness evolution results are not stale (informational)
+    # Runs the 6-epoch evolution from agentquant-artifacts and compares it with the committed
+    # results (#20). Informational: a failure shows as a warning and never blocks the pipeline
+    # or the quality gate, because the scripts and results live in another repo.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: OnePunchMonk/agentquant-artifacts
+          path: artifacts
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Verify harness evolution results are not stale
+        env:
+          GOOGLE_API_KEY: ""
+          ANTHROPIC_API_KEY: ""
+          TAVILY_API_KEY: ""
+        run: |
+          python artifacts/benchmarks/verify_harness_results.py
+
   security-check:
     name: Security & Configuration
     runs-on: ubuntu-latest
