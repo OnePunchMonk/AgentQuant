@@ -110,6 +110,14 @@ class EvidenceGraph:
                                config_key=trial.config_key, strategy_type=trial.strategy_type,
                                asset=trial.asset)
             self._edge(trial_node, claim, "asserts", **common, metric="failure_mode", value=trial.failure_mode)
+        if trial.oos_failure_mode and trial.oos_end:
+            # Derived from out-of-sample data: only knowable once that window has closed.
+            claim = self._node("claim", f"{scope}|{trial.config_key}|failure|{trial.oos_failure_mode}",
+                               subject=scope, predicate="failure_mode", value=trial.oos_failure_mode,
+                               config_key=trial.config_key, strategy_type=trial.strategy_type,
+                               asset=trial.asset)
+            self._edge(trial_node, claim, "asserts", **common, visible_at=trial.oos_end,
+                       metric="oos_failure_mode", value=trial.oos_failure_mode)
         if trial.is_sharpe is not None:
             self._metric_claim(trial, trial_node, common, "is_sharpe", trial.is_sharpe,
                                trial.data_end)
@@ -130,7 +138,11 @@ class EvidenceGraph:
                    metric=metric, numeric_value=float(value), **attrs)
 
     def _add_note(self, note: Note) -> None:
-        note_node = self._node("note", note.note_id, kind=note.kind, status=note.status)
+        # confirmed/rejected come from out-of-sample results, so they are not a time-free
+        # attribute of the note; they are asserted below with the date they became known.
+        status_known_at = note.meta.get("status_known_at") if isinstance(note.meta, Mapping) else None
+        shown_status = None if note.status in {"confirmed", "rejected"} else note.status
+        note_node = self._node("note", note.note_id, kind=note.kind, status=shown_status)
         common = dict(record_id=note.note_id, record_type="note", known_at=note.created_at,
                       data_end=note.data_end)
         if note.strategy_type:
@@ -154,13 +166,14 @@ class EvidenceGraph:
                                     predicate=predicate, value=value,
                                     config_key=note.config_key or None)
             self._edge(note_node, claim_node, "asserts", **common, metric=predicate, value=value)
-        elif note.kind == "hypothesis" and note.status in {"confirmed", "rejected"}:
+        elif note.kind == "hypothesis" and note.status in {"confirmed", "rejected"} and status_known_at:
             subject = note.config_key or note.strategy_type or note.note_id
             value = note.status
             claim_node = self._node("claim", f"{subject}|hypothesis_status|{value}",
                                     subject=subject, predicate="hypothesis_status", value=value,
                                     config_key=note.config_key or None)
-            self._edge(note_node, claim_node, "asserts", **common, metric="hypothesis_status", value=value)
+            self._edge(note_node, claim_node, "asserts", **common, visible_at=status_known_at,
+                       metric="hypothesis_status", value=value)
         elif note.body.strip():
             text_node = self._node("statement", note.body.strip(), kind=note.kind)
             self._edge(note_node, text_node, "contains_statement", **common, quality=note.quality)

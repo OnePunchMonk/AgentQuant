@@ -233,7 +233,8 @@ def test_attach_oos_flags_decay_and_resolves_hypothesis(tmp_path):
     assert svc.attach_oos(t.trial_id, oos_sharpe=-0.2, oos_start="2021-07-01", oos_end="2021-12-31",
                           min_acceptable_sharpe=0.3)
     stored = svc.get_trial(t.trial_id)
-    assert stored.failure_mode == "oos_decay"
+    assert stored.oos_failure_mode == "oos_decay"  # kept apart from the in-sample failure_mode
+    assert stored.failure_mode != "oos_decay"
     with svc._conn() as conn:
         status = conn.execute("SELECT status FROM mem_notes WHERE note_id = ?", (hyp,)).fetchone()[0]
     assert status == "rejected"

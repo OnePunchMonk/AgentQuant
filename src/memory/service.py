@@ -12,6 +12,7 @@ import json
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
 from src.memory.beliefs import DECAY_GAP, BeliefParams, compute_beliefs
@@ -47,14 +48,26 @@ class MemoryService:
         self.belief_params = belief_params or BeliefParams.from_config()
         self.allow_seeds = config.memory.allow_seeds
         self.max_seeds = config.memory.max_seeds
-        if self.mode != "off":
-            with self._conn() as conn:
-                ensure_schema(conn)
+        # Nothing touches the database here: the file and schema are created on the first
+        # write, and a read of a missing database sees an empty one.
 
     # -- plumbing -----------------------------------------------------------
 
-    def _conn(self):
-        return _ConnectionContext(self.db_path)
+    def _conn(self, write: bool = True):
+        """A connection context. Reads (write=False) never create the database file."""
+        path = self.db_path
+        if not write and path != ":memory:" and not Path(path).exists():
+            return _ConnectionContext(":memory:", create_schema=True)
+        if path == ":memory:":
+            return _ConnectionContext(path, create_schema=True)  # every connection is a new database
+        key = str(Path(path).resolve())  # a relative path means different files in different directories
+        if key in _SCHEMA_READY and not Path(path).exists():
+            _SCHEMA_READY.discard(key)  # the file was deleted since we set it up
+        if key not in _SCHEMA_READY:
+            with _ConnectionContext(path) as conn:
+                ensure_schema(conn)
+            _SCHEMA_READY.add(key)
+        return _ConnectionContext(path)
 
     @property
     def can_read(self) -> bool:
@@ -100,32 +113,41 @@ class MemoryService:
             min_acceptable_sharpe = config.agent.min_acceptable_sharpe
         with self._conn() as conn:
             row = conn.execute(
-                "SELECT is_sharpe, hypothesis_id, failure_mode FROM mem_trials WHERE trial_id = ?",
+                "SELECT is_sharpe, hypothesis_id FROM mem_trials WHERE trial_id = ?",
                 (trial_id,),
             ).fetchone()
             if row is None:
                 return False
-            failure_mode = row["failure_mode"]
+            oos_failure_mode = None
             if (
                 row["is_sharpe"] is not None
                 and row["is_sharpe"] - oos_sharpe > DECAY_GAP
                 and oos_sharpe < min_acceptable_sharpe
             ):
-                failure_mode = "oos_decay"
+                oos_failure_mode = "oos_decay"
             conn.execute(
                 """UPDATE mem_trials
                    SET oos_sharpe = ?, oos_return = ?, oos_max_dd = ?, oos_start = ?, oos_end = ?,
-                       oos_source = ?, failure_mode = ?
+                       oos_source = ?, oos_failure_mode = ?
                    WHERE trial_id = ?""",
                 (float(oos_sharpe), oos_return, oos_max_dd, oos_start, oos_end, source,
-                 failure_mode, trial_id),
+                 oos_failure_mode, trial_id),
             )
             if row["hypothesis_id"]:
                 status = "confirmed" if oos_sharpe >= min_acceptable_sharpe else "rejected"
-                conn.execute(
-                    "UPDATE mem_notes SET status = ? WHERE note_id = ? AND kind = 'hypothesis'",
-                    (status, row["hypothesis_id"]),
-                )
+                note = conn.execute(
+                    "SELECT meta_json FROM mem_notes WHERE note_id = ? AND kind = 'hypothesis'",
+                    (row["hypothesis_id"],),
+                ).fetchone()
+                if note is not None:
+                    # The status comes from out-of-sample data; record when it became knowable
+                    # so the evidence graph does not show it to earlier queries.
+                    meta = json.loads(note["meta_json"] or "{}")
+                    meta["status_known_at"] = oos_end
+                    conn.execute(
+                        "UPDATE mem_notes SET status = ?, meta_json = ? WHERE note_id = ?",
+                        (status, json.dumps(meta, sort_keys=True), row["hypothesis_id"]),
+                    )
         return True
 
     def record_note(self, note: Note) -> str:
@@ -152,7 +174,7 @@ class MemoryService:
             sql += " AND run_id != ?"
             args.append(query.exclude_run_id)
         sql, args = self._visibility(sql, args, query.as_of, "data_end")
-        with self._conn() as conn:
+        with self._conn(write=False) as conn:
             rows = conn.execute(sql, args).fetchall()
         trials = [Trial.from_row(r) for r in rows]
         if query.as_of is not None:
@@ -186,7 +208,7 @@ class MemoryService:
         sql, args = self._visibility(sql, args, query.as_of, "data_end")
         sql += " ORDER BY (regime_label = ?) DESC, quality DESC, created_at DESC LIMIT ?"
         args.extend([query.regime_label, limit])
-        with self._conn() as conn:
+        with self._conn(write=False) as conn:
             return [Note.from_row(r) for r in conn.execute(sql, args).fetchall()]
 
     def beliefs(self, query: MemoryQuery, trials: Optional[List[Trial]] = None) -> List[Belief]:
@@ -257,7 +279,7 @@ class MemoryService:
             sql += f" AND strategy_type IN ('',{','.join('?' for _ in query.strategy_types)})"
             args.extend(query.strategy_types)
         sql, args = self._visibility(sql, args, query.as_of, "data_end")
-        with self._conn() as conn:
+        with self._conn(write=False) as conn:
             notes = [Note.from_row(row) for row in conn.execute(sql, args).fetchall()]
         graph = EvidenceGraph.rebuild(trials, notes)
         hits = graph.retrieve(
@@ -319,11 +341,11 @@ class MemoryService:
             args.append(asset)
         sql += " ORDER BY created_at DESC LIMIT ?"
         args.append(limit)
-        with self._conn() as conn:
+        with self._conn(write=False) as conn:
             return [Trial.from_row(r) for r in conn.execute(sql, args).fetchall()]
 
     def get_trial(self, trial_id: str) -> Optional[Trial]:
-        with self._conn() as conn:
+        with self._conn(write=False) as conn:
             row = conn.execute("SELECT * FROM mem_trials WHERE trial_id = ?", (trial_id,)).fetchone()
         return Trial.from_row(row) if row else None
 
@@ -336,7 +358,7 @@ class MemoryService:
         """
         if not self.can_read:
             return [], []
-        with self._conn() as conn:
+        with self._conn(write=False) as conn:
             trials = [Trial.from_row(row) for row in conn.execute(
                 "SELECT * FROM mem_trials ORDER BY trial_id").fetchall()]
             notes = [Note.from_row(row) for row in conn.execute(
@@ -344,7 +366,7 @@ class MemoryService:
         return trials, notes
 
     def served_snapshots(self, run_id: str) -> List[str]:
-        with self._conn() as conn:
+        with self._conn(write=False) as conn:
             rows = conn.execute(
                 "SELECT snapshot_id FROM mem_reads WHERE run_id = ? ORDER BY created_at", (run_id,)
             ).fetchall()
@@ -359,7 +381,7 @@ class MemoryService:
             return cur.rowcount
 
     def stats(self) -> Dict[str, int]:
-        with self._conn() as conn:
+        with self._conn(write=False) as conn:
             return {
                 "trials": conn.execute("SELECT COUNT(*) FROM mem_trials").fetchone()[0],
                 "trials_with_oos": conn.execute(
@@ -376,17 +398,25 @@ def _blank_oos(trial: Trial) -> None:
     trial.oos_start = None
     trial.oos_end = None
     trial.oos_source = None
+    trial.oos_failure_mode = None
+
+
+# Databases whose schema has been created or migrated in this process.
+_SCHEMA_READY: set = set()
 
 
 class _ConnectionContext:
     """Open, commit/rollback and close a connection per operation."""
 
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: str, create_schema: bool = False):
         self.db_path = db_path
+        self.create_schema = create_schema
         self.conn = None
 
     def __enter__(self):
         self.conn = connect(self.db_path)
+        if self.create_schema:
+            ensure_schema(self.conn)  # an ephemeral empty database for reads of a missing file
         return self.conn
 
     def __exit__(self, exc_type, exc, tb):

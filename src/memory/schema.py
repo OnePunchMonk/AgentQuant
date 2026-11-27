@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 DDL = (
     """
@@ -39,6 +39,7 @@ DDL = (
         oos_start         TEXT,
         oos_end           TEXT,
         oos_source        TEXT,
+        oos_failure_mode  TEXT,
         outcome           TEXT NOT NULL DEFAULT 'watch',
         failure_mode      TEXT,
         reasoning         TEXT NOT NULL DEFAULT '',
@@ -104,5 +105,23 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute(statement)
     version = conn.execute("PRAGMA user_version").fetchone()[0]
     if version < SCHEMA_VERSION:
+        _migrate(conn, version)
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
     conn.commit()
+
+
+def _migrate(conn: sqlite3.Connection, from_version: int) -> None:
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(mem_trials)")}
+    if "oos_failure_mode" not in columns:
+        conn.execute("ALTER TABLE mem_trials ADD COLUMN oos_failure_mode TEXT")
+    if from_version < 2:
+        # attach_oos used to overwrite failure_mode with 'oos_decay', a label derived from
+        # data after the trial's in-sample window, which made it visible to earlier queries.
+        # Move it to its own column and restore an in-sample label from the outcome.
+        conn.execute(
+            """UPDATE mem_trials
+               SET oos_failure_mode = 'oos_decay',
+                   failure_mode = CASE outcome WHEN 'rejected' THEN 'negative_sharpe'
+                                               WHEN 'watch' THEN 'below_threshold' ELSE NULL END
+               WHERE failure_mode = 'oos_decay'"""
+        )

@@ -159,9 +159,23 @@ def _data_window(ohlcv: Dict[str, pd.DataFrame], asset: str) -> tuple:
     return to_date(df.index.min()), to_date(df.index.max()), len(df)
 
 
+_RUN_SERVICES: Dict[str, MemoryService] = {}
+
+
+def _memory_service(state: AgentState) -> MemoryService:
+    """One MemoryService per run instead of a new one for every call."""
+    run_id = state.get("run_id") or ""
+    service = _RUN_SERVICES.get(run_id)
+    if service is None:
+        service = MemoryService()
+        if run_id:
+            _RUN_SERVICES[run_id] = service
+    return service
+
+
 def _recall_memory(state: AgentState, context: RegimeContext) -> None:
     """One unified memory read per run, cut off at the last bar the search loop sees."""
-    service = MemoryService()
+    service = _memory_service(state)
     if not service.can_read:
         context.memory_context = ""
         state["memory_pack"] = None
@@ -204,7 +218,7 @@ def _classify_outcome(result: Dict[str, Any], min_sharpe: float) -> tuple:
 
 def _record_trials(state: AgentState, results: List[Dict[str, Any]], errors: List[Dict[str, Any]]) -> None:
     """Persist every backtested proposal, winners and losers, as episodic memory."""
-    service = MemoryService()
+    service = _memory_service(state)
     if not service.can_write:
         return
     asset = state.get("asset", config.reference_asset)
@@ -635,7 +649,7 @@ def holdout_eval_node(state: AgentState) -> AgentState:
 
     try:
         _, full_end, _ = _data_window(full_ohlcv, asset)
-        MemoryService().attach_oos(
+        _memory_service(state).attach_oos(
             best.get("trial_id", ""),
             oos_sharpe=holdout_sharpe,
             oos_return=best["holdout_total_return"],
@@ -740,7 +754,7 @@ def store_node(state: AgentState) -> AgentState:
                 _, data_end, _ = _data_window(state.get("full_ohlcv_data"), state.get("asset", config.reference_asset))
             trial = Trial(asset=state.get("asset", config.reference_asset),
                           strategy_type=state.get("strategy_type", "momentum"), params=best["params"])
-            MemoryService().record_note(Note(
+            _memory_service(state).record_note(Note(
                 kind="nla", body=narrative, data_end=data_end,
                 strategy_type=trial.strategy_type, asset=trial.asset, regime_label=regime,
                 config_key=trial.config_key,
@@ -883,11 +897,10 @@ def _run_assistant_sidecar_context(
             register_hyde_retrieval,
             register_memory_search,
         )
-        from src.memory import MemoryService
 
         registry = SidecarToolRegistry(ToolBudget(max_calls=1, max_wall_seconds=2.0,
                                                   max_input_bytes=4_000, max_output_bytes=16_000))
-        register_memory_search(registry, MemorySearchTool(MemoryService()))
+        register_memory_search(registry, MemorySearchTool(_memory_service(state)))
         # The deterministic generator is local and offline. Provider-backed
         # HyDE is intentionally never constructed by this production path.
         from src.agent.generators.hyde import HydeGenerator
@@ -1126,6 +1139,7 @@ def run_agent(
         logger.exception("Agent run failed with an unhandled exception")
         raise
     finally:
+        _RUN_SERVICES.pop(state.get("run_id", ""), None)
         # The loop may exit (e.g. max_iterations=0) without ever reaching
         # reflect_node, which is otherwise the only place run_status is set.
         if state.get("run_status") is None:

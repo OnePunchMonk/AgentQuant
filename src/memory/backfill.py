@@ -45,6 +45,8 @@ def backfill_legacy(service) -> Dict[str, int]:
     gate = config.agent.min_acceptable_sharpe
     trials, notes = [], []
 
+    with service._conn():  # the schema is created on first use, so make sure it exists
+        pass
     conn = connect(service.db_path)
     try:
         tables = _tables(conn)

@@ -54,6 +54,7 @@ class Trial:
     oos_start: Optional[str] = None
     oos_end: Optional[str] = None
     oos_source: Optional[str] = None
+    oos_failure_mode: Optional[str] = None
     outcome: str = "watch"
     failure_mode: Optional[str] = None
     reasoning: str = ""
@@ -83,6 +84,11 @@ class Trial:
         data["regime_vec"] = json.loads(data.pop("regime_vec_json") or "{}")
         data.pop("config_key", None)
         data.pop("dream_checked_at", None)
+        if data.get("failure_mode") == "oos_decay":
+            # Legacy rows (before schema 2) stored the out-of-sample verdict in failure_mode.
+            data["oos_failure_mode"] = "oos_decay"
+            data["failure_mode"] = {"rejected": "negative_sharpe", "watch": "below_threshold"}.get(data.get("outcome"))
+        data.setdefault("oos_failure_mode", None)
         return cls(**data)
 
 
