@@ -21,6 +21,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import random
 import tempfile
 import uuid
@@ -339,29 +340,79 @@ def evaluate_promotion(
 
 
 class FinalHoldoutGuard:
-    """Tracks whether the final holdout episodes have already been used for
-    a frozen evaluation. A repeat run errors loudly rather than silently
-    re-peeking sealed data."""
+    """One-shot receipt for reading the sealed final holdout.
 
-    def __init__(self, path: Path = Path("experiments/final_holdout_used.json")):
-        self.path = path
+    The receipt is created atomically (``O_CREAT | O_EXCL``) and fsynced *before*
+    the caller reads any sealed data, so two concurrent callers cannot both pass
+    and a crash after the call still counts as spent. The earlier version read the
+    file, checked it, then wrote it, which let two processes both proceed.
+
+    Anything that already exists at ``path`` counts as spent, including an empty
+    or unreadable file. The default path is inside the working tree, so a fresh
+    clone resets it. For a receipt that survives that, point ``path`` somewhere
+    durable or pass a ``ledger`` (``agentquant_gate.Ledger``): the read is also
+    recorded as a ``holdout_read`` entry in the hash-chained ledger and refused if
+    the ledger already has one; the ledger is claimed first, so a crash between the
+    two steps leaves the split spent in the ledger. Limits: exclusive create is only
+    atomic on filesystems that honour it (not all NFS setups), a losing caller that
+    races the winner can see an empty receipt and report an unknown run label (it still
+    fails closed), and durability of newly created parent directories is not handled.
+    """
+
+    def __init__(self, path: Path = Path("experiments/final_holdout_used.json"),
+                 ledger: Optional[Any] = None, split: str = "final"):
+        self.path = Path(path)
+        self.ledger = ledger
+        self.split = split
+
+    def _spent_error(self, run_label: str) -> RuntimeError:
+        used: Dict[str, Any] = {}
+        try:
+            used = json.loads(self.path.read_text())
+        except (OSError, ValueError):
+            pass
+        return RuntimeError(
+            f"Final holdout episodes were already consumed by run "
+            f"{used.get('run_label')!r} at {used.get('used_at')!r}. "
+            f"Refusing to re-peek sealed holdout data for run {run_label!r}. "
+            f"Delete {self.path} only if you deliberately intend to reset the benchmark."
+        )
 
     def check_and_mark_used(self, run_label: str) -> None:
-        used: Dict[str, Any] = {}
+        # 1. Fail fast if anything already marks the split as spent.
         if self.path.exists():
-            used = json.loads(self.path.read_text())
-        if used.get("used"):
-            raise RuntimeError(
-                f"Final holdout episodes were already consumed by run "
-                f"{used.get('run_label')!r} at {used.get('used_at')!r}. "
-                f"Refusing to re-peek sealed holdout data for run {run_label!r}. "
-                f"Delete {self.path} only if you deliberately intend to reset the benchmark."
-            )
+            raise self._spent_error(run_label)
+        # 2. With a ledger, the ledger claim is the authoritative first step: it is locked and
+        #    re-checked inside mark_holdout_read, and it survives a fresh checkout. If anything
+        #    after it fails, the split is still recorded as spent, never the other way round.
+        if self.ledger is not None:
+            try:
+                self.ledger.mark_holdout_read(self.split, run_label)
+            except RuntimeError:
+                raise self._spent_error(run_label) from None
+        # 3. The local receipt, created atomically and fsynced before any sealed data is read.
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps({
-            "used": True, "run_label": run_label,
-            "used_at": datetime.now(timezone.utc).isoformat(),
-        }, indent=2))
+        try:
+            fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        except FileExistsError:
+            raise self._spent_error(run_label) from None
+        try:
+            payload = json.dumps({
+                "used": True, "run_label": run_label,
+                "used_at": datetime.now(timezone.utc).isoformat(),
+            }, indent=2).encode("utf-8")
+            view = memoryview(payload)
+            while view:  # os.write may write less than asked
+                view = view[os.write(fd, view):]
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        if os.name != "nt":  # directories cannot be opened for fsync on Windows
+            dir_fd = os.open(self.path.parent, os.O_RDONLY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
 
 
 EvalFn = Callable[[HarnessConfig, Episode, int], float]
