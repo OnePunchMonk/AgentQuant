@@ -27,7 +27,7 @@ cd AgentQuant
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .
-python run_app.py
+python -m src.demo
 ```
 
 The demo runs three search iterations on synthetic prices and writes `results/demo_run.json`. It shows the loop and its trace; it is not a trading-performance benchmark.
@@ -49,14 +49,7 @@ Troubleshooting: for a missing module, activate the environment and install the 
 
 [Walk through the research loop](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/docs/SELF_IMPROVING_SEARCH.md) · [Architecture](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/docs/AGENTQUANT_HARNESS_ARCHITECTURE.md) · [Memory](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/docs/MEMORY_LAYER_DESIGN.md)
 
-Run a comparison locally:
-
-```bash
-python scripts/fair_search_benchmark.py --episodes 3 --seeds 7 11 19 \
-  --output results/fair_search_benchmark.json
-```
-
-This defaults to synthetic fixtures. Offline prompt-mutation arms do not call an LLM, so matching scores are not evidence of learned improvement. See [experimental details](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/docs/EXPERIMENTAL_DETAILS.md) for interpretation.
+Benchmarks and comparison scripts live in [agentquant-artifacts/benchmarks](https://github.com/OnePunchMonk/agentquant-artifacts/tree/main/benchmarks); they run against an installed `agentquant`.
 
 ## Where it stands
 

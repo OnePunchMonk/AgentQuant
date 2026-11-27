@@ -1,14 +1,9 @@
-#!/usr/bin/env python3
-"""Zero-configuration local demo for the self-improving search loop."""
+"""Zero-configuration local demo of the search loop: `python -m src.demo` or `agentquant-demo`."""
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
 
 from src.agent.agent_graph import run_agent
 from src.agent.trace import TraceRecorder
@@ -26,7 +21,7 @@ def make_demo_data(n: int = 900, seed: int = 7) -> dict:
     return {"DEMO": frame}
 
 
-def main() -> int:
+def main(out_dir: str = "results") -> int:
     trace = TraceRecorder()
     state = run_agent(make_demo_data(), strategy_type="momentum", asset="DEMO",
                       max_iterations=3, trace=trace)
@@ -34,20 +29,12 @@ def main() -> int:
     output = {"mode": "zero_config_demo", "asset": "DEMO", "iterations": state.get("iteration", 0),
               "best": best, "trace_diagnostics": trace.diagnostics(),
               "run_log": state.get("run_log", [])}
-    out_dir = ROOT / "results"
-    out_dir.mkdir(exist_ok=True)
-    (out_dir / "demo_run.json").write_text(json.dumps(output, indent=2, default=str))
-    try:
-        import matplotlib.pyplot as plt
-        equity = best.get("equity_curve")
-        if equity is not None:
-            plt.figure(figsize=(10, 4)); equity.plot(); plt.title("AgentQuant zero-config demo equity curve")
-            plt.tight_layout(); plt.savefig(out_dir / "demo_run.png", dpi=140); plt.close()
-    except Exception as exc:
-        output["chart_note"] = str(exc)
-    print("AgentQuant zero-config demo complete")
+    path = Path(out_dir) / "demo_run.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(output, indent=2, default=str))
+    print("AgentQuant demo complete")
     print(f"Iterations: {output['iterations']} | Best Sharpe: {best.get('sharpe', 0.0):.3f}")
-    print(f"Report: {out_dir / 'demo_run.json'}")
+    print(f"Report: {path}")
     return 0
 
 

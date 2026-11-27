@@ -59,6 +59,7 @@ dev = [
 [project.scripts]
 run-agent = "src.agent.runner:main"
 agentquant = "src.cli:main"
+agentquant-demo = "src.demo:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

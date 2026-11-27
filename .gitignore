@@ -38,3 +38,7 @@ experiments/policy_promotion_ledger.jsonl*
 # Unified memory: SQLite WAL files and dream sidecar heartbeat/lock
 experiments/*.db-*
 experiments/*.dream.*
+
+# runtime output
+results/
+.harness/

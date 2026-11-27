@@ -96,7 +96,7 @@ jobs:
           HTTP_PROXY: "http://127.0.0.1:9"
           HTTPS_PROXY: "http://127.0.0.1:9"
         run: |
-          python run_app.py
+          python -m src.demo
 
   wheel-install:
     name: Build wheel/sdist and run CLI from outside the checkout
@@ -136,53 +136,6 @@ jobs:
           # runs from defaults rather than crashing on a repo-relative path.
           /tmp/agentquant-wheel-venv/bin/python -c "from src.utils.config import config; print('config loaded with defaults:', config.reference_asset)"
 
-  harness-verification:
-    name: Harness Evolution Verification
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -e ".[dev,llm]"
-
-      - name: Verify tool registry
-        env:
-          GOOGLE_API_KEY: ""
-          ANTHROPIC_API_KEY: ""
-          TAVILY_API_KEY: ""
-        run: |
-          python scripts/verify_tools.py
-
-      - name: Verify harness configs exist
-        run: |
-          test -f .harness/v6_research.json && echo "✓ v6_research harness found"
-          test -f .harness/v_ga_optimal.json && echo "✓ GA optimal harness found"
-          test -f .harness/v_de_optimal.json && echo "✓ DE optimal harness found"
-
-      - name: Validate harness evolution results
-        run: |
-          test -f results/harness_evolution_6epochs_results.json && echo "✓ Evolution results found"
-          test -f results/benchmark_report.json && echo "✓ Benchmark report found"
-
-      - name: Verify harness evolution results are not stale (#20)
-        env:
-          GOOGLE_API_KEY: ""
-          ANTHROPIC_API_KEY: ""
-          TAVILY_API_KEY: ""
-        run: |
-          python scripts/verify_harness_results.py
-
   security-check:
     name: Security & Configuration
     runs-on: ubuntu-latest
@@ -216,7 +169,7 @@ jobs:
 
   quality-gates:
     name: Quality Gates
-    needs: [test, base-install, wheel-install, harness-verification, security-check]
+    needs: [test, base-install, wheel-install, security-check]
     runs-on: ubuntu-latest
     permissions:
       contents: read
