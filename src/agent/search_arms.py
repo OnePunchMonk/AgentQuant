@@ -46,6 +46,7 @@ import pandas as pd
 
 from src.agent.episode_splits import Episode, apply_transaction_costs, slice_dev, slice_holdout
 from src.agent.parameter_grid import ParameterGrid
+from src.backtest.core import evaluate_window
 from src.backtest.metrics import PerformanceMetrics
 
 logger = logging.getLogger(__name__)
@@ -100,31 +101,32 @@ class EpisodeResult:
         }
 
 
-def _momentum_signal_returns(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, pd.Series]:
-    fast = int(params.get("fast_window", 20))
-    slow = int(params.get("slow_window", 60))
-    close = df["Close"].astype(float)
-    sma_fast = close.rolling(window=fast, min_periods=1).mean()
-    sma_slow = close.rolling(window=slow, min_periods=1).mean()
-    signal = (sma_fast > sma_slow).astype(float)
-    daily_returns = close.pct_change().fillna(0.0)
-    strat_returns = daily_returns * signal.shift(1).fillna(0.0)
-    return {"returns": strat_returns, "signal": signal}
+def _history_upto(ohlcv: Dict[str, pd.DataFrame], episode: Episode, end: Any) -> pd.DataFrame:
+    """Everything known up to and including ``end`` for the episode's asset.
+
+    Strategies such as moving-average crossovers need history before the window
+    they are scored on. Scoring a 60-bar holdout slice on its own gave the 50/200
+    average no history at all, so the number reported was for a different
+    strategy than the one selected. Callers pass this frame plus ``eval_start``.
+    """
+    df = ohlcv[episode.asset]
+    return df.loc[df.index <= pd.Timestamp(end)]
 
 
-def _evaluate_params(df: pd.DataFrame, params: Dict[str, Any], cost_bps: float) -> Optional[Dict[str, float]]:
+def _evaluate_params(
+    df: pd.DataFrame,
+    params: Dict[str, Any],
+    cost_bps: float,
+    eval_start: Optional[Any] = None,
+) -> Optional[Dict[str, float]]:
+    """Score a momentum config with the shared evaluator (src.backtest.core).
+
+    ``df`` should contain the history before ``eval_start`` and nothing after the
+    decision point. With ``eval_start=None`` the whole frame is scored.
+    """
     if df.empty or len(df) < 5:
         return None
-    sr = _momentum_signal_returns(df, params)
-    costed = apply_transaction_costs(sr["returns"], sr["signal"], cost_bps=cost_bps)
-    net_returns = costed["net_returns"]
-    equity = (1 + net_returns.fillna(0)).cumprod()
-    return {
-        "sharpe": PerformanceMetrics.sharpe(net_returns),
-        "net_return": PerformanceMetrics.total_return(equity),
-        "max_drawdown": PerformanceMetrics.max_drawdown(equity),
-        "turnover": costed["turnover"],
-    }
+    return evaluate_window(df, "momentum", params, cost_bps / 10000.0, eval_start=eval_start)
 
 
 def _grade_on_holdout(
@@ -137,7 +139,14 @@ def _grade_on_holdout(
     cost_bps: float,
     tool_calls: int,
     started: float,
+    history_df: Optional[pd.DataFrame] = None,
 ) -> EpisodeResult:
+    """Grade the winner once on the sealed holdout.
+
+    When ``history_df`` (everything up to the holdout end) is given, the signal is
+    computed on it and only the holdout bars are scored. Without it the holdout
+    slice is scored alone, which is only right for strategies with no lookback.
+    """
     if winner_params is None:
         return EpisodeResult(
             arm=arm, episode_id=episode.episode_id, seed=seed, candidates=candidates,
@@ -145,7 +154,10 @@ def _grade_on_holdout(
             holdout_turnover=MISSING, tool_calls=tool_calls, wall_time_s=time.time() - started,
             status="missing",
         )
-    metrics = _evaluate_params(holdout_df, winner_params, cost_bps)
+    if history_df is not None:
+        metrics = _evaluate_params(history_df, winner_params, cost_bps, eval_start=episode.holdout_start)
+    else:
+        metrics = _evaluate_params(holdout_df, winner_params, cost_bps)
     if metrics is None:
         return EpisodeResult(
             arm=arm, episode_id=episode.episode_id, seed=seed, candidates=candidates,
@@ -211,7 +223,7 @@ def run_fixed_arm(ohlcv: Dict[str, pd.DataFrame], episode: Episode, seed: int, c
     holdout_df = slice_holdout(ohlcv, episode)[episode.asset]
 
     if metrics is None:
-        return _grade_on_holdout("fixed", episode, seed, candidates, None, holdout_df, cost_bps, 0, started)
+        return _grade_on_holdout("fixed", episode, seed, candidates, None, holdout_df, cost_bps, 0, started, history_df=_history_upto(ohlcv, episode, episode.holdout_end))
 
     holdout_metrics = _buy_and_hold_metrics(holdout_df, cost_bps)
     if holdout_metrics is None:
@@ -231,16 +243,16 @@ def run_fixed_arm(ohlcv: Dict[str, pd.DataFrame], episode: Episode, seed: int, c
 def run_random_search_arm(
     ohlcv: Dict[str, pd.DataFrame], episode: Episode, seed: int, cost_bps: float, k: int = 8,
 ) -> EpisodeResult:
+    """Random search over the canonical grid (the same space as every other arm)."""
     started = time.time()
     rng = random.Random(seed)
-    dev_df = slice_dev(ohlcv, episode)[episode.asset]
+    grid = ParameterGrid().get_grid("momentum")
+    dev_hist = _history_upto(ohlcv, episode, episode.dev_end)
     candidates: List[Candidate] = []
     best_params, best_sharpe = None, float("-inf")
-    for _ in range(k):
-        fast = rng.randint(3, 60)
-        slow = fast + rng.randint(5, 200)
-        params = {"fast_window": fast, "slow_window": slow}
-        metrics = _evaluate_params(dev_df, params, cost_bps)
+    for params in rng.sample(grid, min(k, len(grid))):
+        params = dict(params)
+        metrics = _evaluate_params(dev_hist, params, cost_bps, eval_start=episode.dev_start)
         if metrics is None:
             candidates.append(Candidate(params=params, dev_sharpe=None, status="failed",
                                          generation_method="random_search"))
@@ -251,7 +263,7 @@ def run_random_search_arm(
             best_sharpe, best_params = metrics["sharpe"], params
     holdout_df = slice_holdout(ohlcv, episode)[episode.asset]
     return _grade_on_holdout("random_search", episode, seed, candidates, best_params, holdout_df,
-                              cost_bps, 0, started)
+                              cost_bps, 0, started, history_df=_history_upto(ohlcv, episode, episode.holdout_end))
 
 
 def run_grid_search_arm(
@@ -261,11 +273,11 @@ def run_grid_search_arm(
     existing ParameterGrid fixture already in the repo)."""
     started = time.time()
     grid = ParameterGrid().get_grid("momentum")
-    dev_df = slice_dev(ohlcv, episode)[episode.asset]
+    dev_hist = _history_upto(ohlcv, episode, episode.dev_end)
     candidates: List[Candidate] = []
     best_params, best_sharpe = None, float("-inf")
     for params in grid:
-        metrics = _evaluate_params(dev_df, params, cost_bps)
+        metrics = _evaluate_params(dev_hist, params, cost_bps, eval_start=episode.dev_start)
         if metrics is None:
             candidates.append(Candidate(params=params, dev_sharpe=None, status="failed",
                                          generation_method="grid_search"))
@@ -276,7 +288,7 @@ def run_grid_search_arm(
             best_sharpe, best_params = metrics["sharpe"], params
     holdout_df = slice_holdout(ohlcv, episode)[episode.asset]
     return _grade_on_holdout("grid_search", episode, seed, candidates, best_params, holdout_df,
-                              cost_bps, 0, started)
+                              cost_bps, 0, started, history_df=_history_upto(ohlcv, episode, episode.holdout_end))
 
 
 # Env vars that, if any is set, let the agent's real LLM backend execute
@@ -372,9 +384,15 @@ def _run_agent_offline_impl(dev_ohlcv: Dict[str, pd.DataFrame], asset: str, seed
         os.environ["AGENTQUANT_OFFLINE"] = "1"
 
     original_db_path = app_config.results_db_path
-    original_market_impact_bps = app_config.backtest.market_impact_bps
+    original_costs = (app_config.backtest.commission, app_config.backtest.slippage,
+                      app_config.backtest.market_impact_bps)
     app_config.results_db_path = memory_db_path
     if cost_bps is not None:
+        # One total cost per unit of turnover, identical to what the grid, random and
+        # sidecar arms charge. Previously this only overrode market impact and left
+        # commission and slippage on top (16 bps for a 5 bps benchmark).
+        app_config.backtest.commission = 0.0
+        app_config.backtest.slippage = 0.0
         app_config.backtest.market_impact_bps = cost_bps
     np.random.seed(seed)
     random.seed(seed)
@@ -386,7 +404,8 @@ def _run_agent_offline_impl(dev_ohlcv: Dict[str, pd.DataFrame], asset: str, seed
         )
     finally:
         app_config.results_db_path = original_db_path
-        app_config.backtest.market_impact_bps = original_market_impact_bps
+        (app_config.backtest.commission, app_config.backtest.slippage,
+         app_config.backtest.market_impact_bps) = original_costs
     return state
 
 
@@ -404,7 +423,7 @@ def run_frozen_agent_arm(
     dev_ohlcv = slice_dev(ohlcv, episode)
     with tempfile.TemporaryDirectory() as tmp:
         state = _run_agent_offline(dev_ohlcv, episode.asset, seed, str(Path(tmp) / "memory.db"),
-                                    max_iterations=max_iterations, live=live)
+                                    max_iterations=max_iterations, cost_bps=cost_bps, live=live)
     candidates = [
         Candidate(params=r.get("params"), dev_sharpe=r.get("sharpe"), status="ok",
                   generation_method=r.get("generation_method", "agent"))
@@ -416,7 +435,7 @@ def run_frozen_agent_arm(
                           if getattr(e, "stage", "") == "tool_call"))
     holdout_df = slice_holdout(ohlcv, episode)[episode.asset]
     return _grade_on_holdout("frozen_agent", episode, seed, candidates, winner_params, holdout_df,
-                              cost_bps, tool_calls, started)
+                              cost_bps, tool_calls, started, history_df=_history_upto(ohlcv, episode, episode.holdout_end))
 
 
 def run_frozen_agent_folding_arm(
@@ -429,7 +448,8 @@ def run_frozen_agent_folding_arm(
     with tempfile.TemporaryDirectory() as tmp:
         state = _run_agent_offline(
             dev_ohlcv, episode.asset, seed, str(Path(tmp) / "memory.db"),
-            max_iterations=max_iterations, live=live, attempt_history_policy="folding",
+            max_iterations=max_iterations, cost_bps=cost_bps, live=live,
+            attempt_history_policy="folding",
         )
     candidates = [
         Candidate(params=r.get("params"), dev_sharpe=r.get("sharpe"), status="ok",
@@ -442,7 +462,7 @@ def run_frozen_agent_folding_arm(
                          if getattr(e, "stage", "") == "tool_call"))
     holdout_df = slice_holdout(ohlcv, episode)[episode.asset]
     return _grade_on_holdout("frozen_agent_folding", episode, seed, candidates, winner_params,
-                              holdout_df, cost_bps, tool_calls, started)
+                              holdout_df, cost_bps, tool_calls, started, history_df=_history_upto(ohlcv, episode, episode.holdout_end))
 
 
 def run_frozen_agent_memory_arm(
@@ -459,7 +479,7 @@ def run_frozen_agent_memory_arm(
     started = time.time()
     dev_ohlcv = slice_dev(ohlcv, episode)
     state = _run_agent_offline(dev_ohlcv, episode.asset, seed, memory_db_path,
-                                max_iterations=max_iterations, live=live)
+                                max_iterations=max_iterations, cost_bps=cost_bps, live=live)
     candidates = [
         Candidate(params=r.get("params"), dev_sharpe=r.get("sharpe"), status="ok",
                   generation_method=r.get("generation_method", "agent"))
@@ -471,7 +491,7 @@ def run_frozen_agent_memory_arm(
                           if getattr(e, "stage", "") == "tool_call"))
     holdout_df = slice_holdout(ohlcv, episode)[episode.asset]
     return _grade_on_holdout("frozen_agent_memory", episode, seed, candidates, winner_params,
-                              holdout_df, cost_bps, tool_calls, started)
+                              holdout_df, cost_bps, tool_calls, started, history_df=_history_upto(ohlcv, episode, episode.holdout_end))
 
 
 # Fixed thresholds reused from HarnessConfig's own defaults, so the failure
@@ -560,5 +580,5 @@ def run_mutation_agent_arm(
         "shuffled_evidence": "shuffled_evidence_mutation",
     }[mode]
     result = _grade_on_holdout(arm_name, episode, seed, candidates, winner_params, holdout_df,
-                                cost_bps, tool_calls, started)
+                                cost_bps, tool_calls, started, history_df=_history_upto(ohlcv, episode, episode.holdout_end))
     return result, record.to_dict(), child

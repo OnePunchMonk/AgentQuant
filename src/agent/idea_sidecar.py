@@ -41,7 +41,7 @@ from typing import Any, Dict, List, Optional, Protocol, Sequence, Tuple
 import pandas as pd
 
 from src.agent import search_arms
-from src.agent.episode_splits import Episode, slice_dev, slice_holdout
+from src.agent.episode_splits import Episode, slice_holdout
 from src.agent.parameter_grid import ParameterGrid
 
 SCHEMA_VERSION = "1.0.0"
@@ -396,7 +396,7 @@ def run_shadow_episode(
     started = time.time()
     family = "momentum"
     grid = ParameterGrid().get_grid(family)
-    dev_df = slice_dev(ohlcv, episode)[episode.asset]  # the only data a policy-driven step touches
+    dev_hist = search_arms._history_upto(ohlcv, episode, episode.dev_end)  # nothing after dev_end is ever visible
 
     attempted: List[Dict[str, Any]] = []
     steps: List[Step] = []
@@ -412,7 +412,7 @@ def run_shadow_episode(
         validate_action(action, grid, cands)
         steps.append(Step(obs, cands, action))
 
-        metrics = search_arms._evaluate_params(dev_df, action.params, cost_bps)
+        metrics = search_arms._evaluate_params(dev_hist, action.params, cost_bps, eval_start=episode.dev_start)
         if metrics is None:
             attempted.append({"grid_index": action.grid_index, "params": action.params,
                               "status": "failed", "dev_sharpe": None})
@@ -433,7 +433,8 @@ def run_shadow_episode(
     # Trajectory is closed; only now is the sealed holdout touched.
     holdout_df = slice_holdout(ohlcv, episode)[episode.asset]
     result = search_arms._grade_on_holdout("idea_sidecar_shadow", episode, seed, candidates_log, winner,
-                                           holdout_df, cost_bps, 0, started)
+                                           holdout_df, cost_bps, 0, started,
+                                           history_df=search_arms._history_upto(ohlcv, episode, episode.holdout_end))
     used = len(steps)
     reward = compute_reward(result, used / budget.max_proposals if budget.max_proposals else 0.0, reward_spec)
     return ShadowRecord(

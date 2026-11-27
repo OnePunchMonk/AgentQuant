@@ -27,9 +27,14 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from src.agent.episode_splits import Episode, slice_dev, slice_holdout
+from src.agent.episode_splits import Episode, slice_dev
 from src.agent.harness_config import HarnessConfig
-from src.agent.search_arms import _evaluate_params, _run_agent_offline, filter_visible_memory
+from src.agent.search_arms import (
+    _evaluate_params,
+    _history_upto,
+    _run_agent_offline,
+    filter_visible_memory,
+)
 from src.agent.strategy_memory import PastResult, StrategyMemory
 
 
@@ -147,8 +152,8 @@ def make_p2_eval_fn(
         winner_params = best.get("params")
         if not winner_params:
             return None
-        holdout_df = slice_holdout(ohlcv, episode)[episode.asset]
-        metrics = _evaluate_params(holdout_df, winner_params, cost_bps)
+        history = _history_upto(ohlcv, episode, episode.holdout_end)
+        metrics = _evaluate_params(history, winner_params, cost_bps, eval_start=episode.holdout_start)
         if metrics is None:
             return None
         return metrics["sharpe"]

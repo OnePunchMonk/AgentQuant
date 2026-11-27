@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
+from src.backtest.core import required_warmup_bars, strategy_returns
 from src.backtest.metrics import PerformanceMetrics
 from src.exceptions import (
     BacktestFailedError,
@@ -40,24 +41,6 @@ def _get_close(df: pd.DataFrame) -> pd.Series:
     raise KeyError("No close-like column found.")
 
 
-def _apply_transaction_costs(
-    signal: pd.Series,
-    commission: float,
-    slippage: float,
-    market_impact_bps: float = 0.0,
-) -> pd.Series:
-    """
-    Compute per-bar cost series.
-    - commission: fraction of trade value
-    - slippage: one-way slippage fraction (applied directionally)
-    - market_impact_bps: flat linear market impact in basis points, applied
-      per unit of trade turnover (not a true square-root impact model)
-    """
-    trades = signal.diff().abs().fillna(0)
-    total_one_way = commission + slippage + (market_impact_bps / 10_000.0)
-    return trades * total_one_way
-
-
 def _backtest_single_asset(
     asset: str,
     df: pd.DataFrame,
@@ -81,24 +64,25 @@ def _backtest_single_asset(
     # the warmup window are unreliable, so this must block the backtest
     # rather than merely log.
     if eval_start is not None:
-        slow_w = params.get("slow_window", params.get("window", config.backtest.min_warmup_periods))
-        enforcer.check(df, eval_start, min_window=int(slow_w))
+        needed = required_warmup_bars(params, default=config.backtest.min_warmup_periods)
+        enforcer.check(df, eval_start, min_window=int(needed))
 
-    # Apply transaction costs
-    costs = _apply_transaction_costs(
-        signal,
-        config.backtest.commission,
-        config.backtest.slippage,
-        config.backtest.market_impact_bps,
+    # Lag, cost and compounding live in src.backtest.core so the benchmark arms
+    # use exactly the same arithmetic.
+    cost_per_unit = (
+        config.backtest.commission
+        + config.backtest.slippage
+        + config.backtest.market_impact_bps / 10_000.0
     )
-
-    daily_ret = close.pct_change().fillna(0)
-    strat_ret = daily_ret * signal.shift(1).fillna(0) - costs
+    strat_ret, _ = strategy_returns(close, signal, cost_per_unit)
     equity = (1 + strat_ret).cumprod() * asset_cash
 
     if eval_start is not None:
-        equity = equity.loc[equity.index >= eval_start]
-        strat_ret = strat_ret.loc[strat_ret.index >= eval_start]
+        # Keep the bar just before eval_start as the base of the curve, so the
+        # first scored day's return is counted (equity.pct_change() would
+        # otherwise drop it).
+        first_scored = int(equity.index.searchsorted(pd.Timestamp(eval_start)))
+        equity = equity.iloc[max(first_scored - 1, 0):]
 
     metrics = PerformanceMetrics.from_equity(equity)
     # Round trips, as before (entry + exit = 1, flip = 1), but rounded up: the old
@@ -106,6 +90,10 @@ def _backtest_single_asset(
     turnover = signal.diff().abs()
     if len(signal):
         turnover.iloc[0] = abs(float(signal.iloc[0]))  # count a position held from bar 0
+    if eval_start is not None:
+        # Count only trades inside the scored window; the position carried in from
+        # the warmup history is not a trade, but a change on the first scored bar is.
+        turnover = turnover.loc[turnover.index >= pd.Timestamp(eval_start)]
     metrics["num_trades"] = int(math.ceil(float(turnover.fillna(0).sum()) / 2.0))
     metrics["asset"] = asset
     return {"asset": asset, "equity": equity, "metrics": metrics}

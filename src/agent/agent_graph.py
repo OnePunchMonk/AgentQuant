@@ -367,6 +367,28 @@ def hypothesize_node(state: AgentState) -> AgentState:
     return state
 
 
+def _common_eval_start(ohlcv: Dict[str, pd.DataFrame], asset: str, strategy_type: str):
+    """First bar every grid config has a defined signal for, or None.
+
+    A slow strategy is flat (earning exactly zero) until its longest window
+    fills. Scoring over the whole window then lowers its Sharpe by roughly the
+    square root of the active fraction, so the tournament favoured short
+    windows for a reason unrelated to quality. Scoring all candidates from one
+    shared start removes that. When the window is too short to afford the
+    warmup (more than 40% of it), return None and keep whole-window scoring.
+    """
+    from src.agent.parameter_grid import ParameterGrid
+    from src.backtest.core import common_warmup_bars
+
+    df = (ohlcv or {}).get(asset)
+    if df is None or df.empty:
+        return None
+    bars = common_warmup_bars(ParameterGrid().get_grid(strategy_type), n_bars=len(df))
+    if bars <= 0 or bars >= len(df):
+        return None
+    return df.index[bars]
+
+
 def backtest_node(state: AgentState) -> AgentState:
     """Run backtests on all proposals and rank by Sharpe."""
     logger.info("=== BACKTEST: Running tournament ===")
@@ -378,9 +400,17 @@ def backtest_node(state: AgentState) -> AgentState:
 
     results = []
     errors = []
+    eval_start = _common_eval_start(ohlcv, asset, strategy_type)
+    if eval_start is None:
+        state["run_log"].append(
+            "Backtest: search window too short for common-window scoring; "
+            "candidates are scored over the whole window."
+        )
     for i, proposal in enumerate(state["proposals"]):
         try:
-            bt_result = run_backtest(ohlcv, [asset], strategy_type, proposal.params)
+            bt_result = run_backtest(
+                ohlcv, [asset], strategy_type, proposal.params, eval_start=eval_start
+            )
             if bt_result and "metrics" in bt_result:
                 metrics = bt_result["metrics"]
                 results.append({

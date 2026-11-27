@@ -55,7 +55,7 @@ def test_policy_only_sees_dev_rows(setup, monkeypatch):
     seen = []
     orig = search_arms._evaluate_params
     monkeypatch.setattr(search_arms, "_evaluate_params",
-                        lambda df, p, c: (seen.append(df), orig(df, p, c))[1])
+                        lambda df, p, c, **kw: (seen.append(df), orig(df, p, c, **kw))[1])
     rec = sc.run_shadow_episode(ohlcv, ep, sc.HeuristicPolicy(), sc.Budget(4), 5.0)
     dev_calls = seen[:rec.dev_proposals_evaluated]
     assert dev_calls and all((d.index <= pd.Timestamp(ep.dev_end)).all() for d in dev_calls)
@@ -91,7 +91,7 @@ def test_random_and_heuristic_use_identical_budget(setup, monkeypatch):
     for pol in (sc.HeuristicPolicy(), sc.RandomPolicy(seed=1)):
         n = []
         monkeypatch.setattr(search_arms, "_evaluate_params",
-                            lambda df, p, c, n=n: (n.append(1), orig(df, p, c))[1])
+                            lambda df, p, c, n=n, **kw: (n.append(1), orig(df, p, c, **kw))[1])
         rec = sc.run_shadow_episode(ohlcv, ep, pol, sc.Budget(5), 5.0)
         holdout_calls = 1 if rec.winner_params is not None else 0  # holdout is graded only for a gated winner
         counts[pol.name] = (len(n) - holdout_calls, rec.dev_proposals_evaluated)

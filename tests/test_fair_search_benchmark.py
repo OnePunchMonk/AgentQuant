@@ -52,9 +52,9 @@ def test_grid_search_proposal_step_never_receives_holdout_rows(monkeypatch):
     original = search_arms._evaluate_params
     seen_frames = []
 
-    def spy(df, params, cost_bps):
+    def spy(df, params, cost_bps, **kwargs):
         seen_frames.append(df)
-        return original(df, params, cost_bps)
+        return original(df, params, cost_bps, **kwargs)
 
     monkeypatch.setattr(search_arms, "_evaluate_params", spy)
     search_arms.run_grid_search_arm(ohlcv, ep, seed=1, cost_bps=5.0)
