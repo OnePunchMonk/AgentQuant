@@ -1,8 +1,11 @@
 """Conservative paired bootstrap gate. Sharpe metrics are promoted only with a recorded sample size and a deflated-Sharpe hurdle."""
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
+
 import numpy as np
+
 from .dsr import deflated_sharpe_ratio, expected_max_sharpe
 from .ledger import Ledger
+
 
 @dataclass(frozen=True)
 class GateDecision:

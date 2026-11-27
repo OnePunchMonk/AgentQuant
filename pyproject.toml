@@ -75,5 +75,5 @@ select = ["E", "F", "W", "I"]
 ignore = ["E501"]
 
 [tool.setuptools.packages.find]
-where = [".", "gate"]
-include = ["src*", "agentquant_gate*"]
+where = ["."]
+include = ["src*"]

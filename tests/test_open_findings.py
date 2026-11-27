@@ -60,7 +60,7 @@ def test_any_existing_file_counts_as_spent(tmp_path, content):
 
 
 def test_ledger_anchoring_survives_a_fresh_checkout(tmp_path):
-    from agentquant_gate import Ledger
+    from src.gate import Ledger
 
     ledger = Ledger(tmp_path / "ledger.jsonl")
     FinalHoldoutGuard(tmp_path / "one.json", ledger=ledger).check_and_mark_used("first")
@@ -250,9 +250,8 @@ def test_exploration_is_opt_in_through_the_environment(monkeypatch):
 def test_ledger_claim_comes_first_so_a_crash_leaves_the_split_spent(tmp_path, monkeypatch):
     import os
 
-    from agentquant_gate import Ledger
-
     from src.agent import policy_mutation
+    from src.gate import Ledger
 
     ledger = Ledger(tmp_path / "ledger.jsonl")
     receipt = tmp_path / "receipt.json"

@@ -1,5 +1,6 @@
 import pytest
-from agentquant_gate import Gate, Ledger, LedgerIntegrityError
+
+from src.gate import Gate, Ledger, LedgerIntegrityError
 
 
 def test_tamper(tmp_path):

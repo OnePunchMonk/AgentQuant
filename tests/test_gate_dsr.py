@@ -1,8 +1,9 @@
 import math
 
 import pytest
-from agentquant_gate import Gate, Ledger
-from agentquant_gate.dsr import deflated_sharpe_ratio, expected_max_sharpe
+
+from src.gate import Gate, Ledger
+from src.gate.dsr import deflated_sharpe_ratio, expected_max_sharpe
 
 
 def test_expected_max_sharpe_grows_with_trials_and_dispersion():

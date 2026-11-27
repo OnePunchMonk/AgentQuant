@@ -6,9 +6,9 @@ responsibilities and must not be silently approximated here.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
-import math
 from typing import Sequence
 
 import numpy as np

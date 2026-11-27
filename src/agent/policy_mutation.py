@@ -30,10 +30,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from agentquant_gate import Gate, Ledger
-
 from src.agent.episode_splits import Episode
 from src.agent.harness_config import HarnessConfig
+from src.gate import Gate, Ledger
 from src.utils.paths import RUNS_DIR
 
 logger = logging.getLogger(__name__)
@@ -351,7 +350,7 @@ class FinalHoldoutGuard:
     Anything that already exists at ``path`` counts as spent, including an empty
     or unreadable file. The default path is inside the working tree, so a fresh
     clone resets it. For a receipt that survives that, point ``path`` somewhere
-    durable or pass a ``ledger`` (``agentquant_gate.Ledger``): the read is also
+    durable or pass a ``ledger`` (``src.gate.Ledger``): the read is also
     recorded as a ``holdout_read`` entry in the hash-chained ledger and refused if
     the ledger already has one; the ledger is claimed first, so a crash between the
     two steps leaves the split spent in the ledger. Limits: exclusive create is only

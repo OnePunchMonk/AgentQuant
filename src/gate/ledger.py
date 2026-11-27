@@ -1,12 +1,13 @@
 """Append-only, hash-chained JSONL experiment ledger (POSIX writers)."""
+import fcntl
 import hashlib
 import json
 import os
 import uuid
-import fcntl
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+
 
 class LedgerIntegrityError(ValueError):
     pass
