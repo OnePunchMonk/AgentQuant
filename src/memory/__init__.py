@@ -1,4 +1,4 @@
-"""Unified memory layer. See docs/MEMORY_LAYER_DESIGN.md."""
+"""Unified memory layer. See agentquant-artifacts/docs/MEMORY_LAYER_DESIGN.md."""
 
 from src.memory.beliefs import BeliefParams, compute_beliefs
 from src.memory.canonical import canonical_params, config_key, regime_vec_from_context

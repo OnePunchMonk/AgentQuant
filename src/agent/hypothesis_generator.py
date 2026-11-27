@@ -8,7 +8,7 @@ research agent can propose combinations that have not been seen in
 literature search results.
 
 This module is intentionally free-standing: it takes literature findings
-as plain-text context if available (see docs/HYPOTHESIS_GENERATION.md),
+as plain-text context if available (see agentquant-artifacts/docs/HYPOTHESIS_GENERATION.md),
 but does not require them, since the Literature Agent (#22) that will
 eventually supply that context is not implemented yet.
 

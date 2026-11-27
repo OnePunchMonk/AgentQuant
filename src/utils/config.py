@@ -82,7 +82,7 @@ class DreamConfig(BaseModel):
 
 
 class MemoryConfig(BaseModel):
-    """Unified memory layer (src/memory). See docs/MEMORY_LAYER_DESIGN.md."""
+    """Unified memory layer (src/memory). See agentquant-artifacts/docs/MEMORY_LAYER_DESIGN.md."""
     # off: no reads or writes. read: recall only. read_write: recall + record.
     mode: str = "read_write"
     k_beliefs: int = 6

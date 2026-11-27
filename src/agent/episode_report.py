@@ -19,7 +19,7 @@ defaulted or invented.
 
 NOTE ON SCOPE: this module (and research_memo.py) covers *retrospective*
 research episodes only. Prospective/live paper-trading research is
-explicitly deferred -- see docs/RESEARCH_MEMO.md and issue #28, which says
+explicitly deferred -- see agentquant-artifacts/docs/RESEARCH_MEMO.md and issue #28, which says
 to add that only once the experiment contract here is stable.
 """
 

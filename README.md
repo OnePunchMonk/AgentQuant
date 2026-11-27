@@ -34,9 +34,9 @@ For the dashboard, install `.[ui]` and run `python run_app.py --app`. For LLM-gu
 
 ## Follow an experiment
 
-![Research harness architecture](docs/diagrams/research_harness.png)
+![Research harness architecture](https://raw.githubusercontent.com/OnePunchMonk/agentquant-artifacts/main/docs/diagrams/research_harness.png)
 
-[Walk through the research loop](docs/SELF_IMPROVING_SEARCH.md) · [Architecture](docs/AGENTQUANT_HARNESS_ARCHITECTURE.md) · [Memory](docs/MEMORY_LAYER_DESIGN.md)
+[Walk through the research loop](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/docs/SELF_IMPROVING_SEARCH.md) · [Architecture](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/docs/AGENTQUANT_HARNESS_ARCHITECTURE.md) · [Memory](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/docs/MEMORY_LAYER_DESIGN.md)
 
 Run a comparison locally:
 
@@ -45,12 +45,14 @@ python scripts/fair_search_benchmark.py --episodes 3 --seeds 7 11 19 \
   --output results/fair_search_benchmark.json
 ```
 
-This defaults to synthetic fixtures. Offline prompt-mutation arms do not call an LLM, so matching scores are not evidence of learned improvement. See [experimental details](docs/EXPERIMENTAL_DETAILS.md) for interpretation.
+This defaults to synthetic fixtures. Offline prompt-mutation arms do not call an LLM, so matching scores are not evidence of learned improvement. See [experimental details](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/docs/EXPERIMENTAL_DETAILS.md) for interpretation.
 
 ## Where it stands
 
 The bounded search loop, memory service, replay artifacts, and advisory tools are implemented. Validated autonomous self-improvement remains a research goal: live policy comparisons, search-aware Sharpe inference, full promotion-gate integration, and prospective evaluation are still open.
 
-For measured runtime improvements, see [optimizations](optimizations/README.md), including the graph-memory retrieval [before-and-after diagram](optimizations/sidecar_graph_retrieval/README.md).
+For measured runtime improvements, see [optimizations](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/optimizations/README.md), including the graph-memory retrieval [before-and-after diagram](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/optimizations/sidecar_graph_retrieval/README.md).
 
-[Contribute](CONTRIBUTING.md) · [Roadmap](ROADMAP.md) · [Open issues](https://github.com/OnePunchMonk/AgentQuant/issues) · [MIT license](LICENSE)
+[Contribute](CONTRIBUTING.md) · [Roadmap](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/notes/ROADMAP.md) · [Open issues](https://github.com/OnePunchMonk/AgentQuant/issues) · [MIT license](LICENSE)
+
+Docs, diagrams, notebooks and notes live in [agentquant-artifacts](https://github.com/OnePunchMonk/agentquant-artifacts).

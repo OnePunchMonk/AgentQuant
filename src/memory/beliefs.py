@@ -4,7 +4,7 @@ Turn visible trials into beliefs.
 Beliefs are derived from trials at query time, never stored, so a query
 with `as_of` can only ever aggregate evidence that existed by then.
 
-Scoring (see docs/MEMORY_LAYER_DESIGN.md, section 5.3):
+Scoring (see agentquant-artifacts/docs/MEMORY_LAYER_DESIGN.md, section 5.3):
   w_i       = regime similarity x market-time recency decay
   evidence  = weighted OOS Sharpe if any OOS evidence exists, else the
               weighted in-sample Sharpe minus a multiple-testing deflation

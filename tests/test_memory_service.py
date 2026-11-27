@@ -1,4 +1,4 @@
-"""Tests for the unified memory layer (src/memory). See docs/MEMORY_LAYER_DESIGN.md §10."""
+"""Tests for the unified memory layer (src/memory). See agentquant-artifacts/docs/MEMORY_LAYER_DESIGN.md §10."""
 
 import numpy as np
 import pandas as pd
