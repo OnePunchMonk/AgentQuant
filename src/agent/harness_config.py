@@ -269,6 +269,9 @@ class EffectiveHarnessConfig:
 # If a caller sets one of these away from its dataclass default, resolution
 # must fail loudly rather than pretend the knob had an effect.
 _UNSUPPORTED_IF_NON_DEFAULT = {
+    # The planners read llm.temperature from the global config; nothing reads this field,
+    # so a non-default value used to be silently ignored.
+    "temperature": 0.2,
     "use_ensemble": False,
     "grid_adaptation_strategy": None,
     "grid_focus_regions": [],
@@ -295,12 +298,26 @@ def resolve_effective_config(
                 f"harness_config.{field_name}={value!r} has no effect in this runtime "
                 f"(supported knobs: use_tools, use_web_search, prompt_template, "
                 f"prompt_context, min_acceptable_sharpe, max_acceptable_drawdown, "
-                f"max_retries-as-max_iterations). Refusing to silently ignore it."
+                f"max_retries, which sets max_iterations = max_retries + 1). Refusing to silently ignore it."
             )
 
     requested = harness_spec.to_dict()
+    # max_retries is the number of retries after the first attempt; an explicit override wins.
+    max_iterations = max_iterations_override if max_iterations_override is not None else harness_spec.max_retries + 1
+    # Hash what the runtime actually uses. Hashing the whole spec included the creation
+    # timestamp, version and free-text fields, so two configs that behave identically got
+    # different hashes and a run manifest could not tell they were the same.
+    behaviour = {
+        "use_tools": harness_spec.use_tools,
+        "use_web_search": harness_spec.use_web_search,
+        "prompt_template": harness_spec.prompt_template,
+        "prompt_context": dict(harness_spec.prompt_context or {}),
+        "min_acceptable_sharpe": harness_spec.min_acceptable_sharpe,
+        "max_acceptable_drawdown": harness_spec.max_acceptable_drawdown,
+        "max_iterations": max_iterations,
+    }
     config_hash = hashlib.sha256(
-        json.dumps(requested, sort_keys=True, default=str).encode("utf-8")
+        json.dumps(behaviour, sort_keys=True, default=str).encode("utf-8")
     ).hexdigest()[:16]
 
     return EffectiveHarnessConfig(
@@ -310,7 +327,7 @@ def resolve_effective_config(
         prompt_context=dict(harness_spec.prompt_context or {}),
         min_acceptable_sharpe=harness_spec.min_acceptable_sharpe,
         max_acceptable_drawdown=harness_spec.max_acceptable_drawdown,
-        max_iterations=max_iterations_override,
+        max_iterations=max_iterations,
         config_hash=config_hash,
         requested=requested,
     )

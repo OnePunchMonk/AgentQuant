@@ -12,7 +12,7 @@ Techniques:
 
 import logging
 import random
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Callable, List, Optional, Tuple
 
 from src.agent.harness_config import HarnessConfig
@@ -139,7 +139,10 @@ class GeneticAlgorithm:
         # Track best
         best = max(self.population, key=lambda g: g.fitness)
         if self.best_genome is None or best.fitness > self.best_genome.fitness:
-            self.best_genome = best
+            # Keep a copy. Elites stay in the population and are re-evaluated every
+            # generation; holding the live object let a noisy re-evaluation overwrite
+            # the best fitness we had recorded.
+            self.best_genome = replace(best)
 
         avg_fitness = sum(g.fitness for g in self.population) / len(self.population)
         self.fitness_history.append(avg_fitness)
@@ -247,7 +250,7 @@ class DifferentialEvolution:
         for genome in self.population:
             genome.fitness = fitness_fn(genome)
 
-        self.best_genome = max(self.population, key=lambda g: g.fitness)
+        self.best_genome = replace(max(self.population, key=lambda g: g.fitness))
 
         for gen in range(self.generations):
             logger.info(f"\n--- DE Generation {gen + 1}/{self.generations} ---")
@@ -272,7 +275,7 @@ class DifferentialEvolution:
 
                 # Track best
                 if trial.fitness > self.best_genome.fitness:
-                    self.best_genome = trial
+                    self.best_genome = replace(trial)
 
             avg_fitness = sum(g.fitness for g in self.population) / len(self.population)
             self.fitness_history.append(avg_fitness)

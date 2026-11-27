@@ -1034,15 +1034,21 @@ def run_agent(
         raise ValueError("attempt_history_char_budget must be non-negative")
 
     resolved_asset = asset or config.reference_asset
-    effective_max_iterations = max_iterations or config.agent.max_iterations
 
     effective_harness: Optional[EffectiveHarnessConfig] = None
     if isinstance(harness_config, HarnessConfig):
-        effective_harness = resolve_effective_config(
-            harness_config, max_iterations_override=effective_max_iterations
-        )
+        effective_harness = resolve_effective_config(harness_config, max_iterations_override=max_iterations)
     elif harness_config is not None:
         effective_harness = harness_config
+
+    # An explicit argument wins (including 0, which used to fall through to the default
+    # because of `or`); then the harness's own max_retries + 1; then the global default.
+    if max_iterations is not None:
+        effective_max_iterations = max_iterations
+    elif effective_harness is not None and effective_harness.max_iterations is not None:
+        effective_max_iterations = effective_harness.max_iterations
+    else:
+        effective_max_iterations = config.agent.max_iterations
 
     search_ohlcv, holdout_start = _split_search_and_holdout(
         ohlcv_data, resolved_asset, config.agent.holdout_fraction
