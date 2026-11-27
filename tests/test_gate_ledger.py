@@ -1,5 +1,6 @@
 import pytest
-from agentquant_gate import Ledger, Gate, LedgerIntegrityError
+from agentquant_gate import Gate, Ledger, LedgerIntegrityError
+
 
 def test_tamper(tmp_path):
     path = tmp_path / "ledger.jsonl"

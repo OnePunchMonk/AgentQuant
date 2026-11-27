@@ -1,8 +1,12 @@
 from datetime import datetime, timezone
+
 import pytest
 from agentquant_gate.prospective import (
-    validate_commitment, grade_forecast, aggregate_scores,
+    aggregate_scores,
+    grade_forecast,
+    validate_commitment,
 )
+
 
 def sample():
     return {

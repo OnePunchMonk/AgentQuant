@@ -1,7 +1,6 @@
 import math
 
 import pytest
-
 from agentquant_gate import Gate, Ledger
 from agentquant_gate.dsr import deflated_sharpe_ratio, expected_max_sharpe
 
