@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentquant"
-version = "0.3.2"
+version = "0.3.3"
 description = "A failure-aware harness for reproducible, self-improving research, using quantitative strategies as its first testbed."
 authors = [{ name = "Avaya Aggarwal", email = "aggarwal.avaya27@gmail.com" }]
 readme = "README.md"
