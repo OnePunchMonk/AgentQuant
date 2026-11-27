@@ -14,8 +14,11 @@ def anchored_walk_forward(ohlcv_data, assets: List[str], strategy_name: str,
     n = len(sample)
     start = max(1, int(n * train_fraction))
     windows = []
+    min_bars = max(5, test_window // 3)  # a window of a few bars has a meaningless Sharpe
     while start < n:
         end = min(n, start + test_window)
+        if end - start < min_bars:
+            break
         sliced = {a: (ohlcv_data[a] if not isinstance(ohlcv_data, pd.DataFrame) else ohlcv_data).iloc[:end] for a in assets}
         eval_start = sliced[assets[0]].index[start]
         result = run_backtest(sliced, assets, strategy_name, params, eval_start=eval_start)
