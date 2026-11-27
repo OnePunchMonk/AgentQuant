@@ -1,60 +1,51 @@
 # AgentQuant
 
-> Docs, diagrams, notebooks, the Streamlit dashboard and experiment notes live in [agentquant-artifacts](https://github.com/OnePunchMonk/agentquant-artifacts). This repo is the production package.
+A research agent that remembers what failed and tests what works.
 
-**Give research agents a memory of what failed—and a way to test what works.**
+It runs a bounded loop: propose an experiment, evaluate it, record the evidence, pick the next one. Every trial, including the failures, goes into a point-in-time memory, so you can compare search policies at the same budget and replay their decisions. Quant trading is the first domain; the question is whether the agent gets better at choosing experiments or just runs more of them.
 
-AgentQuant runs a research loop: propose an experiment, test it, inspect the result, and use that evidence to choose the next one. It tracks the whole search, including failed attempts, so you can compare research approaches at the same budget and replay their decisions.
+```
+analyze -> hypothesize -> backtest -> reflect -> holdout -> store
+               ^                                          |
+               +------------- memory <--------------------+
+```
 
-Quantitative strategies are the first testbed. The broader question is simple: **does the agent get better at choosing experiments, or does it just run more of them?**
+## Quick start
 
-## What you get
-
-- **Bounded experiments.** Candidates share a backtest evaluator and cost model, with explicit search budgets.
-- **Memory with provenance.** Trials, notes, and temporal graph evidence retain their sources and date cutoffs.
-- **Comparisons you can inspect.** Compare search policies on the same episodes; export traces, episode bundles, and research memos.
-- **Tools around one research loop.** Memory retrieval, hypothesis evidence, and candidate suggestions help the agent without owning evaluation or promotion.
-
-Use it to study research-agent behavior, test memory and proposal policies, or build on an inspectable experiment loop.
-
-## Install and try it
-
-Requires Python 3.10+. The offline demo needs no API keys.
+Python 3.10+. The demo is offline and needs no API keys.
 
 ```bash
-git clone https://github.com/OnePunchMonk/AgentQuant.git
-cd AgentQuant
-python -m venv .venv
-source .venv/bin/activate
+git clone https://github.com/OnePunchMonk/AgentQuant.git && cd AgentQuant
+python -m venv .venv && source .venv/bin/activate
 python -m pip install -e .
-python -m src.demo
+python -m src.demo            # three search iterations on synthetic prices, writes results/demo_run.json
+agentquant --help             # run, memory, dream, regime-card
 ```
 
-The demo runs three search iterations on synthetic prices and writes `results/demo_run.json`. It shows the loop and its trace; it is not a trading-performance benchmark.
+Extras: `.[llm]` (model providers, web research), `.[data]`, `.[backtest]`, `.[regime]`, `.[dev]` (tests and linting). For provider-backed runs copy `.env.example` to `.env` and set your keys; never commit it.
 
-Optional extras, from the repository root:
+Run state (results database, run manifests, ledgers, holdout guard) goes to `.agentquant/`. Set `AGENTQUANT_RUNS_DIR` to move it.
 
-```bash
-python -m pip install -e ".[llm]"  # model providers and web research
-python -m pip install -e ".[dev]"  # tests and development tools
-```
+## What is in the package
 
-Extras can be combined (`".[llm,dev]"`); `data`, `backtest` and `regime` also exist, see [pyproject.toml](pyproject.toml). For provider-backed features copy `.env.example` to `.env` and set the keys for your provider; never commit `.env`. Market data and provider calls need network access, the offline demo does not.
+| Path | What it does |
+|---|---|
+| `src/agent/` | The loop, proposal generation and validation, search arms, sidecars (hypothesis evidence, RL shadow policy, tool runner), harness config and policy mutation |
+| `src/memory/` | Point-in-time memory: trials, notes, evidence graph, beliefs deflated by the number of configs tried, compaction |
+| `src/gate/` | Promotion gate: hash-chained trial ledger, max-T bootstrap, deflated-Sharpe hurdle |
+| `src/backtest/`, `strategies/`, `features/`, `data/` | The quant domain: one shared evaluator and cost model, strategies, regimes, data ingest |
+| `src/research/` | Alpha, hypothesis and NLA memory stores |
 
-Troubleshooting: for a missing module, activate the environment and install the extra above; for a failed data download, check the network and ticker symbols and try a shorter date range. The Streamlit dashboard is in [agentquant-artifacts/app](https://github.com/OnePunchMonk/agentquant-artifacts/tree/main/app).
+Design rules the code enforces: one evaluator for every arm; the final holdout can be used once; a verdict from after a trial's window is never visible to a query made before it closes.
 
-## Follow an experiment
+## Status
 
-![Research harness architecture](https://raw.githubusercontent.com/OnePunchMonk/agentquant-artifacts/main/docs/diagrams/research_harness.png)
+Implemented: the bounded search loop, memory service, gate, replay artifacts and advisory sidecars. Not yet shown: that the self-improvement loop beats a random-search control with live models. That is the open research question (#31).
 
-[Walk through the research loop](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/docs/SELF_IMPROVING_SEARCH.md) · [Architecture](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/docs/AGENTQUANT_HARNESS_ARCHITECTURE.md) · [Memory](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/docs/MEMORY_LAYER_DESIGN.md)
+Planned work is tracked as charters: [#51](https://github.com/OnePunchMonk/AgentQuant/issues/51) Reflector post-training, [#52](https://github.com/OnePunchMonk/AgentQuant/issues/52) domain-agnostic package, [#53](https://github.com/OnePunchMonk/AgentQuant/issues/53) prompt optimisation, [#54](https://github.com/OnePunchMonk/AgentQuant/issues/54) harness and tool-design research.
 
-Benchmarks and comparison scripts live in [agentquant-artifacts/benchmarks](https://github.com/OnePunchMonk/agentquant-artifacts/tree/main/benchmarks); they run against an installed `agentquant`.
+## More
 
-## Where it stands
+Design docs, diagrams, benchmarks, experiments, notebooks and the Streamlit dashboard live in [agentquant-artifacts](https://github.com/OnePunchMonk/agentquant-artifacts). Start with [the research loop walkthrough](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/docs/SELF_IMPROVING_SEARCH.md).
 
-The bounded search loop, memory service, replay artifacts, and advisory tools are implemented. Validated autonomous self-improvement remains a research goal: live policy comparisons, search-aware Sharpe inference, full promotion-gate integration, and prospective evaluation are still open.
-
-For measured runtime improvements, see [optimizations](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/optimizations/README.md), including the graph-memory retrieval [before-and-after diagram](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/optimizations/sidecar_graph_retrieval/README.md).
-
-[Contribute](CONTRIBUTING.md) · [Roadmap](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/notes/ROADMAP.md) · [Open issues](https://github.com/OnePunchMonk/AgentQuant/issues) · [MIT license](LICENSE)
+[Contributing](CONTRIBUTING.md) · [Issues](https://github.com/OnePunchMonk/AgentQuant/issues) · [MIT license](LICENSE)
