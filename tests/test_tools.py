@@ -1,12 +1,5 @@
-"""Tests for src/agent/tools -- registry wiring and the #22 literature
-discovery tool (fetch_and_extract_content). Network calls are mocked so
-this suite stays offline/deterministic; live-URL verification lives in
-scripts/verify_research_tool_urls.py (opt-in, see its docstring)."""
-
-import socket
+"""Tests: tools."""
 from unittest.mock import Mock, patch
-
-import pytest
 
 from src.agent.tools.content_extraction import (
     fetch_and_extract_content,
@@ -35,12 +28,14 @@ SAMPLE_HTML = """
 """
 
 
-@pytest.fixture(autouse=True)
-def _public_dns_for_mocked_fetches():
-    # Keep URL safety checks deterministic and offline; mocked HTTP requests
-    # never actually connect to this documentation address.
-    with patch("socket.getaddrinfo", return_value=[(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 443))]):
-        yield
+def _mock_response(status_code=200, content_type="text/html; charset=utf-8", text=SAMPLE_HTML):
+    resp = Mock()
+    resp.status_code = status_code
+    resp.headers = {"Content-Type": content_type}
+    resp.text = text
+    resp.encoding = "utf-8"
+    resp.iter_content.return_value = [text.encode("utf-8")]
+    return resp
 
 
 def test_parse_html_extracts_citation_meta_over_title_tag():
@@ -81,16 +76,6 @@ def test_score_relevance_counts_distinct_query_word_hits():
 def test_score_relevance_full_match_is_one():
     text = "momentum strategies in crisis regimes"
     assert score_relevance(text, "momentum crisis") == 1.0
-
-
-def _mock_response(status_code=200, content_type="text/html; charset=utf-8", text=SAMPLE_HTML):
-    resp = Mock()
-    resp.status_code = status_code
-    resp.headers = {"Content-Type": content_type}
-    resp.text = text
-    resp.encoding = "utf-8"
-    resp.iter_content.return_value = [text.encode("utf-8")]
-    return resp
 
 
 def test_fetch_and_extract_content_happy_path():

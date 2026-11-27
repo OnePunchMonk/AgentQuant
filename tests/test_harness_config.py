@@ -1,14 +1,5 @@
-"""
-Tests demonstrating that harness configuration is actually wired through the
-agent run, not just accepted and ignored:
-
-- disabling tools results in zero external tool-orchestrator invocations
-- changing prompt_template/prompt_context changes the actually-submitted
-  LLM prompt
-- an unsupported knob raises a clear error instead of being silently dropped
-- run status is separated into passed_quality_gate / budget_exhausted /
-  no_valid_candidate rather than everything being reported as "accepted"
-"""
+"""Tests: harness config."""
+import warnings
 from datetime import datetime
 
 import numpy as np
@@ -17,11 +8,15 @@ import pytest
 
 from src.agent import agent_graph
 from src.agent.agent_graph import STATUS_BUDGET_EXHAUSTED, STATUS_PASSED_QUALITY_GATE, run_agent
+from src.agent.episode_splits import synthetic_ohlcv
 from src.agent.harness_config import (
     HarnessConfig,
     UnsupportedHarnessKnobError,
     resolve_effective_config,
 )
+
+warnings.filterwarnings("ignore", category=FutureWarning)
+
 
 
 def _fixture(seed=3, n=400):
@@ -44,6 +39,62 @@ def _base_harness(**overrides) -> HarnessConfig:
     )
     fields.update(overrides)
     return HarnessConfig(**fields)
+
+
+def test_max_retries_sets_max_iterations_and_an_explicit_override_wins():
+    from src.agent.harness_config import HarnessConfig, resolve_effective_config
+
+    spec = HarnessConfig(version="t", epoch=1, created="now", max_retries=4)
+    assert resolve_effective_config(spec).max_iterations == 5
+    assert resolve_effective_config(spec, max_iterations_override=2).max_iterations == 2
+
+
+def test_temperature_is_a_loudly_unsupported_knob():
+    from src.agent.harness_config import (
+        HarnessConfig,
+        UnsupportedHarnessKnobError,
+        resolve_effective_config,
+    )
+
+    with pytest.raises(UnsupportedHarnessKnobError, match="temperature"):
+        resolve_effective_config(HarnessConfig(version="t", epoch=1, created="now", temperature=0.9))
+
+
+def test_config_hash_ignores_labels_and_timestamps_but_not_behaviour():
+    from src.agent.harness_config import HarnessConfig, resolve_effective_config
+
+    a = HarnessConfig(version="a", epoch=1, created="2020", description="x", prompt_template="p1")
+    b = HarnessConfig(version="b", epoch=9, created="2030", description="y", prompt_template="p1")
+    c = HarnessConfig(version="a", epoch=1, created="2020", description="x", prompt_template="p2")
+    assert resolve_effective_config(a).config_hash == resolve_effective_config(b).config_hash
+    assert resolve_effective_config(a).config_hash != resolve_effective_config(c).config_hash
+
+
+def test_run_agent_uses_max_retries_and_respects_zero(monkeypatch, tmp_path):
+    from src.agent import agent_graph
+    from src.agent.harness_config import HarnessConfig
+    from src.utils.config import config
+
+    monkeypatch.setattr(config, "results_db_path", str(tmp_path / "m.db"))
+    monkeypatch.setenv("AGENTQUANT_OFFLINE", "1")
+    for var in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY", "TAVILY_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    data = {"SPY": synthetic_ohlcv(5, n_days=900, asset="SPY")["SPY"]}
+    spec = HarnessConfig(version="t", epoch=1, created="now", max_retries=1)
+    assert agent_graph.run_agent(data, asset="SPY", harness_config=spec)["max_iterations"] == 2
+    assert agent_graph.run_agent(data, asset="SPY", max_iterations=0)["max_iterations"] == 0
+
+
+def test_best_genome_is_a_copy_so_noisy_reevaluation_cannot_overwrite_it():
+    from src.agent.harness_evolution_algo import GeneticAlgorithm
+
+    ga = GeneticAlgorithm(population_size=6, generations=1)
+    ga.initialize_population()
+    scores = iter([1.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    ga.evaluate_population(lambda g: next(scores))
+    assert ga.best_genome.fitness == 1.0
+    ga.evaluate_population(lambda g: next(scores))  # the same genome object is re-evaluated, worse
+    assert ga.best_genome.fitness == 1.0
 
 
 def test_disabling_tools_means_zero_tool_orchestrator_calls(monkeypatch):

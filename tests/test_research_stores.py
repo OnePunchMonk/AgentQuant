@@ -1,11 +1,22 @@
-"""Tests for the HyDE-inspired hypothesis generation prototype (#23)."""
+"""Tests: research stores."""
+import json
 
 from src.agent.context_builder import RegimeContext
 from src.agent.hypothesis_generator import Hypothesis, HypothesisGenerator
 from src.agent.hypothesis_scorer import HypothesisScorer, _cosine, _embed
+from src.agent.proposal_generator import ProposalGenerator
 from src.agent.strategy_memory import PastResult, StrategyMemory
+from src.research.alpha_store import AlphaStore
 from src.research.hypothesis_memory import HypothesisMemory, HypothesisRecord
 from src.research.nla_memory import NLAMemoryStore
+
+
+class NoopPlanner:
+    def is_available(self):
+        return False
+
+    def generate_proposals(self, prompt, n=5):
+        return []
 
 
 class _FakePlanner:
@@ -23,6 +34,106 @@ class _FakePlanner:
 
 def _regime(label="Crisis-Bear"):
     return RegimeContext(regime_label=label, vix_level=45.0, vix_percentile=90.0)
+
+
+def test_alpha_store_persists_and_recalls_top_candidates(tmp_path):
+    store = AlphaStore(tmp_path / "alphas.db")
+
+    weak = store.store_backtest_result(
+        regime="MidVol-Bull",
+        strategy_type="momentum",
+        params={"fast_window": 5, "slow_window": 20},
+        metrics={"sharpe_ratio": 0.1, "total_return": 0.02, "max_drawdown": 0.04},
+        assets=["SPY"],
+        reasoning="Short momentum test.",
+    )
+    strong = store.store_backtest_result(
+        regime="MidVol-Bull",
+        strategy_type="momentum",
+        params={"fast_window": 50, "slow_window": 200},
+        metrics={"sharpe_ratio": 1.2, "total_return": 0.22, "max_drawdown": 0.05},
+        assets=["SPY", "QQQ"],
+        reasoning="Long-horizon momentum held up in bullish mid-vol regime.",
+    )
+
+    recalled = store.recall(regime="MidVol-Bull", strategy_type="momentum", n=5)
+
+    assert [alpha.alpha_id for alpha in recalled] == [strong.alpha_id, weak.alpha_id]
+    assert recalled[0].status == "accepted"
+    assert recalled[0].assets == ["QQQ", "SPY"]
+
+
+def test_alpha_prompt_context_is_agent_readable(tmp_path):
+    store = AlphaStore(tmp_path / "alphas.db")
+    store.store_backtest_result(
+        regime="LowVol-Bull",
+        strategy_type="momentum",
+        params={"fast_window": 63, "slow_window": 252},
+        metrics={"sharpe_ratio": 0.8, "total_return": 0.18, "max_drawdown": 0.03},
+        assets=["SPY"],
+        reasoning="Slow momentum worked in calm uptrends.",
+    )
+
+    context = store.to_prompt_context("LowVol-Bull", "momentum")
+
+    assert "ALPHA MEMORY FROM PRIOR RUNS" in context
+    assert "Slow momentum worked" in context
+    assert "fast_window" in context
+
+
+def test_alpha_prompt_context_includes_rejected_configs(tmp_path):
+    store = AlphaStore(tmp_path / "alphas.db")
+    store.store_backtest_result(
+        regime="MidVol-Bull",
+        strategy_type="momentum",
+        params={"fast_window": 5, "slow_window": 20},
+        metrics={"sharpe_ratio": -0.4, "total_return": -0.1, "max_drawdown": 0.25},
+        assets=["SPY"],
+        reasoning="Too reactive in this regime.",
+    )
+
+    context = store.to_prompt_context("MidVol-Bull", "momentum")
+
+    assert "REJECTED" in context
+    assert "Avoid repeating" in context
+
+
+def test_proposal_generator_uses_alpha_memory_before_grid(tmp_path):
+    store = AlphaStore(tmp_path / "alphas.db")
+    store.store_backtest_result(
+        regime="MidVol-Bull",
+        strategy_type="momentum",
+        params={"fast_window": 50, "slow_window": 200},
+        metrics={"sharpe_ratio": 1.1, "total_return": 0.2, "max_drawdown": 0.08},
+        assets=["SPY"],
+        reasoning="Retrieved candidate should lead future generation.",
+    )
+
+    generator = ProposalGenerator(planner=NoopPlanner(), alpha_store=store)
+    context = RegimeContext(regime_label="MidVol-Bull")
+    proposals = generator.generate(context, n_proposals=3, strategy_type="momentum")
+
+    assert proposals[0].generation_method == "alpha_memory"
+    assert proposals[0].params == {"fast_window": 50, "slow_window": 200}
+    assert len(proposals) == 3
+
+
+def test_proposal_generator_avoids_rejected_alpha_params(tmp_path):
+    store = AlphaStore(tmp_path / "alphas.db")
+    store.store_backtest_result(
+        regime="MidVol-Bull",
+        strategy_type="momentum",
+        params={"fast_window": 5, "slow_window": 20},
+        metrics={"sharpe_ratio": -0.5, "total_return": -0.08, "max_drawdown": 0.22},
+        assets=["SPY"],
+        reasoning="Rejected fast crossover.",
+    )
+
+    generator = ProposalGenerator(planner=NoopPlanner(), alpha_store=store)
+    context = RegimeContext(regime_label="MidVol-Bull")
+    proposals = generator.generate(context, n_proposals=5, strategy_type="momentum")
+
+    assert {"fast_window": 5, "slow_window": 20} not in [proposal.params for proposal in proposals]
 
 
 def test_template_fallback_without_llm(monkeypatch):
@@ -175,3 +286,63 @@ def test_hypothesis_memory_rejects_invalid_status(tmp_path):
         assert False, "expected ValueError for invalid status"
     except ValueError:
         pass
+
+
+def test_nla_memory_stores_agent_summary_and_context(tmp_path):
+    store = NLAMemoryStore(tmp_path / "research.db")
+    record = store.store_agent_summary(
+        regime="MidVol-Bull",
+        strategy_type="momentum",
+        params={"fast_window": 50, "slow_window": 200},
+        narrative="Slow crossover narrative from explicit proposal reasoning.",
+        metrics={"sharpe_ratio": 1.1, "max_drawdown": 0.08},
+        alpha_id="alpha123",
+        tags=("test",),
+    )
+
+    recalled = store.recall(regime="MidVol-Bull", strategy_type="momentum")
+    context = store.to_prompt_context("MidVol-Bull", "momentum")
+
+    assert recalled[0].record_id == record.record_id
+    assert recalled[0].alpha_id == "alpha123"
+    assert "NLA MEMORY FROM EXPLICIT ACTIVATION NARRATIVES" in context
+    assert "Slow crossover narrative" in context
+    assert "not as hidden chain-of-thought" in context
+
+
+def test_nla_memory_ingests_gemma4_jsonl(tmp_path):
+    jsonl_path = tmp_path / "nla_eval.jsonl"
+    payload = {
+        "text": "momentum proposal with fast_window=20",
+        "explanation": "Activation narrative favors slower confirmation.",
+        "direction_mse": 0.15,
+        "cosine": 0.82,
+    }
+    jsonl_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+
+    store = NLAMemoryStore(tmp_path / "research.db")
+    records = store.ingest_nla_jsonl(
+        jsonl_path,
+        regime="LowVol-Bull",
+        strategy_type="momentum",
+        params={"fast_window": 20},
+        tags=("gemma4",),
+    )
+
+    assert len(records) == 1
+    assert records[0].source_model == "gemma4-nla"
+    assert records[0].quality_score == 0.82 - 0.15
+    assert store.recall(regime="LowVol-Bull", strategy_type="momentum")[0].narrative.startswith(
+        "Activation narrative"
+    )
+
+
+def test_regime_context_includes_nla_memory():
+    context = RegimeContext(
+        regime_label="MidVol-Bull",
+        nla_memory_context="NLA MEMORY FROM EXPLICIT ACTIVATION NARRATIVES:\n  - note",
+    )
+
+    prompt = context.to_prompt_string()
+
+    assert "NLA MEMORY FROM EXPLICIT ACTIVATION NARRATIVES" in prompt

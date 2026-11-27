@@ -1,3 +1,4 @@
+"""Tests: cli."""
 from src.agent.reporting import render_comparison_table, render_regime_card, verdict_for_metrics
 from src.cli import build_parser
 

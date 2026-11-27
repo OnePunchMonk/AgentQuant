@@ -1,8 +1,4 @@
-"""Tests that trace export represents real execution semantics instead of
-inventing them: distinct step types for LLM vs deterministic proposal
-generation, usage marked unknown (not zero) when untracked, and a
-stopped_reason derived from the actual run outcome."""
-
+"""Tests: harnesskit bridge."""
 from src.agent.trace import TraceRecorder
 from src.integrations.harnesskit_bridge import to_trajectory_dict
 

@@ -1,9 +1,20 @@
-"""Tests for extended feature engine."""
+"""Tests: features."""
+import warnings
 
 import numpy as np
 import pandas as pd
+import pytest
 
+from src.agent.context_builder import build_context
+from src.agent.episode_splits import synthetic_ohlcv
 from src.features.engine import compute_features
+from src.features.regime import detect_regime, detect_regime_full
+
+warnings.filterwarnings("ignore", category=FutureWarning)
+
+
+
+SIM = synthetic_ohlcv(3, n_days=1500)["SIM"]
 
 
 def _make_ohlcv(n=350, seed=42):
@@ -18,6 +29,48 @@ def _make_ohlcv(n=350, seed=42):
     }, index=idx)
     vix = pd.DataFrame({"Close": rng.uniform(15, 35, n)}, index=idx)
     return {"SPY": df, "^VIX": vix}
+
+
+def _make_features(n=300, vix_level=20.0, momentum_63d=0.06, has_vix=True):
+    idx = pd.date_range("2020-01-01", periods=n)
+    close = pd.Series(np.linspace(100, 100 * (1 + momentum_63d), n), index=idx)
+    df = pd.DataFrame({
+        "Close": close,
+        "momentum_21d": np.full(n, momentum_63d * 0.5),
+        "momentum_63d": np.full(n, momentum_63d),
+        "momentum_252d": np.full(n, momentum_63d * 2),
+        "volatility_21d": np.full(n, 0.15),
+        "sma_200": close * 0.95,
+        "sma_50": close * 0.98,
+    }, index=idx)
+    if has_vix:
+        # Fill with historical VIX: first 200 bars at 15, then spike to vix_level
+        vix_vals = np.full(n, 15.0)
+        vix_vals[-50:] = vix_level
+        df["vix_close"] = vix_vals
+    return df
+
+
+@pytest.mark.parametrize("n", [176, 220, 300])
+def test_short_windows_still_produce_features_and_a_regime(n):
+    features = compute_features({"SIM": SIM.iloc[:n]}, "SIM")
+    assert len(features) > 0
+    assert detect_regime(features) != "Unknown"
+
+
+def test_long_horizon_features_are_unknown_not_dropped_and_not_nan_in_the_context():
+    features = compute_features({"SIM": SIM.iloc[:176]}, "SIM")
+    assert features["momentum_252d"].isna().all()  # there is no 252-day history
+    context = build_context(features)
+    assert context.momentum_252d == 0.0
+    assert "nan" not in context.to_prompt_string().lower()
+
+
+def test_long_windows_are_unchanged():
+    features = compute_features({"SIM": SIM.iloc[:1000]}, "SIM")
+    last = features.iloc[-1]
+    assert not last.isna().any()
+    assert detect_regime(features) == detect_regime(features.dropna())
 
 
 def test_expected_columns_present():
@@ -72,3 +125,39 @@ def test_no_nan_in_required_features():
     required = [c for c in features.columns if c not in _LONG_HORIZON_FEATURES]
     assert len(features) > 0
     assert not features[required].isnull().any().any(), "a required feature contains NaN"
+
+
+def test_low_vol_bull():
+    features = _make_features(vix_level=12.0, momentum_63d=0.10)
+    regime = detect_regime(features)
+    assert "Bull" in regime
+    assert "Low" in regime or "Mid" in regime
+
+
+def test_crisis_bear():
+    """High VIX + negative momentum should be Crisis-Bear."""
+    features = _make_features(vix_level=55.0, momentum_63d=-0.15)
+    regime = detect_regime(features)
+    assert "Bear" in regime or "Neutral" in regime
+    assert "Crisis" in regime or "HighVol" in regime
+
+
+def test_regime_confidence_in_full():
+    features = _make_features(vix_level=12.0, momentum_63d=0.12)
+    signals = detect_regime_full(features)
+    assert 0.0 <= signals.regime_confidence <= 1.0
+    assert signals.regime_label != "Unknown"
+
+
+def test_no_vix_falls_back_gracefully():
+    features = _make_features(has_vix=False)
+    regime = detect_regime(features)
+    assert isinstance(regime, str)
+    assert len(regime) > 0
+
+
+def test_vix_spike_detected_as_high_vol():
+    """When VIX is in the 90th percentile, vol_regime should be high or crisis."""
+    features = _make_features(vix_level=50.0, momentum_63d=0.0)
+    signals = detect_regime_full(features)
+    assert signals.vol_regime in ("high", "crisis")

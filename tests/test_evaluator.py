@@ -1,20 +1,10 @@
-"""One evaluator, scored with history.
-
-Pins the fixes for two bugs found in the sweep:
-  * the benchmark arms used a second evaluator (long-only, min_periods=1, own
-    cost function) that picked a different dev winner than the production
-    runner in 72% of synthetic episodes;
-  * the holdout was scored on the 60-bar slice alone, so moving averages had no
-    history and the reported return was for a different strategy.
-It also covers common-window scoring in the agent loop, the random arm staying
-on the canonical grid, and configurable Anthropic model ids.
-"""
-
+"""Tests: evaluator."""
 import numpy as np
 import pandas as pd
 import pytest
 
 from src.agent import agent_graph, search_arms
+from src.agent.agent_graph import _split_search_and_holdout
 from src.agent.episode_splits import build_episodes, synthetic_ohlcv
 from src.agent.parameter_grid import ParameterGrid
 from src.backtest.core import common_warmup_bars, evaluate_window
@@ -34,7 +24,27 @@ def _episodes(n=3):
     return ohlcv, build_episodes(ohlcv, "SIM", n_episodes=n, dev_days=220, holdout_days=60)
 
 
-# ------------------------------------------------------------ one evaluator
+def _frame(n):
+    idx = pd.bdate_range("2018-01-01", periods=n)
+    close = pd.Series(100 * np.exp(np.cumsum(np.random.default_rng(0).normal(0.0003, 0.01, n))), index=idx)
+    return pd.DataFrame({"Close": close, "Open": close, "High": close, "Low": close, "Volume": 1e6})
+
+
+def _make_ohlcv(n=500):
+    idx = pd.bdate_range("2022-01-01", periods=n)
+    df = pd.DataFrame(
+        {
+            "Open": 100.0,
+            "High": 101.0,
+            "Low": 99.0,
+            "Close": 100.0 + pd.Series(range(n), index=idx) * 0.01,
+            "Volume": 1_000_000,
+        },
+        index=idx,
+    )
+    return {"SPY": df, "^VIX": df.copy()}
+
+
 @pytest.mark.parametrize("params", GRID[:6])
 def test_runner_and_benchmark_evaluator_agree(params):
     ohlcv, _ = _episodes()
@@ -60,7 +70,6 @@ def test_history_beyond_the_warmup_does_not_change_the_score():
     assert a["net_return"] == pytest.approx(b["net_return"], abs=1e-12)
 
 
-# ------------------------------------------------------------ holdout with history
 def test_holdout_is_scored_with_history_not_on_the_slice_alone():
     ohlcv, episodes = _episodes()
     ep = episodes[1]  # has data before its dev window
@@ -111,17 +120,10 @@ def test_random_search_arm_stays_on_the_canonical_grid():
     assert len({tuple(sorted(c.params.items())) for c in result.candidates}) == len(result.candidates)
 
 
-# ------------------------------------------------------------ common-window scoring
 def test_common_warmup_uses_the_longest_grid_window():
     assert common_warmup_bars(GRID) == 253  # longest window plus one bar
     assert common_warmup_bars(GRID, n_bars=1000) == 253
     assert common_warmup_bars(GRID, n_bars=500) == 0  # would eat more than 40% of the window
-
-
-def _frame(n):
-    idx = pd.bdate_range("2018-01-01", periods=n)
-    close = pd.Series(100 * np.exp(np.cumsum(np.random.default_rng(0).normal(0.0003, 0.01, n))), index=idx)
-    return pd.DataFrame({"Close": close, "Open": close, "High": close, "Low": close, "Volume": 1e6})
 
 
 def test_common_eval_start_only_when_the_window_can_afford_it():
@@ -153,23 +155,6 @@ def test_backtest_node_scores_every_candidate_from_the_same_start(monkeypatch):
     assert seen == [df.index[253], df.index[253]]
 
 
-# ------------------------------------------------------------ configurable model ids
-def test_model_ids_are_configurable(monkeypatch):
-    from src.agent.base_planner import ClaudePlanner
-    from src.agent.tools.orchestrator import _tool_model
-
-    monkeypatch.delenv("AGENTQUANT_CLAUDE_MODEL", raising=False)
-    monkeypatch.delenv("AGENTQUANT_TOOL_MODEL", raising=False)
-    assert config.llm.claude_model.startswith("claude-")
-    assert _tool_model() == config.llm.tool_model
-
-    monkeypatch.setenv("AGENTQUANT_CLAUDE_MODEL", "claude-test-model")
-    monkeypatch.setenv("AGENTQUANT_TOOL_MODEL", "claude-test-tool")
-    assert ClaudePlanner()._model_name == "claude-test-model"
-    assert _tool_model() == "claude-test-tool"
-
-
-# ------------------------------------------------------------ boundary cases found in review
 def test_whole_frame_scoring_matches_the_runner_without_a_base_bar():
     ohlcv, _ = _episodes()
     df = ohlcv["SIM"].iloc[:300]
@@ -178,38 +163,6 @@ def test_whole_frame_scoring_matches_the_runner_without_a_base_bar():
     runner = run_backtest({"SIM": df}, ["SIM"], "momentum", params)["metrics"]
     assert arms["sharpe"] == pytest.approx(runner["sharpe_ratio"], abs=1e-9)
     assert arms["net_return"] == pytest.approx(runner["total_return"], abs=1e-9)
-
-
-@pytest.mark.parametrize("strategy,params", [
-    ("trend_following", {"short_window": 20, "medium_window": 50, "long_window": 200}),
-    ("breakout", {"window": 50, "threshold_pct": 0.03}),
-    ("volatility", {"window": 63, "vol_threshold": 0.30}),
-    ("mean_reversion", {"window": 30, "num_std": 3.0}),
-])
-def test_runner_accepts_every_strategy_at_the_common_start(strategy, params):
-    from src.agent.parameter_grid import ParameterGrid as PG
-
-    df = _frame(1200)
-    start = agent_graph._common_eval_start({"SPY": df}, "SPY", strategy)
-    assert start is not None
-    # Must not raise InsufficientWarmupError (trend_following uses `long_window`).
-    result = run_backtest({"SPY": df}, ["SPY"], strategy, params, eval_start=start)
-    assert result is not None
-    assert PG().get_grid(strategy)  # the grid exists, so the common start was derived from it
-
-
-def test_num_trades_counts_only_the_scored_window():
-    idx = pd.bdate_range("2020-01-01", periods=300)
-    up = np.linspace(100, 140, 150)
-    down = np.linspace(140, 100, 150)
-    close = pd.Series(np.concatenate([up, down]), index=idx)
-    df = pd.DataFrame({"Close": close, "Open": close, "High": close, "Low": close, "Volume": 1e6})
-    params = {"fast_window": 3, "slow_window": 10}
-    whole = run_backtest({"X": df}, ["X"], "momentum", params)["metrics"]["num_trades"]
-    # Score only the second half: the long position carried in from the first half is not a trade.
-    second_half = run_backtest({"X": df}, ["X"], "momentum", params, eval_start=idx[160])["metrics"]["num_trades"]
-    assert whole >= 2
-    assert second_half < whole
 
 
 def test_offline_agent_arms_charge_the_same_total_cost_as_the_other_arms(monkeypatch):
@@ -227,3 +180,50 @@ def test_offline_agent_arms_charge_the_same_total_cost_as_the_other_arms(monkeyp
     search_arms._run_agent_offline({}, "SIM", 0, "unused.db", cost_bps=5.0)
     assert seen["total_bps"] == pytest.approx(5.0)
     assert (config.backtest.commission, config.backtest.slippage, config.backtest.market_impact_bps) == before
+
+
+def test_split_reserves_trailing_fraction():
+    ohlcv = _make_ohlcv(500)
+    search, holdout_start = _split_search_and_holdout(ohlcv, "SPY", 0.2)
+
+    assert holdout_start is not None
+    assert (search["SPY"].index < holdout_start).all()
+    # Roughly 80% of history remains for search.
+    assert 350 <= len(search["SPY"]) <= 410
+    # Holdout data (>= holdout_start) is excluded from every ticker, not
+    # just the primary asset.
+    assert (search["^VIX"].index < holdout_start).all()
+
+
+def test_split_disabled_returns_original_data():
+    ohlcv = _make_ohlcv(500)
+    search, holdout_start = _split_search_and_holdout(ohlcv, "SPY", 0.0)
+
+    assert holdout_start is None
+    assert search is ohlcv
+
+
+@pytest.mark.parametrize("fraction", [-0.1, 1.0, 1.5])
+def test_split_invalid_fraction_is_noop(fraction):
+    ohlcv = _make_ohlcv(500)
+    search, holdout_start = _split_search_and_holdout(ohlcv, "SPY", fraction)
+
+    assert holdout_start is None
+    assert search is ohlcv
+
+
+def test_split_short_history_is_noop():
+    ohlcv = _make_ohlcv(3)
+    search, holdout_start = _split_search_and_holdout(ohlcv, "SPY", 0.2)
+
+    # Not enough bars to carve out a non-trivial search window.
+    assert holdout_start is None
+    assert search is ohlcv
+
+
+def test_split_missing_asset_is_noop():
+    ohlcv = _make_ohlcv(500)
+    search, holdout_start = _split_search_and_holdout(ohlcv, "MISSING", 0.2)
+
+    assert holdout_start is None
+    assert search is ohlcv

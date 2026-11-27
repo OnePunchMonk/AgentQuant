@@ -1,5 +1,4 @@
-"""Tests for dreaming mode (src/memory/dream.py), the offline consolidation sidecar."""
-
+"""Tests: dream."""
 import json
 import sqlite3
 

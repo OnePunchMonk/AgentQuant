@@ -1,3 +1,4 @@
+"""Tests: benchmark suite."""
 import pytest
 
 from src.agent.benchmark_suite import (
