@@ -98,11 +98,6 @@ jobs:
         run: |
           python run_app.py
 
-      - name: --app fails with an actionable error, not a traceback, when ui extra is missing
-        run: |
-          output=$(python run_app.py --app 2>&1) && exit 1 || true
-          echo "$output" | grep -q '\[ui\]' && echo "✓ actionable error shown" || (echo "$output" && exit 1)
-
   wheel-install:
     name: Build wheel/sdist and run CLI from outside the checkout
     runs-on: ubuntu-latest

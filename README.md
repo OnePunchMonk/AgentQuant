@@ -1,5 +1,7 @@
 # AgentQuant
 
+> Docs, diagrams, notebooks, the Streamlit dashboard and experiment notes live in [agentquant-artifacts](https://github.com/OnePunchMonk/agentquant-artifacts). This repo is the production package.
+
 **Give research agents a memory of what failed—and a way to test what works.**
 
 AgentQuant runs a research loop: propose an experiment, test it, inspect the result, and use that evidence to choose the next one. It tracks the whole search, including failed attempts, so you can compare research approaches at the same budget and replay their decisions.
@@ -30,7 +32,7 @@ python run_app.py
 
 The demo runs three search iterations on synthetic prices and writes `results/demo_run.json`. It shows the loop and its trace; it is not a trading-performance benchmark.
 
-For the dashboard, install `.[ui]` and run `python run_app.py --app`. For LLM-guided proposals and web research, install `.[llm]` and configure provider credentials.
+The dashboard is in [agentquant-artifacts/app](https://github.com/OnePunchMonk/agentquant-artifacts/tree/main/app). For LLM-guided proposals and web research, install `.[llm]` and configure provider credentials.
 
 ## Follow an experiment
 

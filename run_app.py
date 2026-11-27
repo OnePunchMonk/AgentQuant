@@ -1,11 +1,9 @@
 """
 Entry point for running the AgentQuant Streamlit application.
 """
-import os
-import subprocess
-import sys
 import argparse
 from pathlib import Path
+
 
 def ensure_directories():
     """Ensure required directories exist"""
@@ -13,57 +11,11 @@ def ensure_directories():
     project_root = Path(__file__).parent
     figures_dir = project_root / "figures"
     figures_dir.mkdir(exist_ok=True)
-    
+
     print(f"Created figures directory: {figures_dir.absolute()}")
 
-def run_streamlit():
-    """Run the Streamlit application"""
-    try:
-        import streamlit  # noqa: F401
-    except ImportError:
-        print(
-            "The interactive dashboard needs the 'ui' extra, which is not installed.\n"
-            "Install it with:\n\n"
-            '    python -m pip install -e ".[ui]"\n\n'
-            "The core CLI and offline demo (python run_app.py, without --app) do not "
-            "require it."
-        )
-        raise SystemExit(1)
-
-    # Ensure we're in the correct directory
-    project_root = Path(__file__).parent
-    os.chdir(project_root)
-    
-    # Create required directories
-    ensure_directories()
-    
-    # Get the path to the Streamlit app
-    app_path = project_root / "src" / "app" / "streamlit_app.py"
-    
-    print(f"Starting Streamlit app: {app_path}")
-    
-    # Run Streamlit
-    streamlit_cmd = [
-        sys.executable, "-m", "streamlit", "run", 
-        str(app_path),
-        "--server.port", "8501",
-        "--browser.serverAddress", "localhost",
-        "--server.headless", "true"
-    ]
-    
-    try:
-        subprocess.run(streamlit_cmd)
-    except KeyboardInterrupt:
-        print("\nStreamlit app stopped by user")
-    except Exception as e:
-        print(f"Error running Streamlit app: {e}")
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="AgentQuant demo or Streamlit app")
-    parser.add_argument("--app", action="store_true", help="Launch the Streamlit dashboard")
-    args = parser.parse_args()
-    if args.app:
-        run_streamlit()
-    else:
-        from scripts.demo_run import main
-        raise SystemExit(main())
+    parser = argparse.ArgumentParser(description="AgentQuant offline demo")
+    parser.parse_args()
+    from scripts.demo_run import main
+    raise SystemExit(main())

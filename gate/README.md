@@ -1,8 +1,8 @@
 # agentquant-gate (foundation)
 
-![Search-aware evaluation architecture](docs/architecture.svg)
+![Search-aware evaluation architecture](https://raw.githubusercontent.com/OnePunchMonk/agentquant-artifacts/main/gate/architecture.svg)
 
-[Edit this diagram in Excalidraw](docs/architecture.excalidraw). The diagram distinguishes existing capabilities from planned integrations.
+[Edit this diagram in Excalidraw](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/gate/architecture.excalidraw). The diagram distinguishes existing capabilities from planned integrations.
 
 
 Standalone, numpy-only, tamper-evident JSONL experiment ledger and conservative search-aware promotion gate.

@@ -15,8 +15,6 @@ services:
     env_file:
       - path: .env
         required: false
-    ports:
-      - "8501:8501"
     volumes:
       - experiments:/app/experiments
       - data_store:/app/data_store

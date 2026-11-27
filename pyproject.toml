@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentquant"
-version = "0.3.0"
+version = "0.3.2"
 description = "A failure-aware harness for reproducible, self-improving research, using quantitative strategies as its first testbed."
 authors = [{ name = "Avaya Aggarwal", email = "aggarwal.avaya27@gmail.com" }]
 readme = "README.md"
@@ -27,14 +27,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Interactive dashboard and plotting (src/app/streamlit_app.py,
-# src/visualization/plots.py). Not required for the CLI, the offline demo,
-# or the agent search loop -- nothing in the core import path touches these.
-ui = [
-    "streamlit>=1.39",
-    "plotly>=5.17",
-    "matplotlib>=3.8",
-]
 llm = [
     "google-generativeai>=0.8",
     "langchain>=0.2",
