@@ -18,11 +18,11 @@
 > every number below and in `results/harness_evolution_6epochs_results.json` predates any
 > real execution. That call is now fixed, and `results/harness_evolution_6epochs_results.json`
 > has been regenerated from an actual run against real yfinance SPY history. Without an
-> LLM API key set (the environment this was regenerated in has none), all 6 epochs
-> execute the identical offline `FallbackPlanner` grid search — `prompt_template` is
-> never read, so `v1_base` through `v6_research` produce byte-identical Sharpe (0.581)
-> and 0.0% epoch-over-epoch improvement, with `tool_calls: 0` throughout. That flat
-> result is the real, reproducible offline number, not a bug: the epoch-over-epoch
+> LLM API key set, epochs do not reach the LLM tool-calling path (`tool_calls: 0`).
+> Their Sharpe values are not required to match: this script uses live market data and
+> runs epochs sequentially against persisted memory, so fallback search candidates and
+> measured values can vary. A zero-tool-call run does not establish that prompt changes
+> affected the fallback or demonstrate an LLM-driven improvement. The epoch-over-epoch
 > improvement narrative in this file (tool calls 0→8, +37.4% Sharpe) has never been
 > reproduced end-to-end and requires re-running with `ANTHROPIC_API_KEY` (and ideally
 > `TAVILY_API_KEY`) exported to mean anything.
