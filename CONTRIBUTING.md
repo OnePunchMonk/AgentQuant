@@ -16,7 +16,7 @@ API keys are optional for the offline tests. Never commit keys or `.env` files.
 
 - Keep changes focused and explain the problem and approach.
 - Add or update tests for changed behavior.
-- Update the relevant documentation and `CHANGELOG.md` for user-facing changes.
+- Update the relevant documentation and changelog ([agentquant-artifacts](https://github.com/OnePunchMonk/agentquant-artifacts/blob/main/notes/CHANGELOG.md)) for user-facing changes.
 - Run the checks used by CI:
 
 ```bash
