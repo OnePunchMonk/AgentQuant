@@ -200,7 +200,10 @@ class ClaudePlanner(BasePlanner):
 
     def __init__(self):
         self._api_key = os.getenv("ANTHROPIC_API_KEY", "")
-        self._model_name = config.llm.model if config.llm.provider == "claude" else "claude-sonnet-5"
+        self._model_name = (
+            os.getenv("AGENTQUANT_CLAUDE_MODEL")
+            or (config.llm.model if config.llm.provider == "claude" else config.llm.claude_model)
+        )
 
     def is_available(self) -> bool:
         if not _looks_like_valid_key(self._api_key):

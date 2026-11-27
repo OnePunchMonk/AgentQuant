@@ -13,6 +13,15 @@ from typing import Any, Dict, List
 logger = logging.getLogger(__name__)
 
 
+def _tool_model() -> str:
+    """Model for the tool-use loop: env override, else config (llm.tool_model)."""
+    import os
+
+    from src.utils.config import config
+
+    return os.getenv("AGENTQUANT_TOOL_MODEL") or config.llm.tool_model
+
+
 class ToolOrchestrator:
     """Orchestrates Claude tool-use loops."""
 
@@ -93,7 +102,7 @@ Use available tools to gather context, then generate proposals with falsifiable 
 
             # Call Claude with tools
             response = client.messages.create(
-                model="claude-opus-5",  # Can be made configurable
+                model=_tool_model(),
                 max_tokens=2000,
                 system=system_prompt,
                 tools=self.registry.to_claude_tools(),

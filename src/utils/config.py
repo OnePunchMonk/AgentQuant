@@ -26,6 +26,11 @@ class LLMConfig(BaseModel):
     model: str = "gemini-2.5-flash"
     temperature: float = 0.2
     max_retries: int = 2
+    # Anthropic model ids were hard-coded in two modules. They are configurable
+    # here, and can be overridden with AGENTQUANT_CLAUDE_MODEL (proposal planner)
+    # and AGENTQUANT_TOOL_MODEL (tool-use loop).
+    claude_model: str = "claude-sonnet-5-5"
+    tool_model: str = "claude-opus-5-5"
 
     @field_validator("provider")
     @classmethod
