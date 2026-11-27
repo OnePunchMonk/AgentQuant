@@ -61,7 +61,10 @@ def test_promotion_loss_keeps_incumbent():
     assert decision.promote is False
 
 
-def test_large_sharpe_gain_still_fails_closed_without_validated_dsr():
+def test_three_paired_observations_cannot_reach_significance_even_for_a_large_gain():
+    """With only three paired cells the bootstrap has 27 distinct resamples, so no
+    gain, however large, can clear p < 0.05. The gate must refuse rather than
+    promote on thin evidence."""
     decision = evaluate_promotion(
         incumbent_val_scores=[0.2, 0.2, 0.2],
         candidate_val_scores=[1.0, 1.2, 1.4],
@@ -69,7 +72,7 @@ def test_large_sharpe_gain_still_fails_closed_without_validated_dsr():
         candidate_protected_score=0.2,
     )
     assert decision.promote is False
-    assert "insufficient_evidence" in decision.reason
+    assert "significance not met" in decision.reason
 
 
 def test_promotion_blocked_by_protected_regression_even_with_large_validation_gain():

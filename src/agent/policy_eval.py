@@ -113,9 +113,16 @@ def make_p2_eval_fn(
     canonical_seed: int,
     canonical_policy: Optional[HarnessConfig] = None,
     shuffle_rng_seed: int = 0,
+    score: str = "net_return",
 ):
     """Build eval_fn(policy, episode, seed) -> Optional[float] for
     run_bounded_self_improvement.
+
+    score: what each (episode, seed) cell returns. "net_return" (default) is the
+      holdout net return, which the promotion gate can test with its paired
+      bootstrap. "sharpe" returns the holdout Sharpe and needs a deflated-Sharpe
+      hurdle in the gate (record n_obs with each trial); see
+      scripts/benchmark_gate_options.py for the comparison.
 
     memory_mode:
       'normal'   -- each episode sees a frozen snapshot of memory as of that
@@ -127,6 +134,8 @@ def make_p2_eval_fn(
     """
     from src.agent.harness_config import harness_v1_base
 
+    if score not in ("net_return", "sharpe"):
+        raise ValueError("score must be 'net_return' or 'sharpe'")
     order = episode_order_of(all_episodes)
     canonical: Dict[str, List[Dict[str, Any]]] = {}
     if memory_mode != "disabled":
@@ -156,6 +165,6 @@ def make_p2_eval_fn(
         metrics = _evaluate_params(history, winner_params, cost_bps, eval_start=episode.holdout_start)
         if metrics is None:
             return None
-        return metrics["sharpe"]
+        return metrics["net_return"] if score == "net_return" else metrics["sharpe"]
 
     return eval_fn

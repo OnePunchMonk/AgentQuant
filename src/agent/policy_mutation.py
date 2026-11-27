@@ -39,6 +39,14 @@ logger = logging.getLogger(__name__)
 # Regression check: performance on this episode must not drop by more than
 # this fraction relative to the incumbent, or the candidate is rejected by
 # the statistical gate.
+# The gate scores each (episode, seed) cell by holdout net return. The score used to
+# be holdout Sharpe over a 60-bar slice (standard error above 2), which the gate
+# refuses to promote on without a deflated-Sharpe hurdle. scripts/benchmark_gate_options.py
+# compares the options on a synthetic known-truth simulation: net return with the
+# paired max-T bootstrap controls false promotions as well as the alternatives
+# (1.8% at no edge) and is about 2.7x more powerful than the DSR hurdle at a
+# 1.5 Sharpe edge (66% vs 24%).
+GATE_METRIC = "validation_net_return"
 PROTECTED_EPISODE_ID = "ep00"
 MAX_PROTECTED_REGRESSION = 0.25
 
@@ -256,7 +264,7 @@ def evaluate_promotion(
              outcome: str = "insufficient_evidence") -> PromotionDecision:
         if gate_ledger is not None:
             gate_ledger.append(
-                "decision", family=gate_family, metric="validation_sharpe",
+                "decision", family=gate_family, metric=GATE_METRIC,
                 candidate_id=candidate_trial_id, incumbent_id=incumbent_trial_id,
                 outcome=outcome, reason=reason,
                 raw_delta=(candidate_mean - incumbent_mean)
@@ -299,7 +307,7 @@ def evaluate_promotion(
     # run-scoped ledger below.
     if gate_ledger is not None:
         gate_decision = Gate(gate_ledger, family=gate_family,
-                             metric="validation_sharpe").evaluate(
+                             metric=GATE_METRIC).evaluate(
             candidate_trial_id, incumbent_trial_id,
             protected_candidate=candidate_protected_score,
             protected_incumbent=incumbent_protected_score,
@@ -309,14 +317,14 @@ def evaluate_promotion(
         with tempfile.TemporaryDirectory(prefix="agentquant-promotion-") as temp_dir:
             ledger = Ledger(Path(temp_dir) / "ledger.jsonl")
             with ledger.trial(config={"role": "incumbent"}, family=gate_family,
-                              metric="validation_sharpe", trial_id=incumbent_trial_id) as trial:
+                              metric=GATE_METRIC, trial_id=incumbent_trial_id) as trial:
                 trial.record(scores=incumbent_val_scores)
             with ledger.trial(config={"role": "candidate"}, parent=incumbent_trial_id,
-                              family=gate_family, metric="validation_sharpe",
+                              family=gate_family, metric=GATE_METRIC,
                               trial_id=candidate_trial_id) as trial:
                 trial.record(scores=candidate_val_scores)
             gate_decision = Gate(ledger, family=gate_family,
-                                 metric="validation_sharpe").evaluate(
+                                 metric=GATE_METRIC).evaluate(
                 candidate_trial_id, incumbent_trial_id,
                 protected_candidate=candidate_protected_score,
                 protected_incumbent=incumbent_protected_score,
@@ -376,7 +384,7 @@ def run_bounded_self_improvement(
 ) -> Dict[str, Any]:
     """Ties inner (eval_fn) and outer (mutation/promotion) loops together.
 
-    eval_fn(policy, episode, seed) -> holdout sharpe for that episode/seed,
+    eval_fn(policy, episode, seed) -> holdout net return for that episode/seed,
     reusing whatever inner-loop machinery the caller wires up (e.g.
     src.agent.search_arms.run_frozen_agent_arm under the hood).
 
@@ -446,7 +454,7 @@ def run_bounded_self_improvement(
     incumbent_scores_full = [incumbent_val_raw[k] for k in val_keys]
     if all(score is not None for score in incumbent_scores_full) and incumbent_scores_full:
         with gate_ledger.trial(
-            config=incumbent.to_dict(), family=gate_family, metric="validation_sharpe",
+            config=incumbent.to_dict(), family=gate_family, metric=GATE_METRIC,
             trial_id=incumbent_trial_id, generation_method="incumbent",
         ) as trial:
             trial.record(scores=incumbent_scores_full,
@@ -454,7 +462,7 @@ def run_bounded_self_improvement(
     else:
         gate_ledger.append(
             "error", trial_id=incumbent_trial_id, parent_id=None, family=gate_family,
-            metric="validation_sharpe", direction="max",
+            metric=GATE_METRIC, direction="max",
             error="incomplete validation episode/seed coverage",
             validation_observations=[[*k, incumbent_val_raw[k]] for k in val_keys],
         )
@@ -467,7 +475,7 @@ def run_bounded_self_improvement(
         if all(score is not None for score in scores_full) and scores_full:
             with gate_ledger.trial(
                 config=cand.to_dict(), parent=incumbent_trial_id, family=gate_family,
-                metric="validation_sharpe", trial_id=trial_id, generation_method="mutation",
+                metric=GATE_METRIC, trial_id=trial_id, generation_method="mutation",
             ) as trial:
                 trial.record(
                     scores=scores_full, validation_keys=[list(k) for k in val_keys],
@@ -477,7 +485,7 @@ def run_bounded_self_improvement(
         else:
             gate_ledger.append(
                 "error", trial_id=trial_id, parent_id=incumbent_trial_id,
-                family=gate_family, metric="validation_sharpe", direction="max",
+                family=gate_family, metric=GATE_METRIC, direction="max",
                 error="incomplete validation episode/seed coverage",
                 validation_observations=[
                     [*k, candidate_val_raw[cand.version][k]] for k in val_keys
