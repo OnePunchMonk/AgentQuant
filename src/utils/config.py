@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
+from src.utils.paths import RUNS_DIR
+
 logger = logging.getLogger(__name__)
 
 
@@ -140,7 +142,7 @@ class AppConfig(BaseModel):
     agent: AgentConfig = AgentConfig()
     backtest: BacktestConfig = BacktestConfig()
     strategies: List[StrategyConfig] = Field(default_factory=list)
-    results_db_path: str = "experiments/results.db"
+    results_db_path: str = str(RUNS_DIR / "results.db")
     memory: MemoryConfig = MemoryConfig()
 
     @field_validator("log_level")

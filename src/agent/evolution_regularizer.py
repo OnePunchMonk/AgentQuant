@@ -38,7 +38,7 @@ class RegularizerConfig:
     final_edit_budget: int = 1
     leakage_tokens: frozenset[str] = frozenset()
     forbidden_path_prefixes: tuple[str, ...] = (
-        ".git/", ".env", "secrets/", "data/", "experiments/",
+        ".git/", ".env", "secrets/", "data/", ".agentquant/",
     )
     min_effect_floor: float = 0.01
     cost_floor_scale: float = 0.001
@@ -87,7 +87,7 @@ def preflight_edit(
                 config.cost_floor_scale * max(0.0, proposal.estimated_cost),
                 config.noise_floor_scale * max(0.0, measurement_noise))
     reasons: list[str] = []
-    paths = tuple(p.replace("\\", "/").lstrip("./") for p in proposal.diff_paths)
+    paths = tuple(re.sub(r"^(?:\./)+", "", p.replace("\\", "/")) for p in proposal.diff_paths)
     if not proposal.component.strip():
         reasons.append("missing_component")
     if not paths:

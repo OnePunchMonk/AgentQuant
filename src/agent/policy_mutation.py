@@ -34,6 +34,7 @@ from agentquant_gate import Gate, Ledger
 
 from src.agent.episode_splits import Episode
 from src.agent.harness_config import HarnessConfig
+from src.utils.paths import RUNS_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -359,7 +360,7 @@ class FinalHoldoutGuard:
     fails closed), and durability of newly created parent directories is not handled.
     """
 
-    def __init__(self, path: Path = Path("experiments/final_holdout_used.json"),
+    def __init__(self, path: Path = RUNS_DIR / "final_holdout_used.json",
                  ledger: Optional[Any] = None, split: str = "final"):
         self.path = Path(path)
         self.ledger = ledger
@@ -431,7 +432,7 @@ def run_bounded_self_improvement(
     use_random_baseline: bool = False,
     rng_seed: int = 0,
     structured_failures: Optional[List["StructuredFailure"]] = None,
-    gate_ledger_path: Path = Path("experiments/policy_promotion_ledger.jsonl"),
+    gate_ledger_path: Path = RUNS_DIR / "policy_promotion_ledger.jsonl",
 ) -> Dict[str, Any]:
     """Ties inner (eval_fn) and outer (mutation/promotion) loops together.
 

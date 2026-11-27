@@ -28,11 +28,13 @@ from importlib.metadata import version as _pkg_version
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from src.utils.paths import RUNS_DIR
+
 logger = logging.getLogger(__name__)
 
 BUNDLE_VERSION = "2"
 SUPPORTED_BUNDLE_VERSIONS = {"1", BUNDLE_VERSION}
-DEFAULT_BUNDLE_DIR = Path("experiments/episode_bundles")
+DEFAULT_BUNDLE_DIR = RUNS_DIR / "episode_bundles"
 UNAVAILABLE = "unavailable: not captured for this run"
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]

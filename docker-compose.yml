@@ -3,7 +3,7 @@
 #   docker compose up -d
 #
 # `app` serves the dashboard and runs agents. `dreamer` shares the same
-# experiments/ (memory db) and data_store/ (market data) volumes and runs
+# .agentquant/ (memory db) and data_store/ (market data) volumes and runs
 # offline consolidation every memory.dream.interval_seconds: it replays
 # in-sample-only trials on forward data, writes consolidation notes when a
 # config's verdict changes, and prunes the read audit log. SQLite runs in
@@ -16,7 +16,7 @@ services:
       - path: .env
         required: false
     volumes:
-      - experiments:/app/experiments
+      - agentquant_runs:/app/.agentquant
       - data_store:/app/data_store
 
   dreamer:
@@ -29,7 +29,7 @@ services:
       # LLM key or network access.
       AGENTQUANT_OFFLINE: "1"
     volumes:
-      - experiments:/app/experiments
+      - agentquant_runs:/app/.agentquant
       - data_store:/app/data_store
     restart: unless-stopped
     healthcheck:
@@ -41,5 +41,5 @@ services:
       retries: 3
 
 volumes:
-  experiments:
+  agentquant_runs:
   data_store:

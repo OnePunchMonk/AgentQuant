@@ -21,9 +21,11 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
+from src.utils.paths import RUNS_DIR
+
 logger = logging.getLogger(__name__)
 
-DEFAULT_MANIFEST_DIR = Path("experiments/run_manifests")
+DEFAULT_MANIFEST_DIR = RUNS_DIR / "run_manifests"
 
 
 def hash_ohlcv(ohlcv_data: Dict[str, "pd.DataFrame"]) -> str:

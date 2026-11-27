@@ -16,8 +16,6 @@ data_store/*.parquet
 
 # Generated outputs
 figures/
-experiments/*.csv
-experiments/*.db
 
 # IDE
 .vscode/
@@ -32,13 +30,10 @@ Thumbs.db
 # Legacy config (standardized to config.yaml)
 config.json
 new_env.ini
-experiments/run_manifests/
-experiments/policy_promotion_ledger.jsonl*
 
 # Unified memory: SQLite WAL files and dream sidecar heartbeat/lock
-experiments/*.db-*
-experiments/*.dream.*
 
 # runtime output
 results/
 .harness/
+.agentquant/

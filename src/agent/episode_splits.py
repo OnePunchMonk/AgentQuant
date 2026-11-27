@@ -21,9 +21,11 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from src.utils.paths import RUNS_DIR
+
 logger = logging.getLogger(__name__)
 
-DEFAULT_SPLITS_PATH = Path("experiments/episode_splits.json")
+DEFAULT_SPLITS_PATH = RUNS_DIR / "episode_splits.json"
 
 # Uniform transaction-cost assumption applied across every arm (bps per
 # trade / per unit of turnover). Kept as one constant so a cost-model change

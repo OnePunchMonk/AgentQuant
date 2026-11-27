@@ -20,8 +20,8 @@ RUN pip install --no-cache-dir -e ".[llm,data]"
 # Copy source code
 COPY . .
 
-# Ensure data_store and experiments directories exist
-RUN mkdir -p data_store experiments figures
+# Ensure data_store and the run-state directory exist
+RUN mkdir -p data_store .agentquant
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \

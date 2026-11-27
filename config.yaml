@@ -111,4 +111,4 @@ strategies:
       threshold_pct: 0.02
 
 # Results storage
-results_db_path: "experiments/results.db"
+results_db_path: ".agentquant/results.db"

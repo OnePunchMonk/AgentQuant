@@ -23,7 +23,7 @@ def test_rejects_duplicate_leakage_and_pruned_paths():
     assert "duplicate_in_history" in duplicate.reasons
     leaked = preflight_edit(EditProposal("grid", ("src/agent/grid.py",), benchmark_tokens=("TEST_ASSET_17",)), config=config)
     assert "benchmark_specific_leakage_marker" in leaked.reasons
-    pruned = preflight_edit(EditProposal("grid", ("experiments/results.db",)), config=config)
+    pruned = preflight_edit(EditProposal("grid", (".agentquant/results.db",)), config=config)
     assert "structural_path_pruned" in pruned.reasons
 
 
@@ -49,3 +49,13 @@ def test_invalid_cost_and_nonfinite_evidence_abstain():
     bad = preflight_edit(EditProposal("x", ("src/a.py",), estimated_cost=-1))
     assert "cost_out_of_bounds" in bad.reasons
     assert not select_with_paired_evidence([0.1, 0.1, 0.1, 0.1, float("nan")], adjusted_floor=0).selected
+
+
+def test_dot_prefixed_protected_paths_are_pruned_and_dot_slash_is_ignored():
+    """lstrip('./') used to strip every leading dot, so '.git/x', '.env' and the run-state dir slipped through."""
+    config = RegularizerConfig()
+    for path in (".git/config", ".env", ".agentquant/results.db", "./.env", "./data/prices.csv"):
+        result = preflight_edit(EditProposal("grid", (path,)), config=config)
+        assert "structural_path_pruned" in result.reasons, path
+    ok = preflight_edit(EditProposal("grid", ("./src/agent/grid.py",)), config=config)
+    assert "structural_path_pruned" not in ok.reasons
