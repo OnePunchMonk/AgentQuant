@@ -7,7 +7,9 @@
 
 Standalone, numpy-only, tamper-evident JSONL experiment ledger and conservative search-aware promotion gate.
 
-This is a **partial implementation** of AgentQuant issue #45 (Milestone 1). It is **not yet wired into AgentQuant's promotion paths**. Sharpe comparisons deliberately return `insufficient_evidence` until a validated Deflated Sharpe Ratio implementation is added.
+This is a **partial implementation** of AgentQuant issue #45. The paired max-T bootstrap gate is wired into the bounded self-improvement loop (`src/agent/policy_mutation.py`), which scores each validation cell by holdout net return.
+
+Sharpe-valued metrics are promoted only when each trial records `n_obs` (bars per score) and the candidate clears a deflated-Sharpe hurdle (`agentquant_gate.dsr`). Without `n_obs` the gate returns `insufficient_evidence`. `scripts/benchmark_gate_options.py` compares the options on a synthetic known-truth simulation (1,000 runs per cell): net return with the bootstrap and Sharpe with the bootstrap both hold false promotions under 2% at no edge and promote 66% / 65% at a 1.5 Sharpe edge; adding the deflated-Sharpe hurdle on top is more conservative (0.5% / 24%) because the max-T bootstrap already corrects for the search.
 
 Hash chains detect changes relative to a trusted checkpoint; an attacker able to rewrite and rehash the entire file cannot be detected without an externally anchored head hash.
 
