@@ -126,6 +126,11 @@ def _compute_drawdown_from_peak(close: pd.Series, window: int = 252) -> pd.Serie
     return dd
 
 
+# Features that need more history than a short search window has; NaN is allowed and
+# consumers treat it as "unknown" (see regime.py and context_builder.py).
+_LONG_HORIZON_FEATURES = {"momentum_252d", "sma_200", "price_vs_sma200"}
+
+
 def check_stationarity(series: pd.Series, significance: float = 0.05) -> bool:
     """
     ADF test for stationarity. Returns True if stationary, False otherwise.
@@ -270,8 +275,13 @@ def compute_features(
             final_df["vix_close"] = vix_close
             final_df["vix_close"] = final_df["vix_close"].ffill()
 
-    # 6) Drop NaN rows from rolling windows
-    final_df = final_df.dropna()
+    # 6) Drop rows missing a feature every consumer needs. The long-horizon features
+    #    (252-day momentum, 200-day SMA) stay NaN where history is too short instead of
+    #    dropping the row: a blanket dropna() returned an EMPTY frame for any window of
+    #    about 252 bars or fewer, so regime and memory conditioning silently fell back
+    #    to "Unknown" in exactly the short windows the benchmark uses.
+    required = [c for c in final_df.columns if c not in _LONG_HORIZON_FEATURES]
+    final_df = final_df.dropna(subset=required)
 
     # 7) Stationarity check on key momentum features (informational)
     for feat in ["momentum_63d", "volatility_21d", "rsi_14"]:

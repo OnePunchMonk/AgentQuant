@@ -65,6 +65,15 @@ class RegimeContext:
         return context
 
 
+def _num(row, key: str, default: float = 0.0) -> float:
+    """A float from a feature row, or `default` when it is missing or NaN."""
+    try:
+        value = float(row.get(key, default))
+    except (TypeError, ValueError):
+        return default
+    return default if pd.isna(value) else value
+
+
 def build_context(features_df: pd.DataFrame) -> RegimeContext:
     """
     Build a RegimeContext from the features DataFrame.
@@ -96,14 +105,14 @@ def build_context(features_df: pd.DataFrame) -> RegimeContext:
         ctx.vix_percentile = 50.0
 
     # Momentum
-    ctx.momentum_21d = float(latest.get("momentum_21d", 0.0) or 0.0)
-    ctx.momentum_63d = float(latest.get("momentum_63d", 0.0) or 0.0)
-    ctx.momentum_252d = float(latest.get("momentum_252d", 0.0) or 0.0)
+    ctx.momentum_21d = _num(latest, "momentum_21d")
+    ctx.momentum_63d = _num(latest, "momentum_63d")
+    ctx.momentum_252d = _num(latest, "momentum_252d")
 
     # Realized vol
-    ctx.realized_vol_5d = float(latest.get("volatility_5d", 0.0) or 0.0)
-    ctx.realized_vol_21d = float(latest.get("volatility_21d", 0.0) or 0.0)
-    ctx.realized_vol_63d = float(latest.get("volatility_63d", 0.0) or 0.0)
+    ctx.realized_vol_5d = _num(latest, "volatility_5d")
+    ctx.realized_vol_21d = _num(latest, "volatility_21d")
+    ctx.realized_vol_63d = _num(latest, "volatility_63d")
 
     # Vol vs average
     if "volatility_21d" in features_df.columns:

@@ -61,7 +61,14 @@ def test_no_vix_runs_without_error():
     assert "rsi_14" in features.columns
 
 
-def test_no_nan_after_dropna():
+def test_no_nan_in_required_features():
+    """Every feature a consumer needs is NaN-free. The long-horizon ones (252-day momentum,
+    200-day SMA) are allowed to be NaN where the window is too short to define them; dropping
+    those rows used to empty the frame for windows of about 252 bars or fewer."""
+    from src.features.engine import _LONG_HORIZON_FEATURES
+
     data = _make_ohlcv(n=300)
     features = compute_features(data, "SPY", "^VIX")
-    assert not features.isnull().any().any(), "Features DataFrame contains NaN values"
+    required = [c for c in features.columns if c not in _LONG_HORIZON_FEATURES]
+    assert len(features) > 0
+    assert not features[required].isnull().any().any(), "a required feature contains NaN"

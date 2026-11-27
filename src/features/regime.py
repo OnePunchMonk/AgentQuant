@@ -57,6 +57,15 @@ class RegimeChangeDetector:
         return event
 
 
+def _num(row, key: str, default: float = 0.0) -> float:
+    """A float from a feature row, or `default` when it is missing or NaN."""
+    try:
+        value = float(row.get(key, default))
+    except (TypeError, ValueError):
+        return default
+    return default if pd.isna(value) else value
+
+
 def detect_regime(features_df: pd.DataFrame) -> str:
     """
     Detects the current market regime label.
@@ -115,9 +124,9 @@ def detect_regime_full(features_df: pd.DataFrame) -> RegimeSignals:
     vol_confidence = 2.0 * abs(vp / 100.0 - 0.5)
 
     # --- Momentum ---
-    signals.momentum_21d = float(latest.get("momentum_21d", 0.0) or 0.0)
-    signals.momentum_63d = float(latest.get("momentum_63d", 0.0) or 0.0)
-    signals.momentum_252d = float(latest.get("momentum_252d", 0.0) or 0.0)
+    signals.momentum_21d = _num(latest, "momentum_21d")
+    signals.momentum_63d = _num(latest, "momentum_63d")
+    signals.momentum_252d = _num(latest, "momentum_252d")
 
     mom = signals.momentum_63d
     if mom > 0.05:
@@ -130,7 +139,7 @@ def detect_regime_full(features_df: pd.DataFrame) -> RegimeSignals:
     mom_confidence = min(abs(mom) / 0.10, 1.0)
 
     # --- Realized vol ---
-    signals.realized_vol_21d = float(latest.get("volatility_21d", 0.0) or 0.0)
+    signals.realized_vol_21d = _num(latest, "volatility_21d")
 
     # --- Trend (SMA) ---
     close = latest.get("Close", None)
